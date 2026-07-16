@@ -66,7 +66,8 @@ class _StudentDailyRoutineScreenState extends State<StudentDailyRoutineScreen> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: AppTheme.card,
+                        gradient: const LinearGradient(
+                            colors: [Colors.transparent, Color(0xFF151518)]),
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(color: AppTheme.border),
                       ),
