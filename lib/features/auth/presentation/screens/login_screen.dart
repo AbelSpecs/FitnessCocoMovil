@@ -101,10 +101,19 @@ class _LoginPageState extends State<LoginPage> {
         context.go('/');
       }
     } catch (err) {
+      final errorMessage = err.toString().replaceAll("Exception: ", "");
       setState(() {
         // Adaptación del mapeo de errores de Axios/Fetch
-        _error = err.toString().replaceAll("Exception: ", "");
+        _error = errorMessage;
       });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
       logger.e('Error en login: $_error');
     } finally {
       if (mounted) {

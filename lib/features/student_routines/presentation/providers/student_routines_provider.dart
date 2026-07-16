@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pyrosfitmovil/core/utils/globals.dart';
 import 'package:pyrosfitmovil/core/services/routine_service.dart';
 import 'package:pyrosfitmovil/features/dashboard/data/services/dashboard_service.dart';
 import 'package:pyrosfitmovil/features/dashboard/data/models/dashboard_models.dart';
@@ -22,6 +23,12 @@ class StudentRoutinesProvider extends ChangeNotifier {
           studentId, dateStart, dateEnd);
       _weeklyExercises = data;
     } catch (e) {
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        const SnackBar(
+          content: Text('Ocurrió un error, por favor intenta de nuevo.'),
+          backgroundColor: Colors.red,
+        ),
+      );
       logError('Error fetching weekly exercises: $e');
     } finally {
       _isLoading = false;
@@ -37,6 +44,12 @@ class StudentRoutinesProvider extends ChangeNotifier {
           studentId, date);
       _dailyExercises = data;
     } catch (e) {
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        const SnackBar(
+          content: Text('Ocurrió un error, por favor intenta de nuevo.'),
+          backgroundColor: Colors.red,
+        ),
+      );
       logError('Error fetching daily exercises: $e');
     } finally {
       _isLoading = false;
@@ -64,6 +77,12 @@ class StudentRoutinesProvider extends ChangeNotifier {
       }
       return false;
     } catch (e) {
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        const SnackBar(
+          content: Text('Ocurrió un error, por favor intenta de nuevo.'),
+          backgroundColor: Colors.red,
+        ),
+      );
       logError('Error completing set: $e');
       return false;
     }
@@ -88,6 +107,12 @@ class StudentRoutinesProvider extends ChangeNotifier {
       }
       return false;
     } catch (e) {
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        const SnackBar(
+          content: Text('Ocurrió un error, por favor intenta de nuevo.'),
+          backgroundColor: Colors.red,
+        ),
+      );
       logError('Error completing exercise: $e');
       return false;
     }

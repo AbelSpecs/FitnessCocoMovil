@@ -43,8 +43,8 @@ class _ClientRoutinesScreenContent extends StatelessWidget {
     final initial = client.name.isNotEmpty ? client.name[0].toUpperCase() : '?';
 
     return context.pyrosStyles.buildMeshBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
+        child: Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('Agenda del Cliente',
             style: TextStyle(fontWeight: FontWeight.bold)),
@@ -234,10 +234,10 @@ class _ClientRoutinesScreenContent extends StatelessWidget {
 
                     return RoutineCard(
                       routine: routine,
-                      onEdit: isFutureOrToday
-                          ? () =>
-                              _showEditRoutineSheet(context, provider, routine)
-                          : null,
+                      // onEdit: isFutureOrToday
+                      //     ? () =>
+                      //         _showEditRoutineSheet(context, provider, routine)
+                      //     : null,
                       onDelete: isFutureOrToday
                           ? () =>
                               provider.deleteRoutine(routine.dailyExerciseId)

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pyrosfitmovil/core/utils/globals.dart';
 import 'package:pyrosfitmovil/core/models/student_info_model.dart';
 import 'package:pyrosfitmovil/core/services/coach_service.dart';
 import 'package:pyrosfitmovil/features/auth/presentation/controllers/auth_provider.dart';
@@ -40,6 +41,12 @@ class ClientsProvider extends ChangeNotifier {
         _clients = rawData.map((e) => StudentInfo.fromJson(e)).toList();
       }
     } catch (e) {
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        const SnackBar(
+          content: Text('Ocurrió un error, por favor intenta de nuevo.'),
+          backgroundColor: Colors.red,
+        ),
+      );
       debugPrint("Error loading clients: $e");
     } finally {
       _isLoading = false;

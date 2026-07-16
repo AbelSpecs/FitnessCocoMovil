@@ -22,6 +22,7 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
   final TextEditingController _coachNotesController = TextEditingController();
 
   final List<Map<String, dynamic>> _sets = [];
+  late DateTime _selectedDate;
 
   @override
   void initState() {
@@ -29,6 +30,7 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
     if (widget.routineToEdit != null) {
       final r = widget.routineToEdit!;
       _coachNotesController.text = r.coachNotes;
+      _selectedDate = DateTime.tryParse(r.scheduledDate) ?? DateTime.now();
 
       // Load sets
       for (var s in r.dailyExerciseSets) {
@@ -40,6 +42,7 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
         });
       }
     } else {
+      _selectedDate = context.read<RoutinesProvider>().selectedDate;
       _addEmptySet();
     }
   }
@@ -108,7 +111,7 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
               const SizedBox(height: 8),
               DropdownButtonFormField<MuscleGroup>(
                 isExpanded: true,
-                value: _selectedMuscleGroup,
+                initialValue: _selectedMuscleGroup,
                 items: provider.muscleGroups
                     .map((m) => DropdownMenuItem(
                           value: m,
@@ -146,7 +149,7 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
               const SizedBox(height: 8),
               DropdownButtonFormField<ExerciseModel>(
                 isExpanded: true,
-                value: _selectedExercise,
+                initialValue: _selectedExercise,
                 items: provider.exercises
                     .map((e) => DropdownMenuItem(
                           value: e,
@@ -171,6 +174,48 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
                       .withOpacity(0.3),
                 ),
                 dropdownColor: theme.colorScheme.surfaceContainerHighest,
+              ),
+
+              const SizedBox(height: 16),
+
+              // Date Picker
+              Text('FECHA ASIGNADA', style: _labelStyle(theme)),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _selectedDate,
+                    firstDate:
+                        DateTime.now().subtract(const Duration(days: 365)),
+                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                  );
+                  if (picked != null) {
+                    setState(() {
+                      _selectedDate = picked;
+                    });
+                  }
+                },
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: theme.colorScheme.outlineVariant),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_today, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        "${_selectedDate.day.toString().padLeft(2, '0')}/${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.year}",
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ],
+                  ),
+                ),
               ),
 
               const SizedBox(height: 16),
@@ -323,11 +368,11 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
     if (isEditing) {
       // Update logic
       final dailyExerciseId = widget.routineToEdit!.dailyExerciseId;
-      final data = {
+      final Map<String, dynamic> data = {
         'coachId': widget.routineToEdit!.coachId,
         'studentId': widget.routineToEdit!.studentId,
         'exerciseId': widget.routineToEdit!.exerciseId,
-        'scheduledDate': widget.routineToEdit!.scheduledDate,
+        'scheduledDate': _selectedDate.toIso8601String(),
         'exerciseName': widget.routineToEdit!.exerciseName,
         'muscleGroupName': widget.routineToEdit!.muscleGroupName,
         'coachNotes': _coachNotesController.text,
@@ -382,12 +427,12 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
               })
           .toList();
 
-      final data = {
-        'assign': {
+      final Map<String, dynamic> data = {
+        'assign': <String, dynamic>{
           'coachId': provider.authProvider.user?.coachId,
           'studentId': 0, // WILL INJECT BEFORE SENDING IF WE PASS FROM SCREEN
           'exerciseId': _selectedExercise!.id,
-          'scheduledDate': provider.selectedDate.toIso8601String(),
+          'scheduledDate': _selectedDate.toIso8601String(),
           'dailyExerciseSets': setsData,
           'coachNotes': _coachNotesController.text,
         }

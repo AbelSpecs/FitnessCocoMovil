@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pyrosfitmovil/core/utils/globals.dart';
 import 'package:pyrosfitmovil/core/services/user_service.dart';
 import 'package:pyrosfitmovil/core/services/student_service.dart';
 import 'package:pyrosfitmovil/core/services/general_service.dart';
@@ -66,6 +67,12 @@ class ProfileProvider extends ChangeNotifier {
         _initEditingValues();
       }
     } catch (e) {
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        const SnackBar(
+          content: Text('Ocurrió un error, por favor intenta de nuevo.'),
+          backgroundColor: Colors.red,
+        ),
+      );
       logger.e("Error fetching profile: $e");
     } finally {
       _isLoading = false;
@@ -154,6 +161,12 @@ class ProfileProvider extends ChangeNotifier {
       _isEditing = false;
       return true;
     } catch (e) {
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        const SnackBar(
+          content: Text('Ocurrió un error, por favor intenta de nuevo.'),
+          backgroundColor: Colors.red,
+        ),
+      );
       logger.e("Error saving profile: $e");
       return false;
     } finally {

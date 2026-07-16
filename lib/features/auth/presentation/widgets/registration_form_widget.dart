@@ -255,8 +255,17 @@ class _RegistrationFormWidgetState extends State<RegistrationFormWidget> {
 
       await widget.onSubmit(form);
       setState(() => _success = true);
-    } catch (e) {
-      Notify.error(context, "Error", "Hubo un error al procesar el formulario");
+    } catch (err) {
+      final errorMessage = err.toString().replaceAll("Exception: ", "");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      Notify.error(context, "Error", errorMessage);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -783,7 +792,7 @@ class _RegistrationFormWidgetState extends State<RegistrationFormWidget> {
               const SizedBox(height: 16),
               GestureDetector(
                 onTap: () => context.go('/login'),
-                child: const Text('Volver a iniciar sesión',
+                child: const Text('Iniciar sesión',
                     style: TextStyle(
                         color: Color(0xFFF97316), fontWeight: FontWeight.bold)),
               ),

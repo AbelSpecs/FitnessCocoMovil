@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pyrosfitmovil/core/utils/globals.dart';
 import 'package:pyrosfitmovil/core/models/daily_student_exercise_model.dart';
 import 'package:pyrosfitmovil/core/models/exercise_model.dart';
 import 'package:pyrosfitmovil/core/models/muscle_group_model.dart';
@@ -49,6 +50,12 @@ class RoutinesProvider extends ChangeNotifier {
         logDebug('Parsed empty routines: $_routines');
       }
     } catch (e) {
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        const SnackBar(
+          content: Text('Ocurrió un error, por favor intenta de nuevo.'),
+          backgroundColor: Colors.red,
+        ),
+      );
       debugPrint("Error loading routines: $e");
       _routines = [];
     } finally {
@@ -65,6 +72,12 @@ class RoutinesProvider extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        const SnackBar(
+          content: Text('Ocurrió un error, por favor intenta de nuevo.'),
+          backgroundColor: Colors.red,
+        ),
+      );
       debugPrint("Error loading muscle groups: $e");
     }
   }
@@ -78,6 +91,12 @@ class RoutinesProvider extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        const SnackBar(
+          content: Text('Ocurrió un error, por favor intenta de nuevo.'),
+          backgroundColor: Colors.red,
+        ),
+      );
       debugPrint("Error loading exercises: $e");
     }
   }
@@ -105,6 +124,12 @@ class RoutinesProvider extends ChangeNotifier {
         return true;
       }
     } catch (e) {
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        const SnackBar(
+          content: Text('Ocurrió un error, por favor intenta de nuevo.'),
+          backgroundColor: Colors.red,
+        ),
+      );
       debugPrint("Error saving new routine: $e");
     }
     return false;
@@ -130,6 +155,12 @@ class RoutinesProvider extends ChangeNotifier {
         return true;
       }
     } catch (e) {
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        const SnackBar(
+          content: Text('Ocurrió un error, por favor intenta de nuevo.'),
+          backgroundColor: Colors.red,
+        ),
+      );
       debugPrint("Error updating routine: $e");
     }
     return false;
@@ -157,6 +188,12 @@ class RoutinesProvider extends ChangeNotifier {
         return true;
       }
     } catch (e) {
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        const SnackBar(
+          content: Text('Ocurrió un error, por favor intenta de nuevo.'),
+          backgroundColor: Colors.red,
+        ),
+      );
       debugPrint("Error creating custom exercise: $e");
     }
     return false;

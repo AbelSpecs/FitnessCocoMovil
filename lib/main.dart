@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pyrosfitmovil/core/utils/globals.dart';
 import 'package:provider/provider.dart';
 import 'package:pyrosfitmovil/features/auth/presentation/controllers/auth_provider.dart';
 import 'package:pyrosfitmovil/core/router/route_tree.dart';
@@ -31,6 +32,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
+        scaffoldMessengerKey: scaffoldMessengerKey,
         routerConfig: AppRouter.router,
         title: 'PyrosFit',
         debugShowCheckedModeBanner: false,

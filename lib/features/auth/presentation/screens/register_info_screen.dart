@@ -50,9 +50,9 @@ class _RegisterInfoScreenState extends State<RegisterInfoScreen> {
       phoneCodes: phoneCodes,
       title: "Información Personal",
       subtitle: "Cuéntanos sobre ti para personalizar tu entrenamiento",
-      successTitle: "¡Información guardada!",
+      successTitle: "¡Registro exitoso!",
       successMessage: (form) =>
-          "Gracias ${form.firstName}, tus datos se han registrado correctamente.",
+          "Gracias ${form.firstName}, tus datos se han registrado correctamente. Ya puedes iniciar sesión.",
       onSubmit: (form) async {
         await AuthService.register(form);
       },

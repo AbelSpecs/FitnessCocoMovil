@@ -55,9 +55,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       phoneCodes: phoneCodes,
       title: "Crear Cuenta",
       subtitle: "",
-      successTitle: "¡Revisa tu email!",
+      successTitle: "¡Registro exitoso!",
       successMessage: (form) =>
-          "Gracias ${form.firstName}, tu cuenta de entrenador ha sido creada correctamente.",
+          "Gracias ${form.firstName}, tu cuenta de entrenador ha sido creada correctamente. Ya puedes iniciar sesión.",
       onSubmit: (form) async {
         await AuthService.register(form);
       },
