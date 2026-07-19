@@ -43,6 +43,7 @@ dependencies:
   intl: ^0.20.3
   toastification: ^3.2.0
   logger: ^2.7.0
+  flutter_svg: ^2.3.0
 
 dev_dependencies:
   flutter_test:
@@ -54,6 +55,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^2.0.0
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -80,7 +82,7 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - .env
+    - assets/icons/dumbbell.png
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 
@@ -109,3 +111,9 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages
+flutter_launcher_icons:
+  android: "dumbbell" # Nombre del icono en Android
+  ios: true # Generar iconos para iOS
+  image_path: "assets/icons/dumbbell.png"
+  adaptive_icon_background: "#FFFFFF" # Color de fondo (blanco en este caso)
+  # adaptive_icon_foreground: "#FFFFFF"
