@@ -10,12 +10,14 @@ class NavigationItem {
   final String targetPath;
   final IconData icon;
   final List<Role> roles;
+  final bool condition;
 
   const NavigationItem({
     required this.label,
     required this.targetPath,
     required this.icon,
     required this.roles,
+    this.condition = false,
   });
 }
 
@@ -34,24 +36,35 @@ class AppShell extends StatelessWidget {
       targetPath: "/",
       icon: Icons.dashboard_outlined,
       roles: [Role.coach, Role.student],
+      condition: false,
+    ),
+    NavigationItem(
+      label: "Crear Rutina",
+      targetPath: "/clientes",
+      icon: Icons.fitness_center_outlined,
+      roles: [Role.student],
+      condition: true,
     ),
     NavigationItem(
       label: "Rutina",
       targetPath: "/rutina", // GoRouter resolverá el /:studentId internamente
       icon: Icons.calendar_today_outlined,
       roles: [Role.student],
-    ),
-    NavigationItem(
-      label: "Perfil",
-      targetPath: "/perfil",
-      icon: Icons.person_outline,
-      roles: [Role.coach, Role.student],
+      condition: false,
     ),
     NavigationItem(
       label: "Clientes",
       targetPath: "/clientes",
       icon: Icons.people_outline,
       roles: [Role.coach],
+      condition: false,
+    ),
+    NavigationItem(
+      label: "Perfil",
+      targetPath: "/perfil",
+      icon: Icons.person_outline,
+      roles: [Role.coach, Role.student],
+      condition: false,
     ),
   ];
 
@@ -63,8 +76,19 @@ class AppShell extends StatelessWidget {
     final userRole = user?.role ?? Role.student;
 
     // 2. Filtramos los elementos de navegación por rol (Tu visibleItems.map)
-    final visibleItems =
-        _navItems.where((item) => item.roles.contains(userRole)).toList();
+    final visibleItems = _navItems.where((item) {
+      if (!item.roles.contains(userRole)) return false;
+
+      if (item.condition) {
+        if (user?.myCoachId == 9) {
+          return true;
+        } else {
+          return false;
+        }
+      }
+
+      return true;
+    }).toList();
 
     // 3. Obtenemos el ancho de pantalla para definir si renderizamos Layout Web/Tablet o Móvil
     final double screenWidth = MediaQuery.of(context).size.width;

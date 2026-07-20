@@ -73,10 +73,19 @@ class _LoginPageState extends State<LoginPage> {
       int coachId =
           coachData?['data'] == null ? 0 : coachData?['data']['id'] as int;
 
+      int myCoachId = 0;
+      if (studentData?['data'] != null) {
+        final details = await UserService.getUserDetails(id);
+        if (details['data'] != null && details['data']['coach'] != null) {
+          myCoachId = details['data']['coach']['id'] as int;
+        }
+      }
+
       UserAuth userAuth = UserAuth(
         id: userData['data']['id'] as int,
         studentId: studentId != 0 ? studentId : null,
         coachId: coachId != 0 ? coachId : null,
+        myCoachId: myCoachId != 0 ? myCoachId : null,
         email: userData['data']['email'] as String?,
         firstName: userData['data']['firstName'] as String?,
         role: role,

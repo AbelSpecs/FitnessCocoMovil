@@ -23,6 +23,7 @@ class UserAuth {
   final int? studentId;
   final int?
       coachId; // El signo '?' hace que la propiedad sea opcional (nullable)
+  final int? myCoachId;
   final String? email;
   final String? firstName;
   final Role? role;
@@ -31,6 +32,7 @@ class UserAuth {
     required this.id,
     this.studentId,
     this.coachId,
+    this.myCoachId,
     this.email,
     this.firstName,
     this.role,
@@ -41,6 +43,7 @@ class UserAuth {
       id: json['id'] as int,
       studentId: json['studentId'] as int?,
       coachId: json['coachId'] as int?,
+      myCoachId: json['myCoachId'] as int?,
       email: json['email'] as String?,
       firstName: json['firstName'] as String?,
       role:
@@ -53,6 +56,7 @@ class UserAuth {
       'id': id,
       'studentId': studentId,
       'coachId': coachId,
+      'myCoachId': myCoachId,
       'email': email,
       'firstName': firstName,
       'role':

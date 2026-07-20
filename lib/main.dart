@@ -10,10 +10,13 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:pyrosfitmovil/features/student_routines/presentation/providers/student_routines_provider.dart';
 
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:flutter/foundation.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");
+
+  const envFile = kReleaseMode ? '.env.production' : '.env.development';
+  await dotenv.load(fileName: envFile);
   await initializeDateFormatting('es_US', null);
 
   runApp(MultiProvider(
