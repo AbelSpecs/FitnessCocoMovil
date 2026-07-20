@@ -109,6 +109,15 @@ class _RegistrationFormWidgetState extends State<RegistrationFormWidget> {
       _selectedCountry = country;
       _selectedCity = null;
       _cities = [];
+      if (country != null) {
+        try {
+          _selectedPhoneCode = widget.phoneCodes.firstWhere((p) => p.id == country.id);
+        } catch (e) {
+          _selectedPhoneCode = null;
+        }
+      } else {
+        _selectedPhoneCode = null;
+      }
     });
     try {
       if (country != null) {
@@ -553,14 +562,28 @@ class _RegistrationFormWidgetState extends State<RegistrationFormWidget> {
               children: [
                 Expanded(
                   flex: 2,
-                  child: _buildDropdownSearch<PhoneCode>(
-                    label: '',
-                    hintText: 'Código',
-                    items: widget.phoneCodes,
-                    selectedItem: _selectedPhoneCode,
-                    itemAsString: (p) => p.code,
-                    onChanged: (v) => setState(() => _selectedPhoneCode = v),
-                    borderColor: borderColor,
+                  child: TextFormField(
+                    key: ValueKey(_selectedPhoneCode?.code),
+                    initialValue: _selectedPhoneCode?.code ?? '',
+                    readOnly: true,
+                    style: const TextStyle(color: Colors.white70),
+                    decoration: InputDecoration(
+                      hintText: '+58',
+                      hintStyle: const TextStyle(
+                          color: Color(0xFF52525B), fontSize: 14),
+                      filled: true,
+                      fillColor: const Color(0xFF27272A).withOpacity(0.6),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: borderColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: borderColor),
+                      ),
+                    ),
                   ),
                 ),
                 Expanded(

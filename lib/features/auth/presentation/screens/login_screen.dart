@@ -386,27 +386,59 @@ class _LoginPageState extends State<LoginPage> {
                                     ),
 
                                     // Link de Registro
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
+                                    Column(
                                       children: [
-                                        const Text('¿No tienes cuenta? ',
-                                            style: TextStyle(
-                                                color: textMuted,
-                                                fontSize: 14)),
-                                        GestureDetector(
-                                          onTap: () {
-                                            // Navegar al registro
-                                            context.go('/register');
-                                          },
-                                          child: const Text(
-                                            'Regístrate',
-                                            style: TextStyle(
-                                              color: Color(
-                                                  0xFFF97316), // text-primary
-                                              fontWeight: FontWeight.bold,
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            const Text(
+                                                '¿No tienes cuenta y eres entrenador? ',
+                                                style: TextStyle(
+                                                    color: textMuted,
+                                                    fontSize: 14)),
+                                            GestureDetector(
+                                              onTap: () {
+                                                // Navegar al registro
+                                                context.go('/register');
+                                              },
+                                              child: const Text(
+                                                'Regístrate',
+                                                style: TextStyle(
+                                                  color: Color(
+                                                      0xFFF97316), // text-primary
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
                                             ),
-                                          ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            const Text(
+                                                '¿No tienes cuenta y no quieres entrenador? ',
+                                                style: TextStyle(
+                                                    color: textMuted,
+                                                    fontSize: 14)),
+                                            GestureDetector(
+                                              onTap: () {
+                                                // Navegar al registro sin entrenador
+                                                context.go(
+                                                    '/register-info?coachId=9');
+                                              },
+                                              child: const Text(
+                                                'Regístrate aqui',
+                                                style: TextStyle(
+                                                  color: Color(
+                                                      0xFFF97316), // text-primary
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     )
