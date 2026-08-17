@@ -80,7 +80,7 @@ class AppShell extends StatelessWidget {
       if (!item.roles.contains(userRole)) return false;
 
       if (item.condition) {
-        if (user?.myCoachId == 9) {
+        if (user?.myCoachId == 9 || user?.myCoachId.toString() == "9") {
           return true;
         } else {
           return false;

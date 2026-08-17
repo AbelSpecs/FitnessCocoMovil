@@ -64,30 +64,43 @@ class _LoginPageState extends State<LoginPage> {
       final studentData = await StudentService.getStudentByUserId(id);
       final coachData = await CoachService.getCoachByUserId(id);
 
+      // Helper para extraer datos de forma segura
+      Map<String, dynamic>? extractData(Map<String, dynamic>? rawData) {
+        if (rawData == null) return null;
+        if (rawData.containsKey('data')) {
+          if (rawData['data'] == null) return null;
+          return rawData['data'] as Map<String, dynamic>;
+        }
+        return rawData;
+      }
+
+      final studentMap = extractData(studentData);
+      final coachMap = extractData(coachData);
+      final userMap = extractData(userData);
+
       // 3. Determinar rol y construir el objeto de sesión (UserAuth)
-      Role role = studentData?['data'] == null ? Role.coach : Role.student;
+      Role role = studentMap == null ? Role.coach : Role.student;
 
-      int studentId =
-          studentData?['data'] == null ? 0 : studentData?['data']['id'] as int;
-
-      int coachId =
-          coachData?['data'] == null ? 0 : coachData?['data']['id'] as int;
+      int studentId = studentMap?['id'] as int? ?? 0;
+      int coachId = coachMap?['id'] as int? ?? 0;
 
       int myCoachId = 0;
-      if (studentData?['data'] != null) {
+      if (studentMap != null) {
         final details = await UserService.getUserDetails(id);
-        if (details['data'] != null && details['data']['coach'] != null) {
-          myCoachId = details['data']['coach']['id'] as int;
+        final detailsMap = extractData(details);
+        
+        if (detailsMap != null && detailsMap['coach'] != null) {
+          myCoachId = detailsMap['coach']['id'] as int? ?? 0;
         }
       }
 
       UserAuth userAuth = UserAuth(
-        id: userData['data']['id'] as int,
+        id: userMap?['id'] as int? ?? int.parse(id),
         studentId: studentId != 0 ? studentId : null,
         coachId: coachId != 0 ? coachId : null,
         myCoachId: myCoachId != 0 ? myCoachId : null,
-        email: userData['data']['email'] as String?,
-        firstName: userData['data']['firstName'] as String?,
+        email: userMap?['email'] as String?,
+        firstName: userMap?['firstName'] as String?,
         role: role,
       );
 
@@ -388,9 +401,9 @@ class _LoginPageState extends State<LoginPage> {
                                     // Link de Registro
                                     Column(
                                       children: [
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
+                                        Wrap(
+                                          alignment: WrapAlignment.center,
+                                          crossAxisAlignment: WrapCrossAlignment.center,
                                           children: [
                                             const Text(
                                                 '¿No tienes cuenta y eres entrenador? ',
@@ -414,9 +427,9 @@ class _LoginPageState extends State<LoginPage> {
                                           ],
                                         ),
                                         const SizedBox(height: 8),
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
+                                        Wrap(
+                                          alignment: WrapAlignment.center,
+                                          crossAxisAlignment: WrapCrossAlignment.center,
                                           children: [
                                             const Text(
                                                 '¿No tienes cuenta y no quieres entrenador? ',
