@@ -3,7 +3,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ApiClient {
   static final Dio _dio = Dio(BaseOptions(
-    baseUrl: dotenv.env['API_BASE_URL'] ?? 'http://10.0.2.2:5242/api',
+    // baseUrl: dotenv.env['API_BASE_URL'] ?? 'https://api.pyrosfit.com/api/v1',//'http://10.0.2.2:5242/api',
+    baseUrl: 'https://api.pyrosfit.com/api/v1',
     connectTimeout: const Duration(seconds: 10),
     receiveTimeout: const Duration(seconds: 10),
     headers: {

@@ -11,6 +11,7 @@ class AuthService {
 
   static Future<Map<String, dynamic>> login(
       LoginCredentials credentials) async {
+    logger.i('Api: ${_api.options.baseUrl}');
     logger.i('Intentando iniciar sesión con: ${credentials.toJson()}');
     try {
       final response =

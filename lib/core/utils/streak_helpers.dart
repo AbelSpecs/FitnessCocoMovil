@@ -1,0 +1,243 @@
+import 'package:flutter/material.dart';
+import 'package:pyrosfitmovil/core/models/streak_models.dart';
+import 'package:pyrosfitmovil/features/dashboard/data/models/dashboard_models.dart';
+
+const List<StreakTier> streakTiers = [
+  StreakTier(
+    min: 0,
+    label: 'Chispa de Esparta',
+    cardGradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFF221F1B), Color(0xFF33261D)],
+    ),
+    orbGradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFFE28B36), Color(0xFFC76F26)],
+    ),
+    glow: [
+      BoxShadow(
+        color: Color(0x80E28B36),
+        blurRadius: 30,
+        offset: Offset(0, 8),
+        spreadRadius: -10,
+      )
+    ],
+    textColor: Color(0xFFF6AA50),
+    ringColor: Color(0x73E28B36),
+  ),
+  StreakTier(
+    min: 3,
+    label: 'Llama Olímpica',
+    cardGradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFF221E1A), Color(0xFF452417)],
+    ),
+    orbGradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFFF2782A), Color(0xFFCC5218)],
+    ),
+    glow: [
+      BoxShadow(
+        color: Color(0x8CF2782A),
+        blurRadius: 34,
+        offset: Offset(0, 10),
+        spreadRadius: -10,
+      )
+    ],
+    textColor: Color(0xFFFFA05C),
+    ringColor: Color(0x80F2782A),
+  ),
+  StreakTier(
+    min: 7,
+    label: 'Forja de Hefesto',
+    cardGradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFF241814), Color(0xFF4E2014)],
+    ),
+    orbGradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFFF95A0B), Color(0xFFD63B08)],
+    ),
+    glow: [
+      BoxShadow(
+        color: Color(0x99F95A0B),
+        blurRadius: 38,
+        offset: Offset(0, 12),
+        spreadRadius: -10,
+      )
+    ],
+    textColor: Color(0xFFFF7E3E),
+    ringColor: Color(0x8CF95A0B),
+  ),
+  StreakTier(
+    min: 14,
+    label: 'Furia del Fénix',
+    cardGradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFF261414), Color(0xFF5A1C16)],
+    ),
+    orbGradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFFFF3B14), Color(0xFFDC2008)],
+    ),
+    glow: [
+      BoxShadow(
+        color: Color(0xB3FF3B14),
+        blurRadius: 44,
+        offset: Offset(0, 14),
+        spreadRadius: -10,
+      )
+    ],
+    textColor: Color(0xFFFF6242),
+    ringColor: Color(0x99FF3B14),
+  ),
+  StreakTier(
+    min: 30,
+    label: 'Fuego de los Titanes',
+    cardGradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFF2B0E14), Color(0xFF6B181E)],
+    ),
+    orbGradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFFFF1A2C), Color(0xFFD9001D)],
+    ),
+    glow: [
+      BoxShadow(
+        color: Color(0xD9FF1A2C),
+        blurRadius: 55,
+        offset: Offset(0, 18),
+        spreadRadius: -10,
+      )
+    ],
+    textColor: Color(0xFFFF5264),
+    ringColor: Color(0xB3FF1A2C),
+  ),
+];
+
+StreakTier tierFor(int streak) {
+  for (final tier in streakTiers.reversed) {
+    if (streak >= tier.min) {
+      return tier;
+    }
+  }
+  return streakTiers.first;
+}
+
+StreakTier? nextTierFor(int streak) {
+  for (final tier in streakTiers) {
+    if (tier.min > streak) {
+      return tier;
+    }
+  }
+  return null;
+}
+
+double calculateStreakExperience(int currentStreak, [List<StreakTier>? tiers]) {
+  final activeTiers = tiers ?? streakTiers;
+  if (currentStreak <= 0) return 0.0;
+  if (activeTiers.length <= 1) return 0.0;
+
+  final maxMin = activeTiers.last.min;
+  if (currentStreak >= maxMin) return 100.0;
+
+  final totalSegments = activeTiers.length - 1;
+  final segmentWidth = 100.0 / totalSegments;
+
+  for (int i = 0; i < totalSegments; i++) {
+    final currentMin = activeTiers[i].min;
+    final nextMin = activeTiers[i + 1].min;
+
+    if (currentStreak >= currentMin && currentStreak <= nextMin) {
+      final segmentProgress = (currentStreak - currentMin) / (nextMin - currentMin);
+      final startPercent = i * segmentWidth;
+      final endPercent = (i + 1) * segmentWidth;
+      final totalPercent = startPercent + segmentProgress * (endPercent - startPercent);
+      return totalPercent.clamp(0.0, 100.0);
+    }
+  }
+
+  return 100.0;
+}
+
+List<HistoryItem> historyExercisesMapper(List<GetDailyStudentExerciseDto> historyExercises) {
+  if (historyExercises.isEmpty) return [];
+
+  final Map<String, List<GetDailyStudentExerciseDto>> grouped = {};
+
+  for (final ex in historyExercises) {
+    final dateKey = ex.scheduledDate.split('T')[0];
+    if (!grouped.containsKey(dateKey)) {
+      grouped[dateKey] = [];
+    }
+    grouped[dateKey]!.add(ex);
+  }
+
+  return grouped.entries.map((entry) {
+    final dateStr = entry.key;
+    final exercises = entry.value;
+
+    final muscleGroups = exercises
+        .map((e) => e.muscleGroupName)
+        .where((name) => name.isNotEmpty)
+        .toSet()
+        .toList();
+
+    final name = muscleGroups.isNotEmpty ? muscleGroups.join(' & ') : 'Rutina';
+    const min = 45;
+
+    return HistoryItem(
+      name: name,
+      date: dateStr,
+      min: min,
+    );
+  }).toList();
+}
+
+List<HistoryItem> streakHistoryMapper(List<StreakHistoryLogDto> streakHistoryLogs) {
+  if (streakHistoryLogs.isEmpty) return [];
+
+  return streakHistoryLogs.map((log) {
+    final rawDate = log.activityDate ?? log.createdAt ?? '';
+    final formattedDate = rawDate.contains('T') ? rawDate.split('T')[0] : rawDate;
+
+    return HistoryItem(
+      name: log.activityTypeName ?? 'Entrenamiento',
+      date: formattedDate,
+      min: 45,
+    );
+  }).toList();
+}
+
+List<HistoryItem> combinedHistoryMapper(
+  List<StreakHistoryLogDto>? streakHistoryLogs,
+  List<GetDailyStudentExerciseDto>? lastCompletedExercises,
+) {
+  final mappedStreakLogs = streakHistoryLogs != null ? streakHistoryMapper(streakHistoryLogs) : <HistoryItem>[];
+  final mappedExercises = lastCompletedExercises != null ? historyExercisesMapper(lastCompletedExercises) : <HistoryItem>[];
+
+  final combined = [...mappedStreakLogs, ...mappedExercises];
+
+  final List<HistoryItem> result = [];
+  final Set<String> seen = {};
+
+  for (final item in combined) {
+    final key = '${item.date}_${item.name}';
+    if (!seen.contains(key)) {
+      seen.add(key);
+      result.add(item);
+    }
+  }
+
+  return result;
+}
