@@ -182,6 +182,18 @@ class HistoryItem {
   });
 }
 
+class UseFreezeShieldDto {
+  final String? shieldDate;
+
+  UseFreezeShieldDto({this.shieldDate});
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (shieldDate != null) 'shieldDate': shieldDate,
+    };
+  }
+}
+
 class StreakTier {
   final int min;
   final String label;

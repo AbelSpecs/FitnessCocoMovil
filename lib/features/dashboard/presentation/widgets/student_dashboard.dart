@@ -111,6 +111,63 @@ class _StudentDashboardState extends State<StudentDashboard> {
     );
   }
 
+  void _showFreezeShieldDialog(int? studentId) {
+    final messenger = ScaffoldMessenger.of(context);
+    showDialog(
+      context: context,
+      builder: (ctx) => FreezeShieldDialog(
+        shields: _shields,
+        streak: _streak,
+        onDismiss: () => Navigator.of(ctx).pop(),
+        onConfirmUse: () async {
+          if (studentId == null || _shields <= 0) return;
+          try {
+            await StreakService.useFreezeShield(studentId);
+            if (mounted) {
+              setState(() {
+                if (_shields > 0) _shields--;
+              });
+              messenger.showSnackBar(
+                SnackBar(
+                  content: const Row(
+                    children: [
+                      Icon(Icons.shield, color: Color(0xFF38BDF8), size: 20),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          '¡Escudo de Hielo activado! Tu racha está protegida ante inactividad 🛡️❄️',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                  backgroundColor: const Color(0xFF1E242B),
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: Color(0xFF38BDF8), width: 1),
+                  ),
+                  duration: const Duration(seconds: 4),
+                ),
+              );
+            }
+          } catch (e) {
+            if (mounted) {
+              messenger.showSnackBar(
+                SnackBar(
+                  content: const Text('No se pudo usar el escudo de hielo. Intenta nuevamente.'),
+                  backgroundColor: Colors.red.shade900,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              );
+            }
+          }
+        },
+      ),
+    );
+  }
+
   int get _maxWeightLifted {
     if (_weeklyExercises.isEmpty) return 0;
     double maxWeight = 0;
@@ -214,18 +271,14 @@ class _StudentDashboardState extends State<StudentDashboard> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Tarjeta Principal de Racha (T-01)
+                  // Tarjeta Principal de Racha (T-01, T-04)
                   PyrosStreakCard(
                     streak: _streak,
                     shields: _shields,
                     dailyFocus: _dailyFocus,
                     dailyExercisesNum: _dailyExercises.length,
                     prRecord: _maxWeightLifted > 0 ? _maxWeightLifted : 100,
-                    onUseShield: () {
-                      if (_shields > 0) {
-                        setState(() => _shields--);
-                      }
-                    },
+                    onUseShield: () => _showFreezeShieldDialog(auth.user?.studentId),
                   ),
                   const SizedBox(height: 16),
 

@@ -102,4 +102,26 @@ class StreakService {
       return null;
     }
   }
+
+  /// Utiliza un escudo de congelación para proteger la racha del estudiante ante inactividad.
+  /// Endpoint: POST /Streaks/student/{studentId}/use-freeze-shield
+  static Future<Map<String, dynamic>?> useFreezeShield(int studentId, {String? shieldDate}) async {
+    try {
+      final payload = shieldDate != null ? {'shieldDate': shieldDate} : <String, dynamic>{};
+      final response = await _api.post('/Streaks/student/$studentId/use-freeze-shield', data: payload);
+      final dynamic responseData = response.data;
+
+      if (responseData != null) {
+        if (responseData is Map<String, dynamic>) {
+          return responseData['data'] is Map<String, dynamic>
+              ? responseData['data'] as Map<String, dynamic>
+              : responseData;
+        }
+      }
+      return null;
+    } catch (e) {
+      logError('Error al usar escudo de congelación para el estudiante $studentId: $e');
+      rethrow;
+    }
+  }
 }

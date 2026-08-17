@@ -435,23 +435,25 @@ class IceShieldsButton extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(6),
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
-                color: const Color(0xFF38BDF8).withValues(alpha: 0.15),
-                shape: BoxShape.circle,
+                color: const Color(0xFF38BDF8).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.25)),
               ),
               child: const Icon(
-                Icons.shield_outlined,
+                Icons.shield,
                 color: Color(0xFF38BDF8),
                 size: 20,
               ),
             ),
             const SizedBox(width: 12),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     'Escudos de Hielo 🛡️',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
@@ -460,8 +462,10 @@ class IceShieldsButton extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'Protegen tu racha un día',
-                    style: TextStyle(
+                    shields > 0
+                        ? 'Protegen tu racha ante un día de inactividad'
+                        : 'No tienes escudos disponibles en este momento',
+                    style: const TextStyle(
                       color: Colors.grey,
                       fontSize: 11,
                     ),
@@ -477,11 +481,11 @@ class IceShieldsButton extends StatelessWidget {
                 border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.3)),
               ),
               child: Text(
-                '$shields/2',
+                '$shields disp.',
                 style: const TextStyle(
                   color: Color(0xFF38BDF8),
                   fontWeight: FontWeight.w900,
-                  fontSize: 14,
+                  fontSize: 13,
                 ),
               ),
             ),
@@ -868,6 +872,204 @@ class StreakCelebrationDialog extends StatelessWidget {
                 ),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Diálogo de Escudos de Hielo / Freeze Shield (T-04)
+class FreezeShieldDialog extends StatefulWidget {
+  final int shields;
+  final int streak;
+  final Future<void> Function()? onConfirmUse;
+  final VoidCallback onDismiss;
+
+  const FreezeShieldDialog({
+    super.key,
+    required this.shields,
+    required this.streak,
+    this.onConfirmUse,
+    required this.onDismiss,
+  });
+
+  @override
+  State<FreezeShieldDialog> createState() => _FreezeShieldDialogState();
+}
+
+class _FreezeShieldDialogState extends State<FreezeShieldDialog> {
+  bool _isLoading = false;
+
+  Future<void> _handleConfirm() async {
+    if (widget.onConfirmUse == null || _isLoading) return;
+    setState(() => _isLoading = true);
+    try {
+      await widget.onConfirmUse!();
+      if (mounted) {
+        widget.onDismiss();
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasShields = widget.shields > 0;
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF1E242B), Color(0xFF13171C)],
+          ),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.35)),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF38BDF8).withValues(alpha: 0.2),
+              blurRadius: 30,
+              offset: const Offset(0, 10),
+            )
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Icon container with ice shield
+            Container(
+              width: 68,
+              height: 68,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF38BDF8).withValues(alpha: 0.15),
+                border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.4)),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF38BDF8).withValues(alpha: 0.25),
+                    blurRadius: 18,
+                  )
+                ],
+              ),
+              child: const Icon(
+                Icons.shield,
+                size: 34,
+                color: Color(0xFF38BDF8),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Title
+            const Text(
+              'Escudos de Hielo 🛡️❄️',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // Description
+            RichText(
+              textAlign: TextAlign.center,
+              text: hasShields
+                  ? TextSpan(
+                      style: const TextStyle(color: Colors.grey, fontSize: 13, height: 1.4, fontFamily: 'Barlow'),
+                      children: [
+                        const TextSpan(text: 'Tienes '),
+                        TextSpan(
+                          text: '${widget.shields} ${widget.shields == 1 ? "escudo disponible" : "escudos disponibles"}',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                        const TextSpan(text: '. Al activar un escudo, tu racha de '),
+                        TextSpan(
+                          text: '${widget.streak} días',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                        const TextSpan(text: ' no se romperá si hoy o mañana no puedes entrenar.'),
+                      ],
+                    )
+                  : const TextSpan(
+                      style: TextStyle(color: Colors.grey, fontSize: 13, height: 1.4, fontFamily: 'Barlow'),
+                      text:
+                          'No te quedan escudos disponibles. Sigue entrenando y alcanzando nuevos hitos de racha para desbloquear más escudos.',
+                    ),
+            ),
+            const SizedBox(height: 24),
+
+            // Action Buttons
+            if (hasShields)
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _isLoading ? null : widget.onDismiss,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.grey,
+                        side: BorderSide(color: AppTheme.border.withValues(alpha: 0.8)),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text('Cancelar'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _handleConfirm,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text(
+                              'Activar Escudo 🛡️',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            ),
+                    ),
+                  ),
+                ],
+              )
+            else
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: widget.onDismiss,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Text('Entendido'),
+                ),
+              ),
           ],
         ),
       ),
