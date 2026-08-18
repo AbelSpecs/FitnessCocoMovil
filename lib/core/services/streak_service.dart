@@ -128,4 +128,54 @@ class StreakService {
       rethrow;
     }
   }
+
+  /// Obtiene el ranking global de rachas de la plataforma.
+  /// Endpoint: GET /Streaks/leaderboard
+  static Future<List<StreakLeaderboardItemDto>> getGlobalStreakLeaderboard({int limit = 50}) async {
+    try {
+      final response = await _api.get('/Streaks/leaderboard', queryParameters: {'limit': limit});
+      final dynamic responseData = response.data;
+
+      if (responseData != null) {
+        final data = responseData is Map<String, dynamic> && responseData.containsKey('data')
+            ? responseData['data']
+            : responseData;
+
+        if (data is List) {
+          return data
+              .map((item) => StreakLeaderboardItemDto.fromJson(item as Map<String, dynamic>))
+              .toList();
+        }
+      }
+      return [];
+    } catch (e) {
+      logError('Error al obtener el ranking global de rachas: $e');
+      return [];
+    }
+  }
+
+  /// Obtiene el ranking (leaderboard) de rachas de los alumnos de un coach.
+  /// Endpoint: GET /Streaks/coach/{coachId}/leaderboard
+  static Future<List<StreakLeaderboardItemDto>> getCoachStreakLeaderboard(int coachId, {int limit = 50}) async {
+    try {
+      final response = await _api.get('/Streaks/coach/$coachId/leaderboard', queryParameters: {'limit': limit});
+      final dynamic responseData = response.data;
+
+      if (responseData != null) {
+        final data = responseData is Map<String, dynamic> && responseData.containsKey('data')
+            ? responseData['data']
+            : responseData;
+
+        if (data is List) {
+          return data
+              .map((item) => StreakLeaderboardItemDto.fromJson(item as Map<String, dynamic>))
+              .toList();
+        }
+      }
+      return [];
+    } catch (e) {
+      logError('Error al obtener el ranking del coach $coachId: $e');
+      return [];
+    }
+  }
 }

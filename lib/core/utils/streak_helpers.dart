@@ -347,3 +347,62 @@ List<RiskStudentInfo> riskRadarStudentsMapper(List<RiskRadarStudentDto>? riskRad
     );
   }).toList();
 }
+
+const List<Map<String, dynamic>> fireTierTitles = [
+  {'min': 30, 'title': 'Fuego de los Titanes'},
+  {'min': 14, 'title': 'Furia del Fénix'},
+  {'min': 7, 'title': 'Forja de Hefesto'},
+  {'min': 3, 'title': 'Llama Olímpica'},
+  {'min': 0, 'title': 'Chispa de Esparta'},
+];
+
+String getTitleForStreak(int streak) {
+  for (final t in fireTierTitles) {
+    if (streak >= (t['min'] as int)) {
+      return t['title'] as String;
+    }
+  }
+  return 'Chispa de Esparta';
+}
+
+List<AthleteRankingInfo> mapLeaderboardToAthletes(
+  List<StreakLeaderboardItemDto>? items, {
+  int currentStudentId = 0,
+  String coachLabel = 'PyrosFit',
+}) {
+  if (items == null || items.isEmpty) {
+    return [];
+  }
+
+  return items.map((item) {
+    final studentName = (item.studentName.trim().isNotEmpty)
+        ? item.studentName
+        : 'Alumno #${item.studentId}';
+    final nameParts = studentName.trim().split(RegExp(r'\s+'));
+    final initials = nameParts.length >= 2
+        ? '${nameParts[0][0]}${nameParts[1][0]}'.toUpperCase()
+        : studentName.length >= 2
+            ? studentName.substring(0, 2).toUpperCase()
+            : studentName.toUpperCase();
+
+    final streak = item.currentStreak;
+    final longestStreak = item.longestStreak;
+    final points = streak * 100 + longestStreak * 25 + item.freezeShieldsAvailable * 10;
+    final title = getTitleForStreak(streak);
+
+    return AthleteRankingInfo(
+      id: item.studentId.toString(),
+      name: studentName,
+      initials: initials,
+      coach: coachLabel,
+      points: points,
+      streak: streak,
+      longestStreak: longestStreak,
+      volume: streak * 1250,
+      sessions: streak,
+      delta: 0,
+      title: title,
+      me: item.studentId == currentStudentId,
+    );
+  }).toList();
+}

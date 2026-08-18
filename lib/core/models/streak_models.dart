@@ -233,3 +233,74 @@ class StreakTier {
     required this.ringColor,
   });
 }
+
+class StreakLeaderboardItemDto {
+  final int rank;
+  final int studentId;
+  final String studentName;
+  final int currentStreak;
+  final int longestStreak;
+  final String? lastCompletedDate;
+  final int freezeShieldsAvailable;
+
+  const StreakLeaderboardItemDto({
+    required this.rank,
+    required this.studentId,
+    required this.studentName,
+    required this.currentStreak,
+    required this.longestStreak,
+    this.lastCompletedDate,
+    required this.freezeShieldsAvailable,
+  });
+
+  factory StreakLeaderboardItemDto.fromJson(Map<String, dynamic> json) {
+    int? parseInt(dynamic value) {
+      if (value == null) return null;
+      if (value is int) return value;
+      if (value is String) return int.tryParse(value);
+      if (value is double) return value.toInt();
+      return null;
+    }
+
+    return StreakLeaderboardItemDto(
+      rank: parseInt(json['rank']) ?? 0,
+      studentId: parseInt(json['studentId']) ?? 0,
+      studentName: json['studentName']?.toString() ?? '',
+      currentStreak: parseInt(json['currentStreak']) ?? 0,
+      longestStreak: parseInt(json['longestStreak']) ?? 0,
+      lastCompletedDate: json['lastCompletedDate'] as String?,
+      freezeShieldsAvailable: parseInt(json['freezeShieldsAvailable']) ?? 0,
+    );
+  }
+}
+
+class AthleteRankingInfo {
+  final String id;
+  final String name;
+  final String initials;
+  final String coach;
+  final int points;
+  final int streak;
+  final int longestStreak;
+  final int volume;
+  final int sessions;
+  final int delta;
+  final String title;
+  final bool me;
+
+  const AthleteRankingInfo({
+    required this.id,
+    required this.name,
+    required this.initials,
+    required this.coach,
+    required this.points,
+    required this.streak,
+    required this.longestStreak,
+    required this.volume,
+    required this.sessions,
+    required this.delta,
+    required this.title,
+    this.me = false,
+  });
+}
+
