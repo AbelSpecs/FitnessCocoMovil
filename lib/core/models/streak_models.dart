@@ -182,6 +182,26 @@ class HistoryItem {
   });
 }
 
+class RiskStudentInfo {
+  final String studentId;
+  final String name;
+  final String initials;
+  final int streak;
+  final String lastWorkout;
+  final int inactivity;
+  final String risk; // 'high' | 'medium' | 'low'
+
+  const RiskStudentInfo({
+    required this.studentId,
+    required this.name,
+    required this.initials,
+    required this.streak,
+    required this.lastWorkout,
+    required this.inactivity,
+    required this.risk,
+  });
+}
+
 class UseFreezeShieldDto {
   final String? shieldDate;
 

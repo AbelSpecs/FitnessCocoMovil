@@ -219,49 +219,75 @@ class _ExerciseRowState extends State<_ExerciseRow> {
         }
       });
       if (success) {
-        // T-03: Actualizar la racha (streak) del estudiante al completar la rutina
-        final rawDate = widget.exercise.scheduledDate;
-        String isoActivityDate;
-        try {
-          if (rawDate.isNotEmpty) {
-            final parsed = rawDate.contains('T')
-                ? DateTime.parse(rawDate)
-                : DateTime.parse('${rawDate}T12:00:00Z');
-            isoActivityDate = parsed.toUtc().toIso8601String();
-          } else {
-            isoActivityDate = DateTime.now().toUtc().toIso8601String();
-          }
-        } catch (_) {
-          isoActivityDate = DateTime.now().toUtc().toIso8601String();
-        }
+        // Verificar si todos los ejercicios de la rutina diaria están completados
+        final currentExercises = provider.dailyExercises;
+        final allCompleted = currentExercises.isNotEmpty &&
+            currentExercises.every((item) =>
+                item.id == widget.exercise.id ? true : item.isCompleted);
 
-        await StreakService.postWorkoutCompleted(
-          widget.exercise.studentId,
-          isoActivityDate,
-        );
+        if (allCompleted) {
+          // Formatear fecha localmente sin desfases de UTC
+          final rawDate = widget.exercise.scheduledDate;
+          final dateStr = rawDate.isNotEmpty
+              ? (rawDate.contains('T') ? rawDate.split('T')[0] : rawDate)
+              : DateFormat('yyyy-MM-dd').format(DateTime.now());
+          final isoActivityDate = '${dateStr}T12:00:00Z';
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Row(
-                children: [
-                  Icon(Icons.local_fire_department, color: Colors.white, size: 20),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      '¡Ejercicio completado! Racha y progreso actualizados 🔥',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+          try {
+            await StreakService.postWorkoutCompleted(
+              widget.exercise.studentId,
+              isoActivityDate,
+            );
+          } catch (_) {}
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Row(
+                  children: [
+                    Icon(Icons.local_fire_department, color: Colors.white, size: 20),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '¡Rutina completada! Has completado todos los ejercicios del día. Racha y progreso actualizados 🔥',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                backgroundColor: const Color(0xFF10B981),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                duration: const Duration(seconds: 4),
               ),
-              backgroundColor: const Color(0xFF10B981),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+            );
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.white, size: 20),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '¡Ejercicio completado! Progreso guardado 💪',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor: const Color(0xFF10B981),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-            ),
-          );
+            );
+          }
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -82,7 +82,7 @@ class StreakService {
 
   /// Obtiene el radar de riesgo de pérdida de racha para los clientes de un entrenador.
   /// Endpoint: GET /Streaks/coach/{coachId}/risk-radar
-  static Future<RiskRadarStudentDto?> getCoachRiskRadar(int coachId) async {
+  static Future<List<RiskRadarStudentDto>> getCoachRiskRadar(int coachId) async {
     try {
       final response = await _api.get('/Streaks/coach/$coachId/risk-radar');
       final dynamic responseData = response.data;
@@ -92,14 +92,18 @@ class StreakService {
             ? responseData['data']
             : responseData;
 
-        if (data != null && data is Map<String, dynamic>) {
-          return RiskRadarStudentDto.fromJson(data);
+        if (data is List) {
+          return data
+              .map((item) => RiskRadarStudentDto.fromJson(item as Map<String, dynamic>))
+              .toList();
+        } else if (data is Map<String, dynamic>) {
+          return [RiskRadarStudentDto.fromJson(data)];
         }
       }
-      return null;
+      return [];
     } catch (e) {
       logError('Error al obtener el radar de riesgo del coach $coachId: $e');
-      return null;
+      return [];
     }
   }
 

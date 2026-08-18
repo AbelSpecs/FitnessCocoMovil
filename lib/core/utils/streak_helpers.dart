@@ -241,3 +241,109 @@ List<HistoryItem> combinedHistoryMapper(
 
   return result;
 }
+
+const List<RiskStudentInfo> defaultStudentsMock = [
+  RiskStudentInfo(
+    studentId: '1',
+    name: 'Carlos Mendoza',
+    initials: 'CM',
+    streak: 0,
+    lastWorkout: 'Hace 5 días',
+    inactivity: 5,
+    risk: 'high',
+  ),
+  RiskStudentInfo(
+    studentId: '2',
+    name: 'Sofía Rodríguez',
+    initials: 'SR',
+    streak: 2,
+    lastWorkout: 'Hace 3 días',
+    inactivity: 3,
+    risk: 'medium',
+  ),
+  RiskStudentInfo(
+    studentId: '3',
+    name: 'María Gómez',
+    initials: 'MG',
+    streak: 14,
+    lastWorkout: 'Ayer',
+    inactivity: 1,
+    risk: 'low',
+  ),
+  RiskStudentInfo(
+    studentId: '4',
+    name: 'Julián Ferrer',
+    initials: 'JF',
+    streak: 0,
+    lastWorkout: 'Hace 8 días',
+    inactivity: 8,
+    risk: 'high',
+  ),
+  RiskStudentInfo(
+    studentId: '5',
+    name: 'Lucía Ibarra',
+    initials: 'LI',
+    streak: 6,
+    lastWorkout: 'Hoy',
+    inactivity: 0,
+    risk: 'low',
+  ),
+  RiskStudentInfo(
+    studentId: '6',
+    name: 'Diego Salas',
+    initials: 'DS',
+    streak: 1,
+    lastWorkout: 'Hace 3 días',
+    inactivity: 3,
+    risk: 'medium',
+  ),
+];
+
+List<RiskStudentInfo> riskRadarStudentsMapper(List<RiskRadarStudentDto>? riskRadarList) {
+  if (riskRadarList == null || riskRadarList.isEmpty) {
+    return defaultStudentsMock;
+  }
+
+  return riskRadarList.map((item) {
+    final studentName = (item.studentName != null && item.studentName!.trim().isNotEmpty)
+        ? item.studentName!
+        : 'Alumno #${item.studentId}';
+    final nameParts = studentName.trim().split(RegExp(r'\s+'));
+    final initials = nameParts.length >= 2
+        ? '${nameParts[0][0]}${nameParts[1][0]}'.toUpperCase()
+        : studentName.length >= 2
+            ? studentName.substring(0, 2).toUpperCase()
+            : studentName.toUpperCase();
+
+    final daysInactive = item.daysInactive ?? 0;
+    String lastWorkout = '';
+    if (daysInactive == 0) {
+      lastWorkout = 'Hoy';
+    } else if (daysInactive == 1) {
+      lastWorkout = 'Ayer';
+    } else if (daysInactive >= 999) {
+      lastWorkout = 'Sin actividad';
+    } else {
+      lastWorkout = 'Hace $daysInactive días';
+    }
+
+    String risk = 'low';
+    if (item.riskLevel == 2) {
+      risk = 'high';
+    } else if (item.riskLevel == 1) {
+      risk = 'medium';
+    } else {
+      risk = 'low';
+    }
+
+    return RiskStudentInfo(
+      studentId: item.studentId.toString(),
+      name: studentName,
+      initials: initials,
+      streak: item.currentStreak ?? 0,
+      lastWorkout: lastWorkout,
+      inactivity: daysInactive >= 999 ? 30 : daysInactive,
+      risk: risk,
+    );
+  }).toList();
+}
