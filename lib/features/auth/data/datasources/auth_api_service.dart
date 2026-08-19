@@ -8,7 +8,7 @@ import 'package:dio/dio.dart';
 class AuthApiService {
   // 1. Configuración de la Base URL (Equivalente a import.meta.env.VITE_API_URL)
   // Tip: En desarrollo local con emulador Android, usa 'http://10.0.2.2:PORT' en lugar de localhost
-  static const String _apiBaseUrl = "https://tu-api-pyrosfit.com/api";
+  static const String _apiBaseUrl = "https://api.pyrosfit.com/api/v1";
 
   // 2. Creación de la instancia de Dio (Equivalente a axios.create)
   final Dio _dio = Dio(

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:pyrosfitmovil/theme/app_theme.dart';
 import 'package:pyrosfitmovil/features/student_routines/presentation/providers/student_routines_provider.dart';
 import 'package:pyrosfitmovil/features/dashboard/data/models/dashboard_models.dart';
+import 'package:pyrosfitmovil/core/services/streak_service.dart';
 
 class StudentDailyRoutineScreen extends StatefulWidget {
   final int studentId;
@@ -217,16 +218,87 @@ class _ExerciseRowState extends State<_ExerciseRow> {
           _expanded = false;
         }
       });
-      if (!success) {
+      if (success) {
+        // Verificar si todos los ejercicios de la rutina diaria están completados
+        final currentExercises = provider.dailyExercises;
+        final allCompleted = currentExercises.isNotEmpty &&
+            currentExercises.every((item) =>
+                item.id == widget.exercise.id ? true : item.isCompleted);
+
+        if (allCompleted) {
+          // Formatear fecha localmente sin desfases de UTC
+          final rawDate = widget.exercise.scheduledDate;
+          final dateStr = rawDate.isNotEmpty
+              ? (rawDate.contains('T') ? rawDate.split('T')[0] : rawDate)
+              : DateFormat('yyyy-MM-dd').format(DateTime.now());
+          final isoActivityDate = '${dateStr}T12:00:00Z';
+
+          try {
+            await StreakService.postWorkoutCompleted(
+              widget.exercise.studentId,
+              isoActivityDate,
+            );
+          } catch (_) {}
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Row(
+                  children: [
+                    Icon(Icons.local_fire_department, color: Colors.white, size: 20),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '¡Rutina completada! Has completado todos los ejercicios del día. Racha y progreso actualizados 🔥',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor: const Color(0xFF10B981),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.white, size: 20),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '¡Ejercicio completado! Progreso guardado 💪',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor: const Color(0xFF10B981),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            );
+          }
+        }
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Error al terminar ejercicio')));
+          const SnackBar(content: Text('Error al terminar ejercicio')),
+        );
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final isDone = _isDone;
 
     return Card(
@@ -341,7 +413,7 @@ class _ExerciseRowState extends State<_ExerciseRow> {
                         color: Colors.black26,
                         borderRadius: BorderRadius.circular(8),
                         border:
-                            Border.all(color: AppTheme.border.withOpacity(0.5)),
+                            Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,

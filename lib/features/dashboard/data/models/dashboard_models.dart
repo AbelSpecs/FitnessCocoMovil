@@ -117,4 +117,32 @@ class GetDailyStudentExerciseDto {
       isCompleted: json['isCompleted'] == true || json['isCompleted'] == 1 || json['isCompleted'] == 'true',
     );
   }
+
+  GetDailyStudentExerciseDto copyWith({
+    int? id,
+    int? coachId,
+    int? studentId,
+    int? exerciseId,
+    String? scheduledDate,
+    List<GetDailyExerciseSetsDto>? dailyExerciseSets,
+    String? exerciseName,
+    String? muscleGroupName,
+    String? coachNotes,
+    String? studentNotes,
+    bool? isCompleted,
+  }) {
+    return GetDailyStudentExerciseDto(
+      id: id ?? this.id,
+      coachId: coachId ?? this.coachId,
+      studentId: studentId ?? this.studentId,
+      exerciseId: exerciseId ?? this.exerciseId,
+      scheduledDate: scheduledDate ?? this.scheduledDate,
+      dailyExerciseSets: dailyExerciseSets ?? this.dailyExerciseSets,
+      exerciseName: exerciseName ?? this.exerciseName,
+      muscleGroupName: muscleGroupName ?? this.muscleGroupName,
+      coachNotes: coachNotes ?? this.coachNotes,
+      studentNotes: studentNotes ?? this.studentNotes,
+      isCompleted: isCompleted ?? this.isCompleted,
+    );
+  }
 }

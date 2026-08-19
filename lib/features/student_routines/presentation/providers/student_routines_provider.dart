@@ -96,12 +96,13 @@ class StudentRoutinesProvider extends ChangeNotifier {
       };
       final response = await RoutineService.updateCompleteDailyStudentExercises(exerciseId, data);
       if (response != null) {
-        // We could optimistically update it, but GetDailyStudentExerciseDto might not have copyWith.
-        // Let's just update the list if possible, or fetch again.
         final index = _dailyExercises.indexWhere((e) => e.id == exerciseId);
         if (index != -1) {
-          // It doesn't have copyWith, so we'll just reload or mutate if not final
-          // Let's fetch again for simplicity or let the UI handle it
+          _dailyExercises[index] = _dailyExercises[index].copyWith(
+            isCompleted: true,
+            studentNotes: studentNotes,
+          );
+          notifyListeners();
         }
         return true;
       }

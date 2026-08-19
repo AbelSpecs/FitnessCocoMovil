@@ -164,6 +164,7 @@ class _StudentWeeklyRoutineScreenState extends State<StudentWeeklyRoutineScreen>
       
       final dayExercises = provider.weeklyExercises.where((ex) => ex.scheduledDate.startsWith(dateString)).toList();
       final isRest = dayExercises.isEmpty;
+      final isCompleted = dayExercises.isNotEmpty && dayExercises.every((ex) => ex.isCompleted);
       final muscleGroup = isRest ? 'Descanso' : dayExercises.first.muscleGroupName;
       final dayShort = DateFormat('E', 'es_US').format(date).substring(0, 1).toUpperCase();
       final dayName = DateFormat('EEEE', 'es_US').format(date);
@@ -173,6 +174,7 @@ class _StudentWeeklyRoutineScreenState extends State<StudentWeeklyRoutineScreen>
         dateString: dateString,
         isToday: isToday,
         isRest: isRest,
+        isCompleted: isCompleted,
         muscleGroup: muscleGroup,
         dayShort: dayShort,
         dayName: dayName,
@@ -196,6 +198,7 @@ class _StudentWeeklyRoutineScreenState extends State<StudentWeeklyRoutineScreen>
     required String dateString,
     required bool isToday,
     required bool isRest,
+    required bool isCompleted,
     required String muscleGroup,
     required String dayShort,
     required String dayName,
@@ -224,7 +227,7 @@ class _StudentWeeklyRoutineScreenState extends State<StudentWeeklyRoutineScreen>
           boxShadow: isToday
               ? [
                   BoxShadow(
-                    color: AppTheme.primary.withOpacity(0.3),
+                    color: AppTheme.primary.withValues(alpha: 0.3),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   )
@@ -253,10 +256,10 @@ class _StudentWeeklyRoutineScreenState extends State<StudentWeeklyRoutineScreen>
                     const SizedBox(height: 4),
                     Text(
                       dayShort,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontFamily: 'BebasNeue',
                         fontSize: 40,
-                        color: isToday ? Colors.white : Colors.white,
+                        color: Colors.white,
                         height: 1.0,
                       ),
                     ),
@@ -271,10 +274,10 @@ class _StudentWeeklyRoutineScreenState extends State<StudentWeeklyRoutineScreen>
             const Spacer(),
             Text(
               muscleGroup,
-              style: TextStyle(
+              style: const TextStyle(
                 fontFamily: 'BebasNeue',
                 fontSize: 24,
-                color: isToday ? Colors.white : Colors.white,
+                color: Colors.white,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -297,20 +300,55 @@ class _StudentWeeklyRoutineScreenState extends State<StudentWeeklyRoutineScreen>
               )
             else
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Icon(
-                    Icons.fitness_center,
-                    size: 12,
-                    color: isToday ? Colors.white70 : Colors.white54,
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.fitness_center,
+                        size: 12,
+                        color: isToday ? Colors.white70 : Colors.white54,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$exerciseCount ej.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isToday ? Colors.white70 : Colors.white54,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '$exerciseCount ej.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isToday ? Colors.white70 : Colors.white54,
+                  if (isCompleted)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.check_circle,
+                            size: 10,
+                            color: Color(0xFF34D399),
+                          ),
+                          SizedBox(width: 3),
+                          Text(
+                            'Hecho',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF34D399),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
                 ],
               ),
           ],

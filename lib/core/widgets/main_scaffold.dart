@@ -12,8 +12,8 @@ class MainScaffold extends StatelessWidget {
     if (location.startsWith('/rutina') || location.startsWith('/clientes')) {
       return 1;
     }
-    // if (location.startsWith('/progreso')) return 2;
-    if (location.startsWith('/perfil')) return 2;
+    if (location.startsWith('/ranking')) return 2;
+    if (location.startsWith('/perfil')) return 3;
     return 0; // Default a Inicio (/)
   }
 
@@ -27,6 +27,9 @@ class MainScaffold extends StatelessWidget {
           context.go('/clientes');
           break;
         case 2:
+          context.go('/ranking');
+          break;
+        case 3:
           context.go('/perfil');
           break;
       }
@@ -38,10 +41,10 @@ class MainScaffold extends StatelessWidget {
         case 1:
           context.go('/rutina/$studentId');
           break;
-        // case 2:
-        //   context.go('/progreso');
-        //   break;
         case 2:
+          context.go('/ranking');
+          break;
+        case 3:
           context.go('/perfil');
           break;
       }
@@ -54,9 +57,7 @@ class MainScaffold extends StatelessWidget {
     final isCoach = role?.name == 'coach';
 
     final selectedIndex = _calculateSelectedIndex(context);
-
-    // Si es coach, si está en el tab 3 (Progreso) que no existe, forzar 0
-    final validIndex = isCoach && selectedIndex > 2 ? 0 : selectedIndex;
+    final validIndex = selectedIndex > 3 ? 0 : selectedIndex;
 
     return Scaffold(
       body: child,
@@ -65,7 +66,7 @@ class MainScaffold extends StatelessWidget {
         onDestinationSelected: (index) =>
             _onItemTapped(index, context, role?.name ?? 'student', context.read<AuthProvider>().user?.studentId ?? 0),
         backgroundColor: const Color(0xFF09090B),
-        indicatorColor: const Color(0xFFF97316).withOpacity(0.2),
+        indicatorColor: const Color(0xFFF97316).withValues(alpha: 0.2),
         destinations: isCoach
             ? const [
                 NavigationDestination(
@@ -77,6 +78,11 @@ class MainScaffold extends StatelessWidget {
                   icon: Icon(Icons.group_outlined),
                   selectedIcon: Icon(Icons.group, color: Color(0xFFF97316)),
                   label: 'Clientes',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.emoji_events_outlined),
+                  selectedIcon: Icon(Icons.emoji_events, color: Color(0xFFF97316)),
+                  label: 'Podio',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.person_outline),
@@ -96,12 +102,11 @@ class MainScaffold extends StatelessWidget {
                       Icon(Icons.fitness_center, color: Color(0xFFF97316)),
                   label: 'Rutina',
                 ),
-                // NavigationDestination(
-                //   icon: Icon(Icons.trending_up_outlined),
-                //   selectedIcon:
-                //       Icon(Icons.trending_up, color: Color(0xFFF97316)),
-                //   label: 'Progreso',
-                // ),
+                NavigationDestination(
+                  icon: Icon(Icons.emoji_events_outlined),
+                  selectedIcon: Icon(Icons.emoji_events, color: Color(0xFFF97316)),
+                  label: 'Podio',
+                ),
                 NavigationDestination(
                   icon: Icon(Icons.person_outline),
                   selectedIcon: Icon(Icons.person, color: Color(0xFFF97316)),

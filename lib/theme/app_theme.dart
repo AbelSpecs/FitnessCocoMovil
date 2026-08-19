@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 
 /// Clase centralizada que mapea el `style.css` de PyrosFit a objetos Flutter.
@@ -27,6 +26,15 @@ class AppTheme {
   static const Color destructive = Color(0xFFBA1A1A); // oklch(0.65 0.22 22)
   static const Color success = Color(0xFF34D399); // oklch(0.74 0.17 155)
 
+  static const LinearGradient fireGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFFD5B0B),
+      Color(0xFFFFAA30),
+    ],
+  );
+
   // -------------------------------------------------------------------------
   // 2. CONSTRUCCIÓN DEL THEMEDATA (Hoja de Estilos de Componentes)
   // -------------------------------------------------------------------------
@@ -54,7 +62,7 @@ class AppTheme {
       // Entorno de Formulario Idéntico a Shadcn (bg-input/60)
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: input.withOpacity(0.6),
+        fillColor: input.withValues(alpha: 0.6),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         hintStyle: const TextStyle(color: Color(0xFF52525B), fontSize: 14),
@@ -138,7 +146,7 @@ class AppTheme {
           ),
           shadowGlow: [
             BoxShadow(
-              color: primary.withOpacity(0.55),
+              color: primary.withValues(alpha: 0.55),
               offset: const Offset(0, 10),
               blurRadius: 40,
               spreadRadius: -10,
@@ -197,7 +205,7 @@ class PyrosStylesExtension extends ThemeExtension<PyrosStylesExtension> {
               center: const Alignment(-0.6, -0.8), // at 20% 10%
               radius: 1.2,
               colors: [
-                AppTheme.primary.withOpacity(0.25),
+                AppTheme.primary.withValues(alpha: 0.25),
                 Colors.transparent,
               ],
             ),
@@ -209,7 +217,7 @@ class PyrosStylesExtension extends ThemeExtension<PyrosStylesExtension> {
               center: const Alignment(0.6, 0.8), // at 80% 90%
               radius: 1.2,
               colors: [
-                AppTheme.primaryGlow.withOpacity(0.18),
+                AppTheme.primaryGlow.withValues(alpha: 0.18),
                 Colors.transparent,
               ],
             ),
