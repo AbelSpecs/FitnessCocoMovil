@@ -178,4 +178,28 @@ class StreakService {
       return [];
     }
   }
+
+  /// Permite ajustar manualmente la racha y escudos de un alumno (uso por Coach o Administrador).
+  /// Endpoint: POST /Streaks/student/{studentId}/adjust
+  static Future<Map<String, dynamic>?> adjustStudentStreak(
+    int studentId,
+    AdjustStreakDto adjustData,
+  ) async {
+    try {
+      final response = await _api.post('/Streaks/student/$studentId/adjust', data: adjustData.toJson());
+      final dynamic responseData = response.data;
+
+      if (responseData != null) {
+        if (responseData is Map<String, dynamic>) {
+          return responseData['data'] is Map<String, dynamic>
+              ? responseData['data'] as Map<String, dynamic>
+              : responseData;
+        }
+      }
+      return null;
+    } catch (e) {
+      logError('Error al ajustar la racha del estudiante $studentId: $e');
+      rethrow;
+    }
+  }
 }

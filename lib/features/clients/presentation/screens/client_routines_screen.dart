@@ -8,6 +8,7 @@ import 'package:pyrosfitmovil/features/auth/presentation/controllers/auth_provid
 import 'package:pyrosfitmovil/features/clients/presentation/providers/routines_provider.dart';
 import 'package:pyrosfitmovil/features/clients/presentation/widgets/routine_card.dart';
 import 'package:pyrosfitmovil/features/clients/presentation/widgets/routine_form_sheet.dart';
+import 'package:pyrosfitmovil/features/clients/presentation/screens/client_edit_panel_screen.dart';
 import 'package:pyrosfitmovil/theme/app_theme.dart';
 
 class ClientRoutinesScreen extends StatelessWidget {
@@ -63,10 +64,10 @@ class _ClientRoutinesScreenContent extends StatelessWidget {
                 padding: const EdgeInsets.all(16.0),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surfaceContainerHighest
-                      .withOpacity(0.3),
+                      .withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                      color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+                      color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
                 ),
                 child: Row(
                   children: [
@@ -96,7 +97,6 @@ class _ClientRoutinesScreenContent extends StatelessWidget {
                           Text(
                             'ALUMNO',
                             style: theme.textTheme.labelSmall?.copyWith(
-                              // color: theme.colorScheme.primary,
                               letterSpacing: 1.5,
                               fontWeight: FontWeight.w600,
                             ),
@@ -120,6 +120,25 @@ class _ClientRoutinesScreenContent extends StatelessWidget {
                             ),
                           ),
                         ],
+                      ),
+                    ),
+                    IconButton.filledTonal(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => ClientEditPanelScreen(client: client),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.manage_accounts_rounded, size: 22),
+                      tooltip: 'Ajustar cliente y métricas del alumno',
+                      style: IconButton.styleFrom(
+                        backgroundColor: AppTheme.primary.withValues(alpha: 0.15),
+                        foregroundColor: AppTheme.primaryGlow,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: AppTheme.primary.withValues(alpha: 0.4)),
+                        ),
                       ),
                     ),
                   ],
@@ -198,7 +217,7 @@ class _ClientRoutinesScreenContent extends StatelessWidget {
                         Icons.fitness_center,
                         size: 64,
                         color:
-                            theme.colorScheme.onSurfaceVariant.withOpacity(0.3),
+                            theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
                       ),
                       const SizedBox(height: 16),
                       Text(
@@ -213,7 +232,7 @@ class _ClientRoutinesScreenContent extends StatelessWidget {
                         'No hay ejercicios para el día seleccionado.',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant
-                              .withOpacity(0.7),
+                              .withValues(alpha: 0.7),
                         ),
                       ),
                     ],
@@ -234,10 +253,10 @@ class _ClientRoutinesScreenContent extends StatelessWidget {
 
                     return RoutineCard(
                       routine: routine,
-                      // onEdit: isFutureOrToday
-                      //     ? () =>
-                      //         _showEditRoutineSheet(context, provider, routine)
-                      //     : null,
+                      onEdit: isFutureOrToday
+                          ? () =>
+                              _showEditRoutineSheet(context, provider, routine)
+                          : null,
                       onDelete: isFutureOrToday
                           ? () =>
                               provider.deleteRoutine(routine.dailyExerciseId)

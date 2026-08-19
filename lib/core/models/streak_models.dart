@@ -174,11 +174,13 @@ class HistoryItem {
   final String name;
   final String date;
   final int min;
+  final int seconds;
 
   HistoryItem({
     required this.name,
     required this.date,
-    required this.min,
+    this.min = 0,
+    this.seconds = 1,
   });
 }
 
@@ -302,5 +304,28 @@ class AthleteRankingInfo {
     required this.title,
     this.me = false,
   });
+}
+
+class AdjustStreakDto {
+  final int? currentStreak;
+  final int? longestStreak;
+  final int? freezeShields;
+  final String? reason;
+
+  AdjustStreakDto({
+    this.currentStreak,
+    this.longestStreak,
+    this.freezeShields,
+    this.reason,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (currentStreak != null) 'currentStreak': currentStreak,
+      if (longestStreak != null) 'longestStreak': longestStreak,
+      if (freezeShields != null) 'freezeShields': freezeShields,
+      if (reason != null && reason!.isNotEmpty) 'reason': reason,
+    };
+  }
 }
 

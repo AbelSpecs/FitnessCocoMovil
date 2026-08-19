@@ -170,13 +170,97 @@ double calculateStreakExperience(int currentStreak, [List<StreakTier>? tiers]) {
   return 100.0;
 }
 
+/// Calcula el peso máximo levantado a partir de los sets reales de los ejercicios
+double calculateMaxWeightLifted(List<GetDailyStudentExerciseDto> exercises) {
+  double maxWeight = 0;
+  for (final ex in exercises) {
+    if (ex.dailyExerciseSets.isNotEmpty) {
+      for (final set in ex.dailyExerciseSets) {
+        final actualWeight = set.actualWeight != null
+            ? (double.tryParse(set.actualWeight.toString()) ?? 0.0)
+            : 0.0;
+        if (actualWeight > maxWeight) {
+          maxWeight = actualWeight;
+        }
+      }
+    }
+  }
+  return maxWeight;
+}
+
+/// Calcula la duración total de la rutina en segundos
+int calculateRoutineDurationInSeconds(List<GetDailyStudentExerciseDto> exercises) {
+  int totalSeconds = 0;
+  for (final ex in exercises) {
+    if (ex.dailyExerciseSets.isNotEmpty) {
+      for (final set in ex.dailyExerciseSets) {
+        // Asume 45 segundos de ejecución por set
+        totalSeconds += 45;
+        if (set.restTime.isNotEmpty) {
+          final restStr = set.restTime.trim();
+          if (restStr.contains(':')) {
+            final parts = restStr.split(':').map((p) => int.tryParse(p) ?? 0).toList();
+            if (parts.length == 3) {
+              totalSeconds += parts[0] * 3600 + parts[1] * 60 + parts[2];
+            } else if (parts.length == 2) {
+              totalSeconds += parts[0] * 60 + parts[1];
+            }
+          } else {
+            final num = int.tryParse(restStr);
+            if (num != null && num > 0) {
+              totalSeconds += num;
+            }
+          }
+        }
+      }
+    }
+  }
+  return totalSeconds > 0 ? totalSeconds : 1;
+}
+
+/// Calcula la duración de la rutina en minutos (mínimo 1)
+int calculateRoutineDurationInMin(List<GetDailyStudentExerciseDto> exercises) {
+  final seconds = calculateRoutineDurationInSeconds(exercises);
+  final mins = (seconds / 60).round();
+  return mins > 0 ? mins : 1;
+}
+
+/// Formatea una duración en segundos para diferenciar segundos (s), minutos (min) y horas (h).
+/// Ejemplos:
+/// - 1 -> "1 s"
+/// - 45 -> "45 s"
+/// - 120 -> "2 min"
+/// - 150 -> "2 min 30 s"
+/// - 3600 -> "1 h"
+/// - 3660 -> "1 h 1 min"
+String formatDuration(int totalSeconds) {
+  if (totalSeconds <= 0) return '1 s';
+
+  final hours = totalSeconds ~/ 3600;
+  final minutes = (totalSeconds % 3600) ~/ 60;
+  final seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return minutes > 0 ? '$hours h $minutes min' : '$hours h';
+  }
+
+  if (minutes > 0) {
+    return seconds > 0 ? '$minutes min $seconds s' : '$minutes min';
+  }
+
+  return '$seconds s';
+}
+
 List<HistoryItem> historyExercisesMapper(List<GetDailyStudentExerciseDto> historyExercises) {
   if (historyExercises.isEmpty) return [];
 
   final Map<String, List<GetDailyStudentExerciseDto>> grouped = {};
 
   for (final ex in historyExercises) {
-    final dateKey = ex.scheduledDate.split('T')[0];
+    final dateKey = ex.scheduledDate.contains('T')
+        ? ex.scheduledDate.split('T')[0]
+        : ex.scheduledDate;
+    if (dateKey.isEmpty) continue;
     if (!grouped.containsKey(dateKey)) {
       grouped[dateKey] = [];
     }
@@ -194,12 +278,13 @@ List<HistoryItem> historyExercisesMapper(List<GetDailyStudentExerciseDto> histor
         .toList();
 
     final name = muscleGroups.isNotEmpty ? muscleGroups.join(' & ') : 'Rutina';
-    const min = 45;
+    final seconds = calculateRoutineDurationInSeconds(exercises);
 
     return HistoryItem(
       name: name,
       date: dateStr,
-      min: min,
+      seconds: seconds,
+      min: (seconds / 60).round(),
     );
   }).toList();
 }
@@ -212,9 +297,12 @@ List<HistoryItem> streakHistoryMapper(List<StreakHistoryLogDto> streakHistoryLog
     final formattedDate = rawDate.contains('T') ? rawDate.split('T')[0] : rawDate;
 
     return HistoryItem(
-      name: log.activityTypeName ?? 'Entrenamiento',
+      name: (log.activityTypeName != null && log.activityTypeName!.isNotEmpty)
+          ? log.activityTypeName!
+          : 'Entrenamiento',
       date: formattedDate,
-      min: 45,
+      seconds: 1, // En caso de no tener tiempo se coloca 1s
+      min: 0,
     );
   }).toList();
 }
@@ -228,18 +316,14 @@ List<HistoryItem> combinedHistoryMapper(
 
   final combined = [...mappedStreakLogs, ...mappedExercises];
 
-  final List<HistoryItem> result = [];
-  final Set<String> seen = {};
+  // Ordenar de más reciente a más antiguo y devolver solo los 4 más recientes
+  combined.sort((a, b) {
+    final dateA = DateTime.tryParse(a.date) ?? DateTime(1970);
+    final dateB = DateTime.tryParse(b.date) ?? DateTime(1970);
+    return dateB.compareTo(dateA);
+  });
 
-  for (final item in combined) {
-    final key = '${item.date}_${item.name}';
-    if (!seen.contains(key)) {
-      seen.add(key);
-      result.add(item);
-    }
-  }
-
-  return result;
+  return combined.take(4).toList();
 }
 
 const List<RiskStudentInfo> defaultStudentsMock = [

@@ -7,6 +7,7 @@ import 'package:pyrosfitmovil/features/auth/presentation/screens/register_info_s
 
 import 'package:pyrosfitmovil/features/clients/presentation/screens/clients_screen.dart';
 import 'package:pyrosfitmovil/features/clients/presentation/screens/client_routines_screen.dart';
+import 'package:pyrosfitmovil/features/clients/presentation/screens/client_edit_panel_screen.dart';
 import 'package:pyrosfitmovil/core/models/student_info_model.dart';
 import 'package:pyrosfitmovil/core/widgets/main_scaffold.dart';
 import 'package:pyrosfitmovil/features/dashboard/presentation/screens/home_screen.dart';
@@ -72,6 +73,18 @@ class AppRouter {
                     }
                     return ClientRoutinesScreen(client: client);
                   },
+                  routes: [
+                    GoRoute(
+                      path: 'edit',
+                      builder: (context, state) {
+                        final client = state.extra as StudentInfo?;
+                        if (client == null) {
+                          return const Scaffold(body: Center(child: Text('Cliente no encontrado')));
+                        }
+                        return ClientEditPanelScreen(client: client);
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),

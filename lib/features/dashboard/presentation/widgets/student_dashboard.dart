@@ -168,23 +168,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
     );
   }
 
-  int get _maxWeightLifted {
-    if (_weeklyExercises.isEmpty) return 0;
-    double maxWeight = 0;
-    for (final ex in _weeklyExercises) {
-      if (ex.isCompleted) {
-        for (final set in ex.dailyExerciseSets) {
-          if (set.isAchieved) {
-            final double weight = (set.actualWeight ?? 0.0).toDouble();
-            if (weight > maxWeight) {
-              maxWeight = weight;
-            }
-          }
-        }
-      }
-    }
-    return maxWeight.toInt();
-  }
+  int get _maxWeightLifted => calculateMaxWeightLifted(_weeklyExercises).toInt();
 
   String get _dailyFocus {
     if (_dailyExercises.isEmpty) return 'Descanso';
@@ -460,10 +444,10 @@ class _StudentDashboardState extends State<StudentDashboard> {
           ),
           Row(
             children: [
-              const Icon(Icons.access_time, size: 12, color: Colors.grey),
+              const Icon(Icons.access_time, size: 12, color: AppTheme.primaryGlow),
               const SizedBox(width: 4),
               Text(
-                '${item.min}′',
+                formatDuration(item.seconds > 0 ? item.seconds : (item.min > 0 ? item.min * 60 : 1)),
                 style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.w500),
               ),
             ],
