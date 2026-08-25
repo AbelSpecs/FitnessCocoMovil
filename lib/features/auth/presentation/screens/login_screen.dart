@@ -283,13 +283,13 @@ class _LoginPageState extends State<LoginPage> {
                                       Container(
                                         padding: const EdgeInsets.all(12),
                                         decoration: BoxDecoration(
-                                          color: Colors.red.withOpacity(
-                                              0.1), // bg-destructive/10
+                                          color: Colors.red.withValues(
+                                              alpha: 0.1), // bg-destructive/10
                                           borderRadius:
                                               BorderRadius.circular(8),
                                           border: Border.all(
                                               color:
-                                                  Colors.red.withOpacity(0.2)),
+                                                  Colors.red.withValues(alpha: 0.2)),
                                         ),
                                         child: Text(
                                           _error,
@@ -406,17 +406,16 @@ class _LoginPageState extends State<LoginPage> {
                                           crossAxisAlignment: WrapCrossAlignment.center,
                                           children: [
                                             const Text(
-                                                '¿No tienes cuenta y eres entrenador? ',
+                                                '¿Eres entrenador? ',
                                                 style: TextStyle(
                                                     color: textMuted,
                                                     fontSize: 14)),
                                             GestureDetector(
                                               onTap: () {
-                                                // Navegar al registro
                                                 context.go('/register');
                                               },
                                               child: const Text(
-                                                'Regístrate',
+                                                'Regístrate Aquí',
                                                 style: TextStyle(
                                                   color: Color(
                                                       0xFFF97316), // text-primary
@@ -432,18 +431,17 @@ class _LoginPageState extends State<LoginPage> {
                                           crossAxisAlignment: WrapCrossAlignment.center,
                                           children: [
                                             const Text(
-                                                '¿No tienes cuenta y no quieres entrenador? ',
+                                                '¿Quieres entrenar? ',
                                                 style: TextStyle(
                                                     color: textMuted,
                                                     fontSize: 14)),
                                             GestureDetector(
                                               onTap: () {
-                                                // Navegar al registro sin entrenador
                                                 context.go(
                                                     '/register-info?coachId=9');
                                               },
                                               child: const Text(
-                                                'Regístrate aqui',
+                                                'Crea tu cuenta Aquí',
                                                 style: TextStyle(
                                                   color: Color(
                                                       0xFFF97316), // text-primary
@@ -452,6 +450,19 @@ class _LoginPageState extends State<LoginPage> {
                                               ),
                                             ),
                                           ],
+                                        ),
+                                        const SizedBox(height: 12),
+                                        const Padding(
+                                          padding: EdgeInsets.symmetric(horizontal: 8.0),
+                                          child: Text(
+                                            '* Si eres cliente, pídele a tu entrenador que te comparta el link de registro.',
+                                            style: TextStyle(
+                                              color: textMuted,
+                                              fontSize: 11.5,
+                                              height: 1.3,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
                                         ),
                                       ],
                                     )
@@ -477,7 +488,7 @@ class _LoginPageState extends State<LoginPage> {
       hintText: hint,
       hintStyle: const TextStyle(color: Color(0xFF52525B), fontSize: 14),
       filled: true,
-      fillColor: const Color(0xFF27272A).withOpacity(0.6), // bg-input/60
+      fillColor: const Color(0xFF27272A).withValues(alpha: 0.6), // bg-input/60
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),

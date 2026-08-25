@@ -67,4 +67,43 @@ class AuthService {
   static Future<void> associateCoach(CoachStudent data) async {
     await _api.post('/CoachStudents', data: data.toJson());
   }
+
+  static Future<Map<String, dynamic>> confirmEmail({
+    int? userId,
+    required String code,
+  }) async {
+    try {
+      final response = await _api.post('/Users/ConfirmEmail', data: {
+        'code': code,
+        'token': code,
+        if (userId != null) 'userId': userId,
+      });
+
+      if (response.data != null) {
+        if (response.data['isSuccess'] == false || response.data['success'] == false) {
+          throw Exception(
+              response.data['message'] ?? 'El código de activación es inválido o ha expirado.');
+        }
+        return response.data is Map<String, dynamic>
+            ? response.data as Map<String, dynamic>
+            : <String, dynamic>{};
+      }
+      throw Exception('Ha ocurrido un error al confirmar tu cuenta.');
+    } on DioException catch (e) {
+      if (e.response != null && e.response?.data != null) {
+        final data = e.response!.data;
+        if (data is Map) {
+          final msg = data['message'] ?? data['title'];
+          if (msg != null) throw Exception(msg.toString());
+        }
+      }
+      throw Exception('El enlace de activación ha expirado o ya ha sido utilizado.');
+    } catch (e) {
+      logger.e('Error en confirmEmail: ');
+      if (e.toString().contains('Exception:')) {
+        rethrow;
+      }
+      throw Exception('Ha ocurrido un error al confirmar tu cuenta.');
+    }
+  }
 }

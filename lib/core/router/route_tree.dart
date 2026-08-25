@@ -4,6 +4,7 @@ import 'package:pyrosfitmovil/core/router/router.dart';
 import 'package:pyrosfitmovil/features/auth/presentation/screens/login_screen.dart';
 import 'package:pyrosfitmovil/features/auth/presentation/screens/register_screen.dart';
 import 'package:pyrosfitmovil/features/auth/presentation/screens/register_info_screen.dart';
+import 'package:pyrosfitmovil/features/auth/presentation/screens/confirm_email_screen.dart';
 
 import 'package:pyrosfitmovil/features/clients/presentation/screens/clients_screen.dart';
 import 'package:pyrosfitmovil/features/clients/presentation/screens/client_routines_screen.dart';
@@ -111,7 +112,20 @@ class AppRouter {
         GoRoute(
           path: '/register-info',
           builder: (context, state) => const RegisterInfoScreen(),
-        )
+        ),
+        GoRoute(
+          path: '/confirm-email',
+          builder: (context, state) {
+            final userId = state.uri.queryParameters['userId'];
+            final token = state.uri.queryParameters['token'];
+            final code = state.uri.queryParameters['code'];
+            return ConfirmEmailScreen(
+              userId: userId,
+              token: token,
+              code: code,
+            );
+          },
+        ),
       ],
       errorBuilder: (context, state) {
         return DefaultErrorScreen(
