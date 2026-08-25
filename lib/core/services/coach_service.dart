@@ -32,4 +32,17 @@ class CoachService {
       return null;
     }
   }
+
+  static Future<Map<String, dynamic>?> updateCoach(
+      int coachId, Map<String, dynamic> data) async {
+    try {
+      final response = await _api.put('/Coaches/$coachId', data: data);
+      if (response.data != null && response.data is Map<String, dynamic>) {
+        return response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
 }
