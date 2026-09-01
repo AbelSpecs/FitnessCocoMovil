@@ -1,3 +1,5 @@
+import 'package:pyrosfitmovil/features/auth/presentation/screens/reset_password_screen.dart';
+import 'package:pyrosfitmovil/features/auth/presentation/screens/forgot_password_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pyrosfitmovil/core/router/router.dart';
@@ -112,6 +114,23 @@ class AppRouter {
         GoRoute(
           path: '/register-info',
           builder: (context, state) => const RegisterInfoScreen(),
+        ),
+        GoRoute(
+          path: '/forgot-password',
+          builder: (context, state) => const ForgotPasswordScreen(),
+        ),
+        GoRoute(
+          path: '/reset-password',
+          builder: (context, state) {
+            final userId = int.tryParse(state.uri.queryParameters['userId'] ?? '');
+            final token = state.uri.queryParameters['token'];
+            final code = state.uri.queryParameters['code'];
+            return ResetPasswordScreen(
+              userId: userId,
+              token: token,
+              code: code,
+            );
+          },
         ),
         GoRoute(
           path: '/confirm-email',

@@ -336,11 +336,30 @@ class _LoginPageState extends State<LoginPage> {
                                               CrossAxisAlignment.start,
                                           spacing: 8.0,
                                           children: [
-                                            const Text('Contraseña',
-                                                style: TextStyle(
-                                                    color: Colors.white,
-                                                    fontWeight:
-                                                        FontWeight.w500)),
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.spaceBetween,
+                                              children: [
+                                                const Text('Contraseña',
+                                                    style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontWeight:
+                                                            FontWeight.w500)),
+                                                GestureDetector(
+                                                  onTap: () {
+                                                    context.push('/forgot-password');
+                                                  },
+                                                  child: const Text(
+                                                    '¿Olvidaste tu contraseña?',
+                                                    style: TextStyle(
+                                                      color: Color(0xFFF97316),
+                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                             TextFormField(
                                               controller: _passwordController,
                                               obscureText: true,

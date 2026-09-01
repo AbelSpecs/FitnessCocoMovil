@@ -106,4 +106,81 @@ class AuthService {
       throw Exception('Ha ocurrido un error al confirmar tu cuenta.');
     }
   }
+
+  static Future<Map<String, dynamic>> forgotPassword(String email) async {
+    try {
+      final response = await _api.post('/Users/ForgotPassword', data: {
+        'email': email.trim(),
+      });
+
+      if (response.data != null) {
+        if (response.data['isSuccess'] == false || response.data['success'] == false) {
+          throw Exception(
+              response.data['message'] ?? 'No se pudo enviar el correo de recuperación.');
+        }
+        return response.data is Map<String, dynamic>
+            ? response.data as Map<String, dynamic>
+            : <String, dynamic>{};
+      }
+      return <String, dynamic>{};
+    } on DioException catch (e) {
+      if (e.response != null && e.response?.data != null) {
+        final data = e.response!.data;
+        if (data is Map) {
+          final msg = data['message'] ?? data['title'];
+          if (msg != null) throw Exception(msg.toString());
+        }
+      }
+      throw Exception('Ha ocurrido un error al solicitar la recuperación de contraseña.');
+    } catch (e) {
+      logger.e('Error en forgotPassword: ');
+      if (e.toString().contains('Exception:')) {
+        rethrow;
+      }
+      throw Exception('Ha ocurrido un error al solicitar la recuperación de contraseña.');
+    }
+  }
+
+  static Future<Map<String, dynamic>> resetPassword({
+    int? userId,
+    required String code,
+    required String newPassword,
+    String? confirmPassword,
+  }) async {
+    try {
+      final response = await _api.post('/Users/ResetPassword', data: {
+        'code': code,
+        'token': code,
+        'newPassword': newPassword,
+        'confirmPassword': confirmPassword ?? newPassword,
+        if (userId != null) 'userId': userId,
+      });
+
+      if (response.data != null) {
+        if (response.data['isSuccess'] == false || response.data['success'] == false) {
+          throw Exception(
+              response.data['message'] ?? 'No se pudo restablecer la contraseña.');
+        }
+        return response.data is Map<String, dynamic>
+            ? response.data as Map<String, dynamic>
+            : <String, dynamic>{};
+      }
+      return <String, dynamic>{};
+    } on DioException catch (e) {
+      if (e.response != null && e.response?.data != null) {
+        final data = e.response!.data;
+        if (data is Map) {
+          final msg = data['message'] ?? data['title'];
+          if (msg != null) throw Exception(msg.toString());
+        }
+      }
+      throw Exception('El enlace de restablecimiento ha expirado o ya ha sido utilizado.');
+    } catch (e) {
+      logger.e('Error en resetPassword: $e');
+      if (e.toString().contains('Exception:')) {
+        rethrow;
+      }
+      throw Exception('Ha ocurrido un error al restablecer la contraseña.');
+    }
+  }
 }
