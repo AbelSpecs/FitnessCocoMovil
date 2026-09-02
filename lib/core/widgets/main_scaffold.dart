@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -53,7 +54,8 @@ class MainScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final role = context.select((AuthProvider p) => p.user?.role);
+    final authUser = context.select((AuthProvider p) => p.user);
+    final role = authUser?.role;
     final isCoach = role?.name == 'coach';
 
     final selectedIndex = _calculateSelectedIndex(context);
@@ -64,52 +66,78 @@ class MainScaffold extends StatelessWidget {
       bottomNavigationBar: NavigationBar(
         selectedIndex: validIndex,
         onDestinationSelected: (index) =>
-            _onItemTapped(index, context, role?.name ?? 'student', context.read<AuthProvider>().user?.studentId ?? 0),
+            _onItemTapped(index, context, role?.name ?? 'student', authUser?.studentId ?? 0),
         backgroundColor: const Color(0xFF09090B),
         indicatorColor: const Color(0xFFF97316).withValues(alpha: 0.2),
         destinations: isCoach
-            ? const [
-                NavigationDestination(
+            ? [
+                const NavigationDestination(
                   icon: Icon(Icons.home_outlined),
                   selectedIcon: Icon(Icons.home, color: Color(0xFFF97316)),
                   label: 'Inicio',
                 ),
-                NavigationDestination(
+                const NavigationDestination(
                   icon: Icon(Icons.group_outlined),
                   selectedIcon: Icon(Icons.group, color: Color(0xFFF97316)),
                   label: 'Clientes',
                 ),
-                NavigationDestination(
+                const NavigationDestination(
                   icon: Icon(Icons.emoji_events_outlined),
                   selectedIcon: Icon(Icons.emoji_events, color: Color(0xFFF97316)),
                   label: 'Podio',
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.person_outline),
-                  selectedIcon: Icon(Icons.person, color: Color(0xFFF97316)),
+                  icon: UserAvatar(
+                    size: 24,
+                    storageKey: authUser?.profilePictureKey,
+                    imageUrl: authUser?.profilePictureUrl,
+                    initial: authUser?.firstName,
+                    showBorder: false,
+                  ),
+                  selectedIcon: UserAvatar(
+                    size: 26,
+                    storageKey: authUser?.profilePictureKey,
+                    imageUrl: authUser?.profilePictureUrl,
+                    initial: authUser?.firstName,
+                    showBorder: true,
+                    borderColor: const Color(0xFFF97316),
+                  ),
                   label: 'Perfil',
                 ),
               ]
-            : const [
-                NavigationDestination(
+            : [
+                const NavigationDestination(
                   icon: Icon(Icons.home_outlined),
                   selectedIcon: Icon(Icons.home, color: Color(0xFFF97316)),
                   label: 'Inicio',
                 ),
-                NavigationDestination(
+                const NavigationDestination(
                   icon: Icon(Icons.fitness_center_outlined),
                   selectedIcon:
                       Icon(Icons.fitness_center, color: Color(0xFFF97316)),
                   label: 'Rutina',
                 ),
-                NavigationDestination(
+                const NavigationDestination(
                   icon: Icon(Icons.emoji_events_outlined),
                   selectedIcon: Icon(Icons.emoji_events, color: Color(0xFFF97316)),
                   label: 'Podio',
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.person_outline),
-                  selectedIcon: Icon(Icons.person, color: Color(0xFFF97316)),
+                  icon: UserAvatar(
+                    size: 24,
+                    storageKey: authUser?.profilePictureKey,
+                    imageUrl: authUser?.profilePictureUrl,
+                    initial: authUser?.firstName,
+                    showBorder: false,
+                  ),
+                  selectedIcon: UserAvatar(
+                    size: 26,
+                    storageKey: authUser?.profilePictureKey,
+                    imageUrl: authUser?.profilePictureUrl,
+                    initial: authUser?.firstName,
+                    showBorder: true,
+                    borderColor: const Color(0xFFF97316),
+                  ),
                   label: 'Perfil',
                 ),
               ],

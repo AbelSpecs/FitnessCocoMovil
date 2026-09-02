@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -39,22 +40,22 @@ class HomeScreen extends StatelessWidget {
         ),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 8.0),
+            padding: const EdgeInsets.only(right: 12.0),
             child: PopupMenuButton<String>(
               color: AppTheme.card,
-              icon: CircleAvatar(
-                radius: 16,
-                backgroundColor: AppTheme.primary,
-                foregroundColor: Colors.white,
-                child: Text(
-                  initial,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 14),
-                ),
+              icon: UserAvatar(
+                size: 34,
+                storageKey: auth.user?.profilePictureKey,
+                imageUrl: auth.user?.profilePictureUrl,
+                initial: firstName,
+                showBorder: true,
+                borderColor: AppTheme.border,
               ),
               offset: const Offset(0, 48),
               onSelected: (value) async {
-                if (value == 'logout') {
+                if (value == 'profile') {
+                  context.go('/perfil');
+                } else if (value == 'logout') {
                   await context.read<AuthProvider>().logout();
                   if (context.mounted) {
                     context.go('/login');
@@ -62,6 +63,17 @@ class HomeScreen extends StatelessWidget {
                 }
               },
               itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'profile',
+                  child: Row(
+                    children: [
+                      Icon(Icons.person_outline, size: 20, color: AppTheme.primaryGlow),
+                      SizedBox(width: 8),
+                      Text('Mi Perfil',
+                          style: TextStyle(color: AppTheme.foreground)),
+                    ],
+                  ),
+                ),
                 const PopupMenuItem(
                   value: 'logout',
                   child: Row(

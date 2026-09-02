@@ -1,3 +1,5 @@
+import 'package:pyrosfitmovil/features/auth/presentation/controllers/auth_provider.dart';
+import 'package:pyrosfitmovil/core/services/storage_service.dart';
 import 'package:flutter/material.dart';
 import 'package:pyrosfitmovil/core/utils/globals.dart';
 import 'package:pyrosfitmovil/core/services/user_service.dart';
@@ -33,6 +35,46 @@ class ProfileProvider extends ChangeNotifier {
   String? get qrBase64 => _qrBase64;
   String? get urlToShare => _urlToShare;
 
+  String? get profilePictureKey =>
+      _userData?['profilePictureKey'] ??
+      _userData?['profilePicture'] ??
+      _coachData?['profilePictureKey'] ??
+      _coachData?['profilePicture'] ??
+      _studentData?['profilePictureKey'] ??
+      _studentData?['profilePicture'];
+
+  String? get profilePictureUrl =>
+      _userData?['profilePictureUrl'] ??
+      (profilePictureKey != null
+          ? StorageService.getServeUrl(profilePictureKey)
+          : null);
+
+  String? get bannerPictureKey {
+    final key = _coachData?['bannerPictureKey'] ??
+        _coachData?['bannerPicture'] ??
+        _coachData?['bannerUrl'] ??
+        _userData?['bannerPictureKey'] ??
+        _userData?['bannerPicture'] ??
+        _userData?['bannerUrl'];
+    if (key != null && key.toString().trim().isNotEmpty) {
+      return key.toString().trim();
+    }
+    return null;
+  }
+
+  String? get bannerPictureUrl {
+    final direct = _coachData?['bannerPictureUrl'] ??
+        _userData?['bannerPictureUrl'];
+    if (direct != null && direct.toString().trim().isNotEmpty) {
+      return direct.toString().trim();
+    }
+    final key = bannerPictureKey;
+    if (key != null && key.isNotEmpty) {
+      return StorageService.getServeUrl(key);
+    }
+    return null;
+  }
+
   // Variables editables (Estudiante)
   double? editingWeight;
   double? editingHeight;
@@ -47,7 +89,7 @@ class ProfileProvider extends ChangeNotifier {
   String? editingCertifications;
   String? editingBannerUrl;
 
-  Future<void> fetchProfile(int userId, bool isCoach) async {
+  Future<void> fetchProfile(int userId, bool isCoach, {AuthProvider? authProvider}) async {
     _isLoading = true;
     _isCoach = isCoach;
     notifyListeners();
@@ -59,6 +101,18 @@ class ProfileProvider extends ChangeNotifier {
         _userData = data['data'];
         _studentData = _userData?['student'];
         _coachData = _userData?['coach'];
+
+        // Sincronizar con AuthProvider global si se proporcionó
+        if (authProvider != null) {
+          final pKey = profilePictureKey;
+          if (pKey != null && pKey.isNotEmpty) {
+            authProvider.updateProfilePicture(pKey, profilePictureUrl);
+          }
+          final bKey = bannerPictureKey;
+          if (bKey != null && bKey.isNotEmpty) {
+            authProvider.updateBannerPicture(bKey, bannerPictureUrl);
+          }
+        }
       }
       logger.i(_coachData);
 
@@ -102,7 +156,7 @@ class ProfileProvider extends ChangeNotifier {
   void _initCoachEditingValues() {
     editingBio = _coachData?['bio'] ?? '';
     editingCertifications = _coachData?['certifications'] ?? '';
-    editingBannerUrl = _coachData?['bannerUrl'] ?? '';
+    editingBannerUrl = bannerPictureUrl ?? bannerPictureKey ?? _coachData?['bannerUrl'] ?? '';
   }
 
   void setEditing(bool val) {
@@ -135,6 +189,18 @@ class ProfileProvider extends ChangeNotifier {
     if (_coachData != null) {
       _coachData = {
         ..._coachData!,
+        'bannerUrl': '',
+        'bannerPictureKey': '',
+        'bannerPicture': '',
+        'bannerPictureUrl': '',
+      };
+    }
+    if (_userData != null) {
+      _userData = {
+        ..._userData!,
+        'bannerPictureKey': '',
+        'bannerPicture': '',
+        'bannerPictureUrl': '',
         'bannerUrl': '',
       };
     }

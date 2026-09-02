@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -146,12 +147,11 @@ class AppShell extends StatelessWidget {
                   alignment: Alignment.bottomCenter,
                   child: Padding(
                     padding: const EdgeInsets.only(bottom: 16.0),
-                    child: CircleAvatar(
-                      backgroundColor:
-                          Theme.of(context).colorScheme.primaryContainer,
-                      child: Text(
-                          user?.firstName?.substring(0, 1).toUpperCase() ??
-                              "U"),
+                    child: UserAvatar(
+                      size: 38,
+                      storageKey: user?.profilePictureKey,
+                      imageUrl: user?.profilePictureUrl,
+                      initial: user?.firstName,
                     ),
                   ),
                 ),
@@ -182,12 +182,11 @@ class AppShell extends StatelessWidget {
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12.0),
-              child: CircleAvatar(
-                radius: 16,
-                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                child: Text(
-                    user?.firstName?.substring(0, 1).toUpperCase() ?? "U",
-                    style: const TextStyle(fontSize: 12)),
+              child: UserAvatar(
+                size: 32,
+                storageKey: user?.profilePictureKey,
+                imageUrl: user?.profilePictureUrl,
+                initial: user?.firstName,
               ),
             )
           ],
@@ -201,8 +200,27 @@ class AppShell extends StatelessWidget {
           onDestinationSelected: (int index) =>
               _onTabSelected(context, index, visibleItems),
           destinations: visibleItems.map((item) {
+            final isProfile = item.label == 'Perfil';
             return NavigationDestination(
-              icon: Icon(item.icon),
+              icon: isProfile
+                  ? UserAvatar(
+                      size: 24,
+                      storageKey: user?.profilePictureKey,
+                      imageUrl: user?.profilePictureUrl,
+                      initial: user?.firstName,
+                      showBorder: false,
+                    )
+                  : Icon(item.icon),
+              selectedIcon: isProfile
+                  ? UserAvatar(
+                      size: 26,
+                      storageKey: user?.profilePictureKey,
+                      imageUrl: user?.profilePictureUrl,
+                      initial: user?.firstName,
+                      showBorder: true,
+                      borderColor: const Color(0xFFF97316),
+                    )
+                  : null,
               label: item.label,
             );
           }).toList(),

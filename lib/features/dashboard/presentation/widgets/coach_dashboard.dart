@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pyrosfitmovil/core/models/streak_models.dart';
@@ -363,23 +364,11 @@ class _CoachDashboardState extends State<CoachDashboard> {
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: const Color(0xFF27272A),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.border.withValues(alpha: 0.8)),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                student.initials,
-                style: const TextStyle(
-                  color: AppTheme.primaryGlow,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
+            UserAvatar(
+              size: 42,
+              borderRadius: 12,
+              shape: BoxShape.rectangle,
+              initial: student.initials,
             ),
             const SizedBox(width: 12),
             Expanded(

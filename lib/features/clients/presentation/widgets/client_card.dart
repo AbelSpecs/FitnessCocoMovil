@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:pyrosfitmovil/core/models/student_info_model.dart';
 import 'package:pyrosfitmovil/theme/app_theme.dart';
@@ -31,23 +32,11 @@ class ClientCard extends StatelessWidget {
           child: Row(
             children: [
               // Avatar
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: context.pyrosStyles.gradientPrimary,
-                  boxShadow: context.pyrosStyles.shadowGlow,
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  initial,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onPrimary,
-                  ),
-                ),
+              UserAvatar(
+                size: 56,
+                storageKey: client.profilePictureKey,
+                imageUrl: client.profilePictureUrl,
+                initial: initial,
               ),
               const SizedBox(width: 16),
               // Info

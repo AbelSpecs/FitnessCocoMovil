@@ -1,3 +1,5 @@
+import 'package:pyrosfitmovil/core/services/storage_service.dart';
+import 'package:pyrosfitmovil/core/widgets/user_avatar.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -30,7 +32,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final isCoach = authUser.role?.name == 'coach';
 
     return ChangeNotifierProvider(
-      create: (_) => ProfileProvider()..fetchProfile(authUser.id, isCoach),
+      create: (_) => ProfileProvider()..fetchProfile(authUser.id, isCoach, authProvider: context.read<AuthProvider>()),
       child: Scaffold(
         backgroundColor: AppTheme.background,
         appBar: AppBar(
@@ -93,9 +95,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildCoachProfile(BuildContext context, ProfileProvider provider, String? firstName) {
     final coachData = provider.coachData;
     final isVerified = coachData?['isVerified'] == true;
+    final authUser = context.read<AuthProvider>().user;
     final bannerUrl = provider.isEditing
-        ? (provider.editingBannerUrl ?? coachData?['bannerUrl'])
-        : (coachData?['bannerUrl'] ?? provider.editingBannerUrl);
+        ? (provider.editingBannerUrl != null && provider.editingBannerUrl!.trim().isNotEmpty
+            ? provider.editingBannerUrl
+            : null)
+        : (provider.bannerPictureUrl ??
+            provider.bannerPictureKey ??
+            provider.editingBannerUrl ??
+            authUser?.bannerPictureUrl ??
+            authUser?.bannerPictureKey);
 
     final String fullName =
         '${firstName ?? "Entrenador"} ${provider.userData?['lastName'] ?? ''}'.trim();
@@ -298,31 +307,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       // Avatar
-                      Container(
-                        width: 76,
-                        height: 76,
-                        decoration: BoxDecoration(
-                          gradient: AppTheme.fireGradient,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFF18181B), width: 4),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.primary.withValues(alpha: 0.4),
-                              blurRadius: 18,
-                              offset: const Offset(0, 4),
-                            )
-                          ],
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          initial,
-                          style: const TextStyle(
-                            fontFamily: 'BebasNeue',
-                            fontSize: 40,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
+                      UserAvatar(
+                        size: 76,
+                        borderRadius: 20,
+                        shape: BoxShape.rectangle,
+                        storageKey: provider.profilePictureKey,
+                        imageUrl: provider.profilePictureUrl,
+                        initial: initial,
                       ),
                       const Spacer(),
 
@@ -872,12 +863,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _renderBannerImage(String? banner) {
-    if (banner == null || banner.isEmpty) {
+    if (banner == null || banner.trim().isEmpty) {
       return const SizedBox.shrink();
     }
-    if (banner.startsWith('data:image') || !banner.startsWith('http')) {
+    final trimmed = banner.trim();
+
+    if (trimmed.startsWith('data:image')) {
       try {
-        final cleanBase64 = banner.contains(',') ? banner.split(',')[1] : banner;
+        final cleanBase64 = trimmed.contains(',') ? trimmed.split(',')[1] : trimmed;
         final bytes = base64Decode(cleanBase64);
         return Image.memory(
           bytes,
@@ -888,15 +881,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
       } catch (e) {
         return const Center(child: Icon(Icons.broken_image, color: Colors.grey));
       }
-    } else {
-      return Image.network(
-        banner,
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-        errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
-      );
     }
+
+    final effectiveUrl = StorageService.getServeUrl(trimmed);
+    if (effectiveUrl.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Image.network(
+      effectiveUrl,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return Container(
+          color: const Color(0xFF18181B),
+          child: const Center(
+            child: SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
+              ),
+            ),
+          ),
+        );
+      },
+      errorBuilder: (_, __, ___) => Container(
+        color: const Color(0xFF18181B),
+        child: const Center(
+          child: Icon(Icons.broken_image, color: Colors.grey, size: 36),
+        ),
+      ),
+    );
   }
 
   Future<void> _pickBannerImage(BuildContext context, ProfileProvider provider) async {
@@ -966,29 +985,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       padding: const EdgeInsets.all(24.0),
       child: Column(
         children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              gradient: AppTheme.fireGradient,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.primary.withValues(alpha: 0.4),
-                  blurRadius: 20,
-                  offset: const Offset(0, 4),
-                )
-              ],
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              initial,
-              style: const TextStyle(
-                fontFamily: 'BebasNeue',
-                fontSize: 42,
-                color: Colors.white,
-              ),
-            ),
+          UserAvatar(
+            size: 80,
+            shape: BoxShape.circle,
+            storageKey: provider.profilePictureKey,
+            imageUrl: provider.profilePictureUrl,
+            initial: initial,
           ),
           const SizedBox(height: 16),
           Text(

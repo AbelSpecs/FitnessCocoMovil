@@ -21,12 +21,15 @@ enum Role {
 class UserAuth {
   final int id;
   final int? studentId;
-  final int?
-      coachId; // El signo '?' hace que la propiedad sea opcional (nullable)
+  final int? coachId;
   final int? myCoachId;
   final String? email;
   final String? firstName;
   final Role? role;
+  final String? profilePictureKey;
+  final String? profilePictureUrl;
+  final String? bannerPictureKey;
+  final String? bannerPictureUrl;
 
   UserAuth({
     required this.id,
@@ -36,6 +39,10 @@ class UserAuth {
     this.email,
     this.firstName,
     this.role,
+    this.profilePictureKey,
+    this.profilePictureUrl,
+    this.bannerPictureKey,
+    this.bannerPictureUrl,
   });
 
   factory UserAuth.fromJson(Map<String, dynamic> json) {
@@ -48,6 +55,10 @@ class UserAuth {
       firstName: json['firstName'] as String?,
       role:
           json['role'] != null ? Role.fromString(json['role'] as String) : null,
+      profilePictureKey: json['profilePictureKey'] as String?,
+      profilePictureUrl: json['profilePictureUrl'] as String?,
+      bannerPictureKey: json['bannerPictureKey'] as String?,
+      bannerPictureUrl: json['bannerPictureUrl'] as String?,
     );
   }
 
@@ -59,9 +70,40 @@ class UserAuth {
       'myCoachId': myCoachId,
       'email': email,
       'firstName': firstName,
-      'role':
-          role?.name, // Guarda el enum como string puro ("student" o "coach")
+      'role': role?.name,
+      'profilePictureKey': profilePictureKey,
+      'profilePictureUrl': profilePictureUrl,
+      'bannerPictureKey': bannerPictureKey,
+      'bannerPictureUrl': bannerPictureUrl,
     };
+  }
+
+  UserAuth copyWith({
+    int? id,
+    int? studentId,
+    int? coachId,
+    int? myCoachId,
+    String? email,
+    String? firstName,
+    Role? role,
+    String? profilePictureKey,
+    String? profilePictureUrl,
+    String? bannerPictureKey,
+    String? bannerPictureUrl,
+  }) {
+    return UserAuth(
+      id: id ?? this.id,
+      studentId: studentId ?? this.studentId,
+      coachId: coachId ?? this.coachId,
+      myCoachId: myCoachId ?? this.myCoachId,
+      email: email ?? this.email,
+      firstName: firstName ?? this.firstName,
+      role: role ?? this.role,
+      profilePictureKey: profilePictureKey ?? this.profilePictureKey,
+      profilePictureUrl: profilePictureUrl ?? this.profilePictureUrl,
+      bannerPictureKey: bannerPictureKey ?? this.bannerPictureKey,
+      bannerPictureUrl: bannerPictureUrl ?? this.bannerPictureUrl,
+    );
   }
 }
 

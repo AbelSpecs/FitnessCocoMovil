@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -71,23 +72,11 @@ class _ClientRoutinesScreenContent extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        gradient: context.pyrosStyles.gradientPrimary,
-                        shape: BoxShape.circle,
-                        boxShadow: context.pyrosStyles.shadowGlow,
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        initial,
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.onPrimary,
-                        ),
-                      ),
+                    UserAvatar(
+                      size: 64,
+                      storageKey: client.profilePictureKey,
+                      imageUrl: client.profilePictureUrl,
+                      initial: initial,
                     ),
                     const SizedBox(width: 16),
                     Expanded(

@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/services/storage_service.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:pyrosfitmovil/theme/app_theme.dart';
@@ -94,6 +95,22 @@ class _LoginPageState extends State<LoginPage> {
         }
       }
 
+      final profilePicKey = (userMap?['profilePictureKey'] ??
+              userMap?['profilePicture'] ??
+              coachMap?['profilePictureKey'] ??
+              studentMap?['profilePictureKey']) as String?;
+      final profilePicUrl = profilePicKey != null
+          ? StorageService.getServeUrl(profilePicKey)
+          : null;
+
+      final bannerPicKey = (coachMap?['bannerPictureKey'] ??
+              coachMap?['bannerPicture'] ??
+              coachMap?['bannerUrl'] ??
+              userMap?['bannerPictureKey']) as String?;
+      final bannerPicUrl = bannerPicKey != null
+          ? StorageService.getServeUrl(bannerPicKey)
+          : null;
+
       UserAuth userAuth = UserAuth(
         id: userMap?['id'] as int? ?? int.parse(id),
         studentId: studentId != 0 ? studentId : null,
@@ -102,6 +119,10 @@ class _LoginPageState extends State<LoginPage> {
         email: userMap?['email'] as String?,
         firstName: userMap?['firstName'] as String?,
         role: role,
+        profilePictureKey: profilePicKey,
+        profilePictureUrl: profilePicUrl,
+        bannerPictureKey: bannerPicKey,
+        bannerPictureUrl: bannerPicUrl,
       );
 
       // 4. Guardar en tu manejador de estado (Provider)

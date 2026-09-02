@@ -1,3 +1,5 @@
+import 'package:pyrosfitmovil/core/services/storage_service.dart';
+import 'package:pyrosfitmovil/core/services/user_service.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -32,6 +34,8 @@ class AuthProvider extends ChangeNotifier {
       if (tokenData != null && userData != null) {
         _token = tokenData;
         _user = UserAuth.fromJson(jsonDecode(userData));
+        // Sincronizar en segundo plano fotos y detalles actualizados
+        refreshUserProfile();
       }
     } catch (e) {
       debugPrint("Error inicializando autenticación: $e");
@@ -65,4 +69,75 @@ class AuthProvider extends ChangeNotifier {
 
     notifyListeners();
   }
+
+  /// Actualiza la foto de perfil del usuario en memoria y en disco
+  Future<void> updateProfilePicture(String key, String? url) async {
+    if (_user == null) return;
+    _user = _user!.copyWith(
+      profilePictureKey: key,
+      profilePictureUrl: url,
+    );
+    await _storage.write(
+        key: "pyrosfit_user", value: jsonEncode(_user!.toJson()));
+    notifyListeners();
+  }
+
+  /// Actualiza la foto de banner del usuario en memoria y en disco
+  Future<void> updateBannerPicture(String key, String? url) async {
+    if (_user == null) return;
+    _user = _user!.copyWith(
+      bannerPictureKey: key,
+      bannerPictureUrl: url,
+    );
+    await _storage.write(
+        key: "pyrosfit_user", value: jsonEncode(_user!.toJson()));
+    notifyListeners();
+  }
+
+  /// Sincroniza los datos más recientes del usuario desde el servidor
+  Future<void> refreshUserProfile() async {
+    if (_user == null) return;
+    try {
+      final details = await UserService.getUserDetails(_user!.id.toString());
+      final data = details['data'] as Map<String, dynamic>?;
+      if (data != null) {
+        final coach = data['coach'] as Map<String, dynamic>?;
+        final student = data['student'] as Map<String, dynamic>?;
+
+        final profileKey = (data['profilePictureKey'] ??
+            data['profilePicture'] ??
+            coach?['profilePictureKey'] ??
+            coach?['profilePicture'] ??
+            student?['profilePictureKey'] ??
+            student?['profilePicture']) as String?;
+
+        final bannerKey = (coach?['bannerPictureKey'] ??
+            coach?['bannerPicture'] ??
+            coach?['bannerUrl'] ??
+            data['bannerPictureKey'] ??
+            data['bannerPicture']) as String?;
+
+        final profileUrl = profileKey != null && profileKey.isNotEmpty
+            ? StorageService.getServeUrl(profileKey)
+            : null;
+        final bannerUrl = bannerKey != null && bannerKey.isNotEmpty
+            ? StorageService.getServeUrl(bannerKey)
+            : null;
+
+        _user = _user!.copyWith(
+          profilePictureKey: profileKey,
+          profilePictureUrl: profileUrl,
+          bannerPictureKey: bannerKey,
+          bannerPictureUrl: bannerUrl,
+        );
+
+        await _storage.write(
+            key: "pyrosfit_user", value: jsonEncode(_user!.toJson()));
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint("Error refrescando perfil en AuthProvider: $e");
+    }
+  }
+
 }

@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:pyrosfitmovil/core/models/streak_models.dart';
 import 'package:pyrosfitmovil/core/models/student_info_model.dart';
@@ -179,29 +180,11 @@ class _ClientEditPanelScreenState extends State<ClientEditPanelScreen> {
                       ),
                       child: Row(
                         children: [
-                          Container(
-                            width: 60,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: AppTheme.fireGradient,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppTheme.primary.withValues(alpha: 0.4),
-                                  blurRadius: 15,
-                                  offset: const Offset(0, 4),
-                                )
-                              ],
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              initial,
-                              style: const TextStyle(
-                                fontSize: 26,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
+                          UserAvatar(
+                            size: 60,
+                            storageKey: widget.client.profilePictureKey,
+                            imageUrl: widget.client.profilePictureUrl,
+                            initial: initial,
                           ),
                           const SizedBox(width: 14),
                           Expanded(
