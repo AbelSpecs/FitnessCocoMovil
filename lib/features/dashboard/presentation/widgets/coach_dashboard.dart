@@ -1,3 +1,4 @@
+import 'package:go_router/go_router.dart';
 import 'package:pyrosfitmovil/core/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -165,7 +166,80 @@ class _CoachDashboardState extends State<CoachDashboard> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  
+                  // Acceso Rápido a Biblioteca de Ejercicios y Videos (FT-T15)
+                  const SizedBox(height: 16),
+                  InkWell(
+                    onTap: () => context.push('/exercises'),
+                    borderRadius: BorderRadius.circular(18),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppTheme.primary.withValues(alpha: 0.2),
+                            const Color(0xFF18181B),
+                          ],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        ),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.4)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primary,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTheme.primary.withValues(alpha: 0.4),
+                                  blurRadius: 10,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(Icons.fitness_center_rounded, color: Colors.white, size: 20),
+                          ),
+                          const SizedBox(width: 14),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'BIBLIOTECA TÉCNICA',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 2,
+                                    color: AppTheme.primaryGlow,
+                                  ),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Ejercicios y Videos',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Gestiona técnica, grupos musculares y videos R2/YouTube',
+                                  style: TextStyle(fontSize: 11, color: Colors.white60),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.arrow_forward_ios_rounded, color: AppTheme.primaryGlow, size: 16),
+                        ],
+                      ),
+                    ),
+                  ),
+
+const SizedBox(height: 20),
 
                   // KPIs (T-06)
                   Row(
