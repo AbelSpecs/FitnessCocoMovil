@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/services/user_service.dart';
 import 'package:pyrosfitmovil/core/services/storage_service.dart';
 import 'package:pyrosfitmovil/core/widgets/user_avatar.dart';
 import 'dart:convert';
@@ -19,6 +20,8 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isCopied = false;
+  int _coachSelectedTab = 0;
+  int _studentSelectedTab = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -116,8 +119,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // 1. BANNER CARD CON SUPERPOSICIÓN DE AVATAR
-        _buildCoachHeaderCard(
+        // 1. HERO HEADER MÓVIL (Banner + Avatar Centrado + Identidad + Acciones Rápidas)
+        _buildCoachHeroHeader(
           context,
           provider,
           bannerUrl: bannerUrl,
@@ -128,21 +131,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         const SizedBox(height: 16),
 
-        // 2. TARJETA: SOBRE MI MARCA (BIO & CERTIFICACIONES)
-        _buildCoachBrandCard(context, provider, bio),
-        const SizedBox(height: 16),
+        // 2. FILA DE MÉTRICAS RÁPIDAS (KPIs)
+        _buildCoachKpisRow(),
+        const SizedBox(height: 20),
 
-        // 3. TARJETA: CÓDIGO QR Y ENLACE DE REGISTRO
-        _buildCoachQrCard(context, provider),
-        const SizedBox(height: 16),
+        // 3. SELECTOR DE PESTAÑAS NATIVO O MODO EDICIÓN
+        if (!provider.isEditing) ...[
+          _buildMobileSegmentedTabs(
+            tabs: const ['Mi Marca', 'Enlace & QR', 'Cuenta'],
+            selectedIndex: _coachSelectedTab,
+            onTabSelected: (index) => setState(() => _coachSelectedTab = index),
+          ),
+          const SizedBox(height: 16),
 
-        // 4. BARRA DE GUARDAR / CANCELAR EN MODO EDICIÓN
-        if (provider.isEditing) _buildActionButtons(context, provider),
+          // Contenido de la pestaña activa
+          if (_coachSelectedTab == 0)
+            _buildCoachBrandCard(context, provider, bio)
+          else if (_coachSelectedTab == 1)
+            _buildCoachQrCard(context, provider)
+          else
+            _buildCoachAccountCard(context, provider, authUser),
+        ] else ...[
+          // Modo edición de perfil enfocado
+          _buildCoachBrandCard(context, provider, bio),
+          const SizedBox(height: 16),
+          _buildActionButtons(context, provider),
+        ],
       ],
     );
   }
 
-  Widget _buildCoachHeaderCard(
+  Widget _buildCoachHeroHeader(
     BuildContext context,
     ProfileProvider provider, {
     required String? bannerUrl,
@@ -156,30 +175,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF18181B).withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: AppTheme.border.withValues(alpha: 0.8)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.4),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: Colors.black.withValues(alpha: 0.45),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
           )
         ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Banner Image Area
+          // 1. ÁREA DE PORTADA / BANNER
           Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.bottomCenter,
             children: [
               Container(
-                height: 160,
+                height: 165,
                 width: double.infinity,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      AppTheme.primary.withValues(alpha: 0.25),
+                      AppTheme.primary.withValues(alpha: 0.3),
                       const Color(0xFF18181B),
                       AppTheme.primary.withValues(alpha: 0.15),
                     ],
@@ -194,17 +214,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              Icons.add_photo_alternate_outlined,
-                              size: 36,
+                              Icons.photo_library_outlined,
+                              size: 38,
                               color: AppTheme.primary.withValues(alpha: 0.6),
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              'Sin imagen de banner'.toUpperCase(),
+                              'PORTADA DE ENTRENADOR',
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
-                                letterSpacing: 1.5,
+                                letterSpacing: 2,
                                 color: Colors.white.withValues(alpha: 0.5),
                               ),
                             ),
@@ -213,7 +233,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
               ),
 
-              // Gradient Overlay at bottom for smooth contrast
+              // Gradient Overlay sutil
               Positioned.fill(
                 child: Container(
                   decoration: BoxDecoration(
@@ -221,7 +241,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.2),
                         const Color(0xFF18181B).withValues(alpha: 0.85),
                       ],
                     ),
@@ -229,7 +249,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
 
-              // Action Buttons Top Right
+              // Botones flotantes de portada
               Positioned(
                 top: 10,
                 right: 10,
@@ -240,25 +260,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         color: Colors.black54,
                         borderRadius: BorderRadius.circular(10),
                         child: InkWell(
-                          onTap: () {
-                            provider.removeBanner();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Banner eliminado. Guarda los cambios para confirmar.'),
-                                backgroundColor: AppTheme.primary,
-                              ),
-                            );
-                          },
+                          onTap: () => _removeBanner(context, provider),
                           borderRadius: BorderRadius.circular(10),
                           child: const Padding(
                             padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                            child: Row(
-                              children: [
-                                Icon(Icons.delete_outline_rounded, size: 16, color: Colors.redAccent),
-                                SizedBox(width: 4),
-                                Text('Quitar', style: TextStyle(color: Colors.redAccent, fontSize: 11)),
-                              ],
-                            ),
+                            child: Icon(Icons.delete_outline_rounded, size: 16, color: Colors.redAccent),
                           ),
                         ),
                       ),
@@ -268,16 +274,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       color: Colors.black54,
                       borderRadius: BorderRadius.circular(10),
                       child: InkWell(
-                        onTap: () => _pickBannerImage(context, provider),
+                        onTap: () => _showBannerOptions(context, provider),
                         borderRadius: BorderRadius.circular(10),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                           child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.camera_alt_rounded, size: 16, color: AppTheme.primaryGlow),
+                              const Icon(Icons.camera_alt_rounded, size: 15, color: AppTheme.primaryGlow),
                               const SizedBox(width: 5),
                               Text(
-                                hasBanner ? 'Cambiar' : 'Subir banner',
+                                hasBanner ? 'Cambiar portada' : 'Subir portada',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 11,
@@ -292,199 +299,175 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
               ),
-            ],
-          ),
 
-          // Header Content (Overlapping Avatar & Coach Info)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Transform.translate(
-                  offset: const Offset(0, -32),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      // Avatar
-                      UserAvatar(
-                        size: 76,
-                        borderRadius: 20,
-                        shape: BoxShape.rectangle,
+              // Avatar Centrado con Halo de Fuego y Badge de Cámara
+              Positioned(
+                bottom: -40,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.primary.withValues(alpha: 0.4),
+                            blurRadius: 20,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: UserAvatar(
+                        size: 84,
+                        shape: BoxShape.circle,
+                        showBorder: true,
+                        borderColor: const Color(0xFF18181B),
                         storageKey: provider.profilePictureKey,
                         imageUrl: provider.profilePictureUrl,
                         initial: initial,
+                        onTap: () => _showAvatarOptions(context, provider),
                       ),
-                      const Spacer(),
-
-                      // Action Buttons
-                      if (provider.isEditing)
-                        OutlinedButton.icon(
-                          onPressed: () => provider.setEditing(false),
-                          icon: const Icon(Icons.close_rounded, size: 16),
-                          label: const Text('Cancelar'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.white70,
-                            side: const BorderSide(color: AppTheme.border),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: GestureDetector(
+                        onTap: () => _showAvatarOptions(context, provider),
+                        child: Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primary,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: const Color(0xFF18181B), width: 2.5),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.5),
+                                blurRadius: 6,
+                              ),
+                            ],
                           ),
-                        )
-                      else
-                        OutlinedButton.icon(
-                          onPressed: () => provider.setEditing(true),
-                          icon: const Icon(Icons.edit_rounded, size: 16, color: AppTheme.primaryGlow),
-                          label: const Text('Editar marca'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            side: const BorderSide(color: AppTheme.border),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          ),
+                          child: const Icon(Icons.camera_alt_rounded, size: 14, color: Colors.white),
                         ),
-                      const SizedBox(width: 8),
-                      ElevatedButton.icon(
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 48),
+
+          // 2. IDENTIDAD CENTRAL DEL ENTRENADOR
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        fullName,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                    if (isVerified) ...[
+                      const SizedBox(width: 6),
+                      const Icon(Icons.verified_rounded, size: 18, color: Color(0xFF34D399)),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppTheme.primary.withValues(alpha: 0.3)),
+                  ),
+                  child: const Text(
+                    'COACH CERTIFICADO',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                      color: AppTheme.primaryGlow,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  '“$bio”',
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontStyle: FontStyle.italic,
+                    color: Colors.white70,
+                    height: 1.3,
+                  ),
+                ),
+                const SizedBox(height: 18),
+
+                // Botones de acción móviles estilizados
+                Row(
+                  children: [
+                    Expanded(
+                      child: provider.isEditing
+                          ? OutlinedButton.icon(
+                              onPressed: () => provider.setEditing(false),
+                              icon: const Icon(Icons.close_rounded, size: 16),
+                              label: const Text('Cancelar edición'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.white70,
+                                side: const BorderSide(color: AppTheme.border),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                            )
+                          : OutlinedButton.icon(
+                              onPressed: () => provider.setEditing(true),
+                              icon: const Icon(Icons.edit_rounded, size: 16, color: AppTheme.primaryGlow),
+                              label: const Text('Editar Perfil'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                side: BorderSide(color: AppTheme.primary.withValues(alpha: 0.5)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                            ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton.icon(
                         onPressed: () => context.go('/clientes'),
                         icon: const Icon(Icons.people_alt_rounded, size: 16),
-                        label: const Text('Alumnos'),
+                        label: const Text('Mis Alumnos'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.primary,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-
-                // Tags & Name
-                Transform.translate(
-                  offset: const Offset(0, -18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Text(
-                            'ENTRENADOR CERTIFICADO',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 2.5,
-                              color: AppTheme.primaryGlow,
-                            ),
-                          ),
-                          if (isVerified) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.35)),
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.verified_rounded, size: 11, color: Color(0xFF34D399)),
-                                  SizedBox(width: 3),
-                                  Text(
-                                    'Verificado',
-                                    style: TextStyle(
-                                      color: Color(0xFF34D399),
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        fullName,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          height: 1.1,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '“$bio”',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontStyle: FontStyle.italic,
-                          color: Colors.white70,
-                          height: 1.3,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Quick Stats Row (4 stats)
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.25),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildCoachStatItem('Alumnos', '24'),
-                      _buildStatDivider(),
-                      _buildCoachStatItem('Rutinas', '86'),
-                      _buildStatDivider(),
-                      _buildCoachStatItem('Valoración', '4.9 ⭐'),
-                      _buildStatDivider(),
-                      _buildCoachStatItem('Experiencia', '6 años'),
-                    ],
-                  ),
-                ),
+                const SizedBox(height: 16),
               ],
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildCoachStatItem(String label, String value) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 10,
-            color: Colors.white54,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatDivider() {
-    return Container(
-      width: 1,
-      height: 24,
-      color: AppTheme.border.withValues(alpha: 0.5),
     );
   }
 
@@ -918,55 +901,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Future<void> _pickBannerImage(BuildContext context, ProfileProvider provider) async {
-    try {
-      final picker = ImagePicker();
-      final picked = await picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1200,
-        maxHeight: 600,
-        imageQuality: 80,
-      );
-      if (picked != null) {
-        final bytes = await picked.readAsBytes();
-        final base64String = 'data:image/jpeg;base64,${base64Encode(bytes)}';
-        provider.setBanner(base64String);
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Banner cargado. Guarda los cambios para conservarlo.'),
-              backgroundColor: AppTheme.primary,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al seleccionar imagen: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
+
 
   // =========================================================================
   // STUDENT PROFILE VIEW
   // =========================================================================
 
   Widget _buildStudentProfile(BuildContext context, ProfileProvider provider, String? firstName) {
+    final authUser = context.read<AuthProvider>().user;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildHeroCard(context, provider, firstName),
         const SizedBox(height: 16),
-        _buildBasicDataForm(context, provider),
-        const SizedBox(height: 16),
-        _buildGoalsSection(context, provider),
-        const SizedBox(height: 24),
-        _buildActionButtons(context, provider),
+
+        if (!provider.isEditing) ...[
+          _buildMobileSegmentedTabs(
+            tabs: const ['Métricas', 'Objetivos', 'Cuenta'],
+            selectedIndex: _studentSelectedTab,
+            onTabSelected: (index) => setState(() => _studentSelectedTab = index),
+          ),
+          const SizedBox(height: 16),
+
+          if (_studentSelectedTab == 0)
+            _buildBasicDataForm(context, provider)
+          else if (_studentSelectedTab == 1)
+            _buildGoalsSection(context, provider)
+          else
+            _buildCoachAccountCard(context, provider, authUser),
+        ] else ...[
+          _buildBasicDataForm(context, provider),
+          const SizedBox(height: 16),
+          _buildGoalsSection(context, provider),
+          const SizedBox(height: 24),
+          _buildActionButtons(context, provider),
+        ],
       ],
     );
   }
@@ -985,12 +955,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
       padding: const EdgeInsets.all(24.0),
       child: Column(
         children: [
-          UserAvatar(
-            size: 80,
-            shape: BoxShape.circle,
-            storageKey: provider.profilePictureKey,
-            imageUrl: provider.profilePictureUrl,
-            initial: initial,
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              UserAvatar(
+                size: 80,
+                shape: BoxShape.circle,
+                storageKey: provider.profilePictureKey,
+                imageUrl: provider.profilePictureUrl,
+                initial: initial,
+                onTap: () => _showAvatarOptions(context, provider),
+              ),
+              Positioned(
+                bottom: -2,
+                right: -2,
+                child: GestureDetector(
+                  onTap: () => _showAvatarOptions(context, provider),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFF18181B), width: 2.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.5),
+                          blurRadius: 6,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(Icons.camera_alt_rounded, size: 14, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           Text(
@@ -1291,4 +1289,693 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ],
     );
   }
+
+
+  Widget _buildStatDivider() {
+    return Container(
+      width: 1,
+      height: 24,
+      color: AppTheme.border.withValues(alpha: 0.5),
+    );
+  }
+
+  Widget _buildCoachKpisRow() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF18181B).withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppTheme.border.withValues(alpha: 0.6)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildCoachKpiItem(Icons.group_outlined, 'Alumnos', '24'),
+          _buildStatDivider(),
+          _buildCoachKpiItem(Icons.fitness_center_outlined, 'Rutinas', '86'),
+          _buildStatDivider(),
+          _buildCoachKpiItem(Icons.star_rounded, 'Rating', '4.9'),
+          _buildStatDivider(),
+          _buildCoachKpiItem(Icons.workspace_premium_outlined, 'Exp.', '6 años'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCoachKpiItem(IconData icon, String label, String value) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 18, color: AppTheme.primaryGlow),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 1),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 10,
+            color: Colors.white54,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMobileSegmentedTabs({
+    required List<String> tabs,
+    required int selectedIndex,
+    required ValueChanged<int> onTabSelected,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: const Color(0xFF18181B).withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.border.withValues(alpha: 0.8)),
+      ),
+      child: Row(
+        children: List.generate(tabs.length, (index) {
+          final isSelected = selectedIndex == index;
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => onTabSelected(index),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppTheme.primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: AppTheme.primary.withValues(alpha: 0.35),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  tabs[index],
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                    color: isSelected ? Colors.white : Colors.white60,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildCoachAccountCard(BuildContext context, ProfileProvider provider, dynamic authUser) {
+    final email = authUser?.email ?? provider.userData?['email']?.toString() ?? 'No disponible';
+    final id = authUser?.id?.toString() ?? provider.userData?['id']?.toString() ?? '1';
+
+    String roleDisplay = provider.isCoach ? 'Entrenador (Coach)' : 'Alumno';
+    final r = authUser?.role?.toString().toLowerCase();
+    if (r != null) {
+      if (r.contains('coach')) {
+        roleDisplay = 'Entrenador (Coach)';
+      } else if (r.contains('student') || r.contains('alumno')) {
+        roleDisplay = 'Alumno';
+      }
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF18181B).withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.border.withValues(alpha: 0.8)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.shield_outlined, color: AppTheme.primaryGlow, size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Cuenta y Seguridad',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildAccountInfoRow('Correo electrónico', email),
+          const Divider(color: Colors.white12, height: 24),
+          _buildAccountInfoRow('Rol de usuario', roleDisplay),
+          const Divider(color: Colors.white12, height: 24),
+          _buildAccountInfoRow('ID de Usuario', '#$id'),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.lock_reset_rounded, size: 18, color: AppTheme.primaryGlow),
+              label: const Text('Restablecer contraseña'),
+              onPressed: () => context.push('/forgot-password'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white,
+                side: const BorderSide(color: AppTheme.border),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: TextButton.icon(
+              icon: const Icon(Icons.logout_rounded, size: 18, color: Colors.redAccent),
+              label: const Text('Cerrar sesión', style: TextStyle(color: Colors.redAccent)),
+              onPressed: () async {
+                await context.read<AuthProvider>().logout();
+                if (context.mounted) {
+                  context.go('/login');
+                }
+              },
+              style: TextButton.styleFrom(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAccountInfoRow(String title, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(title, style: const TextStyle(color: Colors.white54, fontSize: 13)),
+        Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+      ],
+    );
+  }
+
+  void _showAvatarOptions(BuildContext context, ProfileProvider provider) {
+    final hasAvatar = provider.profilePictureKey != null && provider.profilePictureKey!.isNotEmpty;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF18181B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (bottomSheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Foto de Perfil',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.photo_library_rounded, color: AppTheme.primaryGlow),
+                  ),
+                  title: const Text('Elegir de la galería', style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(bottomSheetContext);
+                    _pickAndUploadProfileImage(context, provider, ImageSource.gallery);
+                  },
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.camera_alt_rounded, color: AppTheme.primaryGlow),
+                  ),
+                  title: const Text('Tomar foto con la cámara', style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(bottomSheetContext);
+                    _pickAndUploadProfileImage(context, provider, ImageSource.camera);
+                  },
+                ),
+                if (hasAvatar) ...[
+                  const Divider(color: Colors.white12, height: 16),
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+                    ),
+                    title: const Text('Eliminar foto actual', style: TextStyle(color: Colors.redAccent)),
+                    onTap: () {
+                      Navigator.pop(bottomSheetContext);
+                      _removeProfileImage(context, provider);
+                    },
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickAndUploadProfileImage(
+    BuildContext context,
+    ProfileProvider provider,
+    ImageSource source,
+  ) async {
+    final auth = context.read<AuthProvider>();
+    final userId = auth.user?.id;
+    if (userId == null) return;
+
+    final prevKey = provider.profilePictureKey;
+    final prevUrl = provider.profilePictureUrl;
+
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: source,
+        maxWidth: 1000,
+        maxHeight: 1000,
+        imageQuality: 85,
+      );
+      if (picked == null) return;
+
+      final bytes = await picked.readAsBytes();
+      final localBase64 = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+
+      // ⚡ ACTUALIZACIÓN VISUAL INSTANTÁNEA (0 ms)
+      provider.updateProfilePicture(localBase64, localBase64);
+      auth.updateProfilePicture(localBase64, localBase64);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                ),
+                SizedBox(width: 12),
+                Text('Guardando foto en la nube...'),
+              ],
+            ),
+            backgroundColor: Color(0xFF27272A),
+            duration: Duration(seconds: 15),
+          ),
+        );
+      }
+
+      final fileName = picked.name.isNotEmpty ? picked.name : 'avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+      // 1. Obtener URL presignada de Cloudflare R2
+      final presign = await StorageService.getPresignedProfileUrl(
+        userId: userId,
+        fileName: fileName,
+        contentType: 'image/jpeg',
+      );
+
+      final uploadUrl = presign['uploadUrl'] as String;
+      final key = presign['key'] as String;
+
+      // 2. Subida binaria a Cloudflare R2
+      await StorageService.uploadBytesToPresignedUrl(
+        uploadUrl: uploadUrl,
+        bytes: bytes,
+        contentType: 'image/jpeg',
+      );
+
+      // 3. Persistir key en base de datos
+      await UserService.updateProfilePictures(
+        userId,
+        profilePicture: key,
+        bannerPicture: provider.bannerPictureKey,
+      );
+
+      // 4. Limpiar caché de imagen e inyectar cache-buster para actualización definitiva
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
+
+      final serveUrl = StorageService.getServeUrl(key);
+      final cacheBusterUrl = '$serveUrl&t=${DateTime.now().millisecondsSinceEpoch}';
+
+      await auth.updateProfilePicture(key, cacheBusterUrl);
+      provider.updateProfilePicture(key, cacheBusterUrl);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('¡Foto de perfil actualizada con éxito!'),
+            backgroundColor: Color(0xFF10B981),
+          ),
+        );
+      }
+    } catch (e) {
+      // Revertir si falló la subida
+      provider.updateProfilePicture(prevKey, prevUrl);
+      auth.updateProfilePicture(prevKey ?? '', prevUrl);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No se pudo subir la foto de perfil. Intenta nuevamente.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _removeProfileImage(
+    BuildContext context,
+    ProfileProvider provider,
+  ) async {
+    final auth = context.read<AuthProvider>();
+    final userId = auth.user?.id;
+    if (userId == null) return;
+
+    try {
+      await UserService.updateProfilePictures(
+        userId,
+        profilePicture: null,
+        bannerPicture: provider.bannerPictureKey,
+      );
+
+      await auth.updateProfilePicture('', null);
+      provider.updateProfilePicture(null, null);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Foto de perfil eliminada'),
+            backgroundColor: AppTheme.primary,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error al eliminar la foto de perfil'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showBannerOptions(BuildContext context, ProfileProvider provider) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF18181B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (bottomSheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Imagen de Portada / Banner',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.photo_library_rounded, color: AppTheme.primaryGlow),
+                  ),
+                  title: const Text('Elegir de la galería', style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(bottomSheetContext);
+                    _pickAndUploadBannerImage(context, provider, ImageSource.gallery);
+                  },
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.camera_alt_rounded, color: AppTheme.primaryGlow),
+                  ),
+                  title: const Text('Tomar foto con la cámara', style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(bottomSheetContext);
+                    _pickAndUploadBannerImage(context, provider, ImageSource.camera);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickAndUploadBannerImage(
+    BuildContext context,
+    ProfileProvider provider,
+    ImageSource source,
+  ) async {
+    final auth = context.read<AuthProvider>();
+    final userId = auth.user?.id;
+    final trainerId = auth.user?.coachId ?? auth.user?.id ?? 1;
+    if (userId == null) return;
+
+    final prevKey = provider.bannerPictureKey;
+    final prevUrl = provider.bannerPictureUrl;
+
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: source,
+        maxWidth: 1600,
+        maxHeight: 900,
+        imageQuality: 85,
+      );
+      if (picked == null) return;
+
+      final bytes = await picked.readAsBytes();
+      final localBase64 = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+
+      // ⚡ ACTUALIZACIÓN VISUAL INSTANTÁNEA (0 ms)
+      provider.updateBannerPicture(localBase64, localBase64);
+      auth.updateBannerPicture(localBase64, localBase64);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                ),
+                SizedBox(width: 12),
+                Text('Guardando banner en la nube...'),
+              ],
+            ),
+            backgroundColor: Color(0xFF27272A),
+            duration: Duration(seconds: 15),
+          ),
+        );
+      }
+
+      final fileName = picked.name.isNotEmpty ? picked.name : 'banner_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+      // 1. Obtener URL presignada para banner
+      final presign = await StorageService.getPresignedBannerUrl(
+        trainerId: trainerId,
+        fileName: fileName,
+        contentType: 'image/jpeg',
+      );
+
+      final uploadUrl = presign['uploadUrl'] as String;
+      final key = presign['key'] as String;
+
+      // 2. Subida binaria directa a Cloudflare R2
+      await StorageService.uploadBytesToPresignedUrl(
+        uploadUrl: uploadUrl,
+        bytes: bytes,
+        contentType: 'image/jpeg',
+      );
+
+      // 3. Persistir key en base de datos inmediatamente
+      await UserService.updateProfilePictures(
+        userId,
+        profilePicture: provider.profilePictureKey,
+        bannerPicture: key,
+      );
+
+      // 4. Limpiar caché de imagen e inyectar cache-buster para actualización definitiva
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
+
+      final serveUrl = StorageService.getServeUrl(key);
+      final cacheBusterUrl = '$serveUrl&t=${DateTime.now().millisecondsSinceEpoch}';
+
+      await auth.updateBannerPicture(key, cacheBusterUrl);
+      provider.updateBannerPicture(key, cacheBusterUrl);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('¡Banner actualizado con éxito!'),
+            backgroundColor: Color(0xFF10B981),
+          ),
+        );
+      }
+    } catch (e) {
+      // Revertir si falló la subida
+      provider.updateBannerPicture(prevKey, prevUrl);
+      auth.updateBannerPicture(prevKey ?? '', prevUrl);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al subir banner: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _removeBanner(
+    BuildContext context,
+    ProfileProvider provider,
+  ) async {
+    final auth = context.read<AuthProvider>();
+    final userId = auth.user?.id;
+    if (userId == null) return;
+
+    try {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                ),
+                SizedBox(width: 12),
+                Text('Eliminando banner...'),
+              ],
+            ),
+            backgroundColor: Color(0xFF27272A),
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
+
+      await UserService.updateProfilePictures(
+        userId,
+        profilePicture: provider.profilePictureKey,
+        bannerPicture: null,
+      );
+
+      await auth.updateBannerPicture('', null);
+      provider.removeBanner();
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Banner eliminado correctamente'),
+            backgroundColor: AppTheme.primary,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error al eliminar el banner'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
 }

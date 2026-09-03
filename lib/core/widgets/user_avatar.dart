@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:pyrosfitmovil/core/services/storage_service.dart';
 import 'package:pyrosfitmovil/theme/app_theme.dart';
@@ -42,19 +43,34 @@ class UserAvatar extends StatelessWidget {
     Widget avatarContent;
 
     if (effectiveUrl.isNotEmpty) {
-      avatarContent = Image.network(
-        effectiveUrl,
-        width: size,
-        height: size,
-        fit: BoxFit.cover,
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return _buildFallback(isPlaceholder: true);
-        },
-        errorBuilder: (context, error, stackTrace) {
-          return _buildFallback();
-        },
-      );
+      if (effectiveUrl.startsWith('data:image')) {
+        try {
+          final cleanBase64 = effectiveUrl.contains(',') ? effectiveUrl.split(',')[1] : effectiveUrl;
+          avatarContent = Image.memory(
+            base64Decode(cleanBase64),
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => _buildFallback(),
+          );
+        } catch (e) {
+          avatarContent = _buildFallback();
+        }
+      } else {
+        avatarContent = Image.network(
+          effectiveUrl,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return _buildFallback(isPlaceholder: true);
+          },
+          errorBuilder: (context, error, stackTrace) {
+            return _buildFallback();
+          },
+        );
+      }
     } else {
       avatarContent = _buildFallback();
     }

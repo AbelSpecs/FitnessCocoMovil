@@ -184,6 +184,57 @@ class ProfileProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateBannerPicture(String? key, String? url) {
+    editingBannerUrl = url ?? key ?? '';
+    if (_coachData != null) {
+      _coachData = {
+        ..._coachData!,
+        'bannerPictureKey': key,
+        'bannerPicture': key,
+        'bannerPictureUrl': url,
+        'bannerUrl': url ?? key,
+      };
+    }
+    if (_userData != null) {
+      _userData = {
+        ..._userData!,
+        'bannerPictureKey': key,
+        'bannerPicture': key,
+        'bannerPictureUrl': url,
+        'bannerUrl': url ?? key,
+      };
+    }
+    notifyListeners();
+  }
+
+  void updateProfilePicture(String? key, String? url) {
+    if (_userData != null) {
+      _userData = {
+        ..._userData!,
+        'profilePictureKey': key,
+        'profilePictureUrl': url,
+        'profilePicture': key,
+      };
+    }
+    if (_coachData != null) {
+      _coachData = {
+        ..._coachData!,
+        'profilePictureKey': key,
+        'profilePictureUrl': url,
+        'profilePicture': key,
+      };
+    }
+    if (_studentData != null) {
+      _studentData = {
+        ..._studentData!,
+        'profilePictureKey': key,
+        'profilePictureUrl': url,
+        'profilePicture': key,
+      };
+    }
+    notifyListeners();
+  }
+
   void removeBanner() {
     editingBannerUrl = '';
     if (_coachData != null) {
