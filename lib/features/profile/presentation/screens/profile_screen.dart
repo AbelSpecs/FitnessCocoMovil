@@ -1400,9 +1400,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildCoachAccountCard(BuildContext context, ProfileProvider provider, dynamic authUser) {
-    final email = authUser?.email ?? provider.userData?['email']?.toString() ?? 'No disponible';
-    final id = authUser?.id?.toString() ?? provider.userData?['id']?.toString() ?? '1';
-
     String roleDisplay = provider.isCoach ? 'Entrenador (Coach)' : 'Alumno';
     final r = authUser?.role?.toString().toLowerCase();
     if (r != null) {
@@ -1434,32 +1431,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          _buildAccountInfoRow('Correo electrónico', email),
-          const Divider(color: Colors.white12, height: 24),
           _buildAccountInfoRow('Rol de usuario', roleDisplay),
-          const Divider(color: Colors.white12, height: 24),
-          _buildAccountInfoRow('ID de Usuario', '#$id'),
           const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              icon: const Icon(Icons.lock_reset_rounded, size: 18, color: AppTheme.primaryGlow),
-              label: const Text('Restablecer contraseña'),
-              onPressed: () => context.push('/forgot-password'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.white,
-                side: const BorderSide(color: AppTheme.border),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
             child: TextButton.icon(
               icon: const Icon(Icons.logout_rounded, size: 18, color: Colors.redAccent),
-              label: const Text('Cerrar sesión', style: TextStyle(color: Colors.redAccent)),
+              label: const Text('Cerrar sesión', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
               onPressed: () async {
                 await context.read<AuthProvider>().logout();
                 if (context.mounted) {
@@ -1467,8 +1445,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 }
               },
               style: TextButton.styleFrom(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                backgroundColor: Colors.red.withValues(alpha: 0.1),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: Colors.redAccent.withValues(alpha: 0.3)),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 14),
               ),
             ),
           ),
