@@ -132,7 +132,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SizedBox(height: 16),
 
         // 2. FILA DE MÉTRICAS RÁPIDAS (KPIs)
-        _buildCoachKpisRow(),
+        _buildCoachKpisRow(provider),
         const SizedBox(height: 20),
 
         // 3. SELECTOR DE PESTAÑAS NATIVO O MODO EDICIÓN
@@ -693,6 +693,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     .toList(),
               ),
             ],
+            const SizedBox(height: 16),
+            const Text(
+              'AÑOS DE EXPERIENCIA',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.5,
+                color: Colors.white54,
+              ),
+            ),
+            const SizedBox(height: 6),
+            TextFormField(
+              initialValue: (provider.editingYearsOfExperience ?? provider.coachExperienceYears).toString(),
+              keyboardType: TextInputType.number,
+              onChanged: (v) => provider.updateCoachField('yearsOfExperience', v),
+              style: const TextStyle(color: Colors.white, fontSize: 13),
+              decoration: InputDecoration(
+                hintText: 'Ej: 5',
+                hintStyle: const TextStyle(color: Colors.white30, fontSize: 13),
+                filled: true,
+                fillColor: const Color(0xFF27272A).withValues(alpha: 0.6),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: AppTheme.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Años de trayectoria ejerciendo como entrenador.',
+              style: TextStyle(fontSize: 11, color: Colors.white38),
+            ),
           ],
         ],
       ),
@@ -1299,7 +1337,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildCoachKpisRow() {
+  Widget _buildCoachKpisRow(ProfileProvider provider) {
+    final activeStudents = provider.coachActiveStudents;
+    final totalRoutines = provider.coachTotalRoutines;
+    final rating = provider.coachAverageRating;
+    final expYears = provider.coachExperienceYears;
+
+    final ratingStr = rating > 0 ? rating.toStringAsFixed(1) : 'N/A';
+    final expStr = '$expYears ${expYears == 1 ? 'año' : 'años'}';
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
       decoration: BoxDecoration(
@@ -1310,13 +1356,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildCoachKpiItem(Icons.group_outlined, 'Alumnos', '24'),
+          _buildCoachKpiItem(Icons.group_outlined, 'Alumnos', '$activeStudents'),
           _buildStatDivider(),
-          _buildCoachKpiItem(Icons.fitness_center_outlined, 'Rutinas', '86'),
+          _buildCoachKpiItem(Icons.fitness_center_outlined, 'Rutinas', '$totalRoutines'),
           _buildStatDivider(),
-          _buildCoachKpiItem(Icons.star_rounded, 'Rating', '4.9'),
+          _buildCoachKpiItem(Icons.star_rounded, 'Rating', ratingStr),
           _buildStatDivider(),
-          _buildCoachKpiItem(Icons.workspace_premium_outlined, 'Exp.', '6 años'),
+          _buildCoachKpiItem(Icons.workspace_premium_outlined, 'Exp.', expStr),
         ],
       ),
     );

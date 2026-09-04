@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/models/coach_profile_model.dart';
 import 'package:pyrosfitmovil/core/network/api_client.dart';
 
 class CoachService {
@@ -39,6 +40,19 @@ class CoachService {
       final response = await _api.put('/Coaches/$coachId', data: data);
       if (response.data != null && response.data is Map<String, dynamic>) {
         return response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  static Future<CoachProfile?> getCoachProfile(int coachId) async {
+    try {
+      final response = await _api.get('/Coaches/profile/$coachId');
+      if (response.data != null && response.data['data'] != null) {
+        return CoachProfile.fromJson(
+            response.data['data'] as Map<String, dynamic>);
       }
       return null;
     } catch (e) {
