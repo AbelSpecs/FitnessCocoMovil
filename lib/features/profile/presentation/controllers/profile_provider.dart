@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/models/coach_profile_model.dart';
 import 'package:pyrosfitmovil/features/auth/presentation/controllers/auth_provider.dart';
 import 'package:pyrosfitmovil/core/services/storage_service.dart';
 import 'package:flutter/material.dart';
@@ -19,6 +20,7 @@ class ProfileProvider extends ChangeNotifier {
   Map<String, dynamic>? _userData;
   Map<String, dynamic>? _studentData;
   Map<String, dynamic>? _coachData;
+  CoachProfile? _coachProfile;
 
   String? _qrBase64;
   String? _urlToShare;
@@ -31,6 +33,33 @@ class ProfileProvider extends ChangeNotifier {
   Map<String, dynamic>? get userData => _userData;
   Map<String, dynamic>? get studentData => _studentData;
   Map<String, dynamic>? get coachData => _coachData;
+  CoachProfile? get coachProfile => _coachProfile;
+
+  int get coachActiveStudents =>
+      _coachProfile?.activeStudents ??
+      (_coachData?['activeStudents'] as num?)?.toInt() ??
+      (_coachData?['totalStudents'] as num?)?.toInt() ??
+      (_coachData?['studentsCount'] as num?)?.toInt() ??
+      0;
+
+  int get coachTotalRoutines =>
+      _coachProfile?.totalRoutinesCreated ??
+      (_coachData?['totalRoutinesCreated'] as num?)?.toInt() ??
+      (_coachData?['routinesCount'] as num?)?.toInt() ??
+      0;
+
+  double get coachAverageRating =>
+      _coachProfile?.averageRating ??
+      (_coachData?['averageRating'] as num?)?.toDouble() ??
+      (_coachData?['rating'] as num?)?.toDouble() ??
+      0.0;
+
+  int get coachExperienceYears =>
+      _coachProfile?.yearsOfExperience ??
+      (_coachData?['yearsOfExperience'] as num?)?.toInt() ??
+      (_coachData?['experienceYears'] as num?)?.toInt() ??
+      0;
+
 
   String? get qrBase64 => _qrBase64;
   String? get urlToShare => _urlToShare;
@@ -88,6 +117,7 @@ class ProfileProvider extends ChangeNotifier {
   String? editingBio;
   String? editingCertifications;
   String? editingBannerUrl;
+  int? editingYearsOfExperience;
 
   Future<void> fetchProfile(int userId, bool isCoach, {AuthProvider? authProvider}) async {
     _isLoading = true;
@@ -118,6 +148,22 @@ class ProfileProvider extends ChangeNotifier {
 
       if (isCoach && _coachData != null) {
         final coachId = _coachData!['id'];
+        if (coachId != null && coachId is int) {
+          try {
+            final profile = await CoachService.getCoachProfile(coachId);
+            if (profile != null) {
+              _coachProfile = profile;
+              _coachData = {
+                ..._coachData!,
+                ...profile.toJson(),
+                'experienceYears': profile.yearsOfExperience,
+                'yearsOfExperience': profile.yearsOfExperience,
+              };
+            }
+          } catch (err) {
+            logger.w("Error al cargar métricas dinámicas del coach: $err");
+          }
+        }
         _initCoachEditingValues();
         final qrData = await GeneralService.getQr(coachId);
         logger.i('qrData: $qrData');
@@ -157,6 +203,7 @@ class ProfileProvider extends ChangeNotifier {
     editingBio = _coachData?['bio'] ?? '';
     editingCertifications = _coachData?['certifications'] ?? '';
     editingBannerUrl = bannerPictureUrl ?? bannerPictureKey ?? _coachData?['bannerUrl'] ?? '';
+    editingYearsOfExperience = coachExperienceYears;
   }
 
   void setEditing(bool val) {
@@ -297,6 +344,10 @@ class ProfileProvider extends ChangeNotifier {
       case 'bannerUrl':
         editingBannerUrl = value?.toString();
         break;
+      case 'yearsOfExperience':
+      case 'experienceYears':
+        editingYearsOfExperience = int.tryParse(value?.toString() ?? '') ?? 0;
+        break;
     }
     notifyListeners();
   }
@@ -362,6 +413,8 @@ class ProfileProvider extends ChangeNotifier {
         'bio': editingBio,
         'certifications': editingCertifications,
         'bannerUrl': editingBannerUrl,
+        'yearsOfExperience': editingYearsOfExperience ?? coachExperienceYears,
+        'experienceYears': editingYearsOfExperience ?? coachExperienceYears,
       };
 
       if (coachId != null && coachId is int) {
@@ -369,6 +422,14 @@ class ProfileProvider extends ChangeNotifier {
       }
 
       _coachData = updateData;
+      if (_coachProfile != null) {
+        _coachProfile = _coachProfile!.copyWith(
+          bio: editingBio,
+          certifications: editingCertifications,
+          bannerPicture: editingBannerUrl,
+          yearsOfExperience: editingYearsOfExperience ?? coachExperienceYears,
+        );
+      }
       _isEditing = false;
       return true;
     } catch (e) {
