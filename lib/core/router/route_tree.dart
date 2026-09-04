@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/features/exercises/presentation/screens/exercises_screen.dart';
 import 'package:pyrosfitmovil/features/auth/presentation/screens/reset_password_screen.dart';
 import 'package:pyrosfitmovil/features/auth/presentation/screens/forgot_password_screen.dart';
 import 'package:flutter/material.dart';
@@ -94,6 +95,10 @@ class AppRouter {
             GoRoute(
               path: '/ranking',
               builder: (context, state) => const RankingScreen(),
+            ),
+            GoRoute(
+              path: '/exercises',
+              builder: (context, state) => const ExercisesScreen(),
             ),
             GoRoute(
               path: '/perfil',

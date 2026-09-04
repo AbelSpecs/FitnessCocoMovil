@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/features/exercises/presentation/controllers/exercises_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:pyrosfitmovil/core/utils/globals.dart';
 import 'package:provider/provider.dart';
@@ -23,6 +24,7 @@ Future<void> main() async {
     providers: [
       ChangeNotifierProvider(create: (_) => AuthProvider()),
       ChangeNotifierProvider(create: (_) => StudentRoutinesProvider()),
+      ChangeNotifierProvider(create: (_) => ExercisesProvider()),
       // Aquí puedes agregar más providers si los necesitas
     ],
     child: const MyApp(),

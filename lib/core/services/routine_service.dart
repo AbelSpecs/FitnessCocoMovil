@@ -55,6 +55,44 @@ class RoutineService {
     }
   }
 
+
+  static Future<List<dynamic>?> getExerciseByCoachId(int id) async {
+    try {
+      final response = await _api.get('/Exercises/coach/$id');
+      if (response.data != null && response.data['data'] != null) {
+        return response.data['data'] as List<dynamic>;
+      }
+      return null;
+    } catch (e) {
+      logError('Error fetching exercises by coach id: $e');
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> updateExercise(
+      int id, Map<String, dynamic> data) async {
+    try {
+      final response = await _api.put('/Exercises/$id', data: data);
+      if (response.data != null && response.data['data'] != null) {
+        return response.data['data'] as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      logError('Error updating exercise: $e');
+      return null;
+    }
+  }
+
+  static Future<bool> deleteExercise(int id) async {
+    try {
+      final response = await _api.delete('/Exercises/$id');
+      return response.statusCode == 200 || response.statusCode == 204;
+    } catch (e) {
+      logError('Error deleting exercise: $e');
+      return false;
+    }
+  }
+
   // DailyStudentExercises
   static Future<List<dynamic>?> getDailyStudentExercisesByStudentIdAndDate(
       int studentId, String date) async {
