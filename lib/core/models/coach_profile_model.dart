@@ -17,6 +17,9 @@ class CoachProfile {
   final int totalRoutinesCreated;
   final double averageRating;
   final int totalRatingsCount;
+  final int? averageStreak;
+  final int? retentionRate;
+  final int? sessionsPerWeek;
 
   CoachProfile({
     required this.id,
@@ -37,6 +40,9 @@ class CoachProfile {
     this.totalRoutinesCreated = 0,
     this.averageRating = 0.0,
     this.totalRatingsCount = 0,
+    this.averageStreak,
+    this.retentionRate,
+    this.sessionsPerWeek,
   });
 
   factory CoachProfile.fromJson(Map<String, dynamic> json) {
@@ -63,6 +69,9 @@ class CoachProfile {
           (json['rating'] as num?)?.toDouble() ??
           0.0,
       totalRatingsCount: (json['totalRatingsCount'] as num?)?.toInt() ?? 0,
+      averageStreak: (json['averageStreak'] as num?)?.toInt(),
+      retentionRate: (json['retentionRate'] as num?)?.toInt(),
+      sessionsPerWeek: (json['sessionsPerWeek'] as num?)?.toInt(),
     );
   }
 
@@ -86,6 +95,9 @@ class CoachProfile {
       'totalRoutinesCreated': totalRoutinesCreated,
       'averageRating': averageRating,
       'totalRatingsCount': totalRatingsCount,
+      if (averageStreak != null) 'averageStreak': averageStreak,
+      if (retentionRate != null) 'retentionRate': retentionRate,
+      if (sessionsPerWeek != null) 'sessionsPerWeek': sessionsPerWeek,
     };
   }
 
@@ -108,6 +120,9 @@ class CoachProfile {
     int? totalRoutinesCreated,
     double? averageRating,
     int? totalRatingsCount,
+    int? averageStreak,
+    int? retentionRate,
+    int? sessionsPerWeek,
   }) {
     return CoachProfile(
       id: id ?? this.id,
@@ -128,6 +143,9 @@ class CoachProfile {
       totalRoutinesCreated: totalRoutinesCreated ?? this.totalRoutinesCreated,
       averageRating: averageRating ?? this.averageRating,
       totalRatingsCount: totalRatingsCount ?? this.totalRatingsCount,
+      averageStreak: averageStreak ?? this.averageStreak,
+      retentionRate: retentionRate ?? this.retentionRate,
+      sessionsPerWeek: sessionsPerWeek ?? this.sessionsPerWeek,
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/services/streak_service.dart';
 import 'package:pyrosfitmovil/core/models/coach_profile_model.dart';
 import 'package:pyrosfitmovil/features/auth/presentation/controllers/auth_provider.dart';
 import 'package:pyrosfitmovil/core/services/storage_service.dart';
@@ -21,6 +22,7 @@ class ProfileProvider extends ChangeNotifier {
   Map<String, dynamic>? _studentData;
   Map<String, dynamic>? _coachData;
   CoachProfile? _coachProfile;
+  int _coachAverageStreak = 0;
 
   String? _qrBase64;
   String? _urlToShare;
@@ -53,6 +55,34 @@ class ProfileProvider extends ChangeNotifier {
       (_coachData?['averageRating'] as num?)?.toDouble() ??
       (_coachData?['rating'] as num?)?.toDouble() ??
       0.0;
+
+    int get coachAverageStreak =>
+      _coachProfile?.averageStreak ??
+      (_coachData?['averageStreak'] as num?)?.toInt() ??
+      _coachAverageStreak;
+
+  int get coachTotalStudents =>
+      _coachProfile?.totalStudents ??
+      (_coachData?['totalStudents'] as num?)?.toInt() ??
+      (_coachData?['studentsCount'] as num?)?.toInt() ??
+      0;
+
+  int get coachRetentionRate {
+    final explicit = _coachProfile?.retentionRate ??
+        (_coachData?['retentionRate'] as num?)?.toInt();
+    if (explicit != null) return explicit;
+    final total = coachTotalStudents;
+    final active = coachActiveStudents;
+    if (total > 0) {
+      return ((active / total) * 100).round();
+    }
+    return 100;
+  }
+
+  int get coachSessionsPerWeek =>
+      _coachProfile?.sessionsPerWeek ??
+      (_coachData?['sessionsPerWeek'] as num?)?.toInt() ??
+      coachTotalRoutines;
 
   int get coachExperienceYears =>
       _coachProfile?.yearsOfExperience ??
@@ -150,18 +180,38 @@ class ProfileProvider extends ChangeNotifier {
         final coachId = _coachData!['id'];
         if (coachId != null && coachId is int) {
           try {
-            final profile = await CoachService.getCoachProfile(coachId);
+            final results = await Future.wait([
+              CoachService.getCoachProfile(coachId),
+              StreakService.getCoachAverageStreak(coachId),
+            ]);
+            final profile = results[0] as CoachProfile?;
+            final avgStreak = results[1] as int? ?? 0;
+            _coachAverageStreak = avgStreak;
+
             if (profile != null) {
-              _coachProfile = profile;
+              final activeCount = profile.activeStudents;
+              final totalCount = profile.totalStudents;
+              final retention = totalCount > 0 ? ((activeCount / totalCount) * 100).round() : 100;
+
+              _coachProfile = profile.copyWith(
+                averageStreak: avgStreak,
+                retentionRate: retention,
+                sessionsPerWeek: profile.totalRoutinesCreated,
+              );
               _coachData = {
                 ..._coachData!,
-                ...profile.toJson(),
+                ..._coachProfile!.toJson(),
                 'experienceYears': profile.yearsOfExperience,
                 'yearsOfExperience': profile.yearsOfExperience,
+                'averageStreak': avgStreak,
+                'retentionRate': retention,
+                'sessionsPerWeek': profile.totalRoutinesCreated,
+                'bio': profile.bio ?? _coachData?['bio'],
+                'certifications': profile.certifications ?? _coachData?['certifications'],
               };
             }
           } catch (err) {
-            logger.w("Error al cargar métricas dinámicas del coach: $err");
+            logger.w("Error al cargar métricas dinámicas y racha del coach: $err");
           }
         }
         _initCoachEditingValues();
