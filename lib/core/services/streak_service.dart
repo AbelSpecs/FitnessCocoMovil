@@ -202,4 +202,17 @@ class StreakService {
       rethrow;
     }
   }
+  /// Calcula y retorna el promedio de días de racha activa de los alumnos de un coach.
+  /// Endpoint: GET /Streaks/coach/{coachId}/leaderboard
+  static Future<int> getCoachAverageStreak(int coachId) async {
+    try {
+      final list = await getCoachStreakLeaderboard(coachId);
+      if (list.isEmpty) return 0;
+      final sum = list.fold<int>(0, (acc, item) => acc + item.currentStreak);
+      return (sum / list.length).round();
+    } catch (e) {
+      logError('No se pudo calcular la racha media del coach $coachId: $e');
+      return 0;
+    }
+  }
 }

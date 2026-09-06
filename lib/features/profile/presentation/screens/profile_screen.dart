@@ -474,7 +474,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildCoachBrandCard(BuildContext context, ProfileProvider provider, String bio) {
     final certsRaw = provider.isEditing
         ? (provider.editingCertifications ?? '')
-        : (provider.coachData?['certifications']?.toString() ?? 'Personal Trainer, Nutrición deportiva');
+        : (provider.coachProfile?.certifications ??
+            provider.coachData?['certifications']?.toString() ??
+            '');
 
     final certList = certsRaw
         .split(',')
@@ -539,8 +541,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 6),
             Text(
-              bio,
-              style: const TextStyle(fontSize: 14, color: Colors.white, height: 1.3),
+              bio.trim().isNotEmpty ? '"$bio"' : 'Sin eslogan o biografía registrada.',
+              style: TextStyle(
+                fontSize: 14,
+                color: bio.trim().isNotEmpty ? Colors.white : Colors.white38,
+                fontStyle: bio.trim().isNotEmpty ? FontStyle.italic : FontStyle.normal,
+                height: 1.3,
+              ),
             ),
             const SizedBox(height: 16),
 
@@ -554,24 +561,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: (certList.isNotEmpty ? certList : ['Personal Trainer', 'Nutrición deportiva'])
-                  .map((cert) => Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.35),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppTheme.border),
-                        ),
-                        child: Text(
-                          cert,
-                          style: const TextStyle(color: Colors.white70, fontSize: 12),
-                        ),
-                      ))
-                  .toList(),
-            ),
+            if (certList.isEmpty)
+              const Text(
+                'Sin certificaciones registradas.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.white38,
+                  fontStyle: FontStyle.italic,
+                ),
+              )
+            else
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: certList
+                    .map((cert) => Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.35),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppTheme.border),
+                          ),
+                          child: Text(
+                            cert,
+                            style: const TextStyle(color: Colors.white70, fontSize: 12),
+                          ),
+                        ))
+                    .toList(),
+              ),
             const SizedBox(height: 18),
 
             // Performance sub-stats
@@ -585,11 +602,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildSubStat('Sesiones/sem', '32'),
+                  _buildSubStat('Sesiones/sem', '${provider.coachSessionsPerWeek}'),
                   _buildStatDivider(),
-                  _buildSubStat('Retención', '92%'),
+                  _buildSubStat('Retención', '${provider.coachRetentionRate}%'),
                   _buildStatDivider(),
-                  _buildSubStat('Racha media', '11d'),
+                  _buildSubStat('Racha media', '${provider.coachAverageStreak}d'),
                 ],
               ),
             ),
