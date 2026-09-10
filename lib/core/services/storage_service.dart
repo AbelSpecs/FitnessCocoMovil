@@ -4,6 +4,14 @@ import 'package:dio/dio.dart';
 class StorageService {
   static const String storageApiBase = "https://api.pyrosfit.com/api/Storage";
 
+  /// Retorna la URL directa para consultar el avatar de un usuario por su userId
+  static String getUserProfileUrl(dynamic userId) {
+    if (userId == null || userId.toString().trim().isEmpty || userId.toString() == "0") {
+      return "";
+    }
+    return "$storageApiBase/users/$userId/profile";
+  }
+
   /// Retorna la URL directa del endpoint /Storage/serve para una key o URL de Cloudflare R2 / S3
   static String getServeUrl(String? keyOrUrl) {
     if (keyOrUrl == null || keyOrUrl.trim().isEmpty) return "";

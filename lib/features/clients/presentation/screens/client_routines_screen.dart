@@ -74,6 +74,7 @@ class _ClientRoutinesScreenContent extends StatelessWidget {
                   children: [
                     UserAvatar(
                       size: 64,
+                      userId: client.userId,
                       storageKey: client.profilePictureKey,
                       imageUrl: client.profilePictureUrl,
                       initial: initial,

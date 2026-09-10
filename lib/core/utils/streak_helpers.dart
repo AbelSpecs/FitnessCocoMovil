@@ -453,6 +453,7 @@ List<AthleteRankingInfo> mapLeaderboardToAthletes(
   List<StreakLeaderboardItemDto>? items, {
   int currentStudentId = 0,
   String coachLabel = 'PyrosFit',
+  Map<int, int>? studentToUserMap,
 }) {
   if (items == null || items.isEmpty) {
     return [];
@@ -474,6 +475,12 @@ List<AthleteRankingInfo> mapLeaderboardToAthletes(
     final points = streak * 100 + longestStreak * 25 + item.freezeShieldsAvailable * 10;
     final title = getTitleForStreak(streak);
 
+    final resolvedUserId = item.userId ?? studentToUserMap?[item.studentId];
+    final resolvedAvatar = item.avatarUrl ??
+        (resolvedUserId != null && resolvedUserId > 0
+            ? 'https://api.pyrosfit.com/api/Storage/users/$resolvedUserId/profile'
+            : null);
+
     return AthleteRankingInfo(
       id: item.studentId.toString(),
       name: studentName,
@@ -487,6 +494,8 @@ List<AthleteRankingInfo> mapLeaderboardToAthletes(
       delta: 0,
       title: title,
       me: item.studentId == currentStudentId,
+      userId: resolvedUserId,
+      avatarUrl: resolvedAvatar,
     );
   }).toList();
 }

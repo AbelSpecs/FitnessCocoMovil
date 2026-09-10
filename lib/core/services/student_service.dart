@@ -16,6 +16,24 @@ class StudentService {
     }
   }
 
+  static Future<List<dynamic>?> getAllStudents() async {
+    try {
+      final response = await _api.get('/Students');
+      if (response.data != null) {
+        if (response.data is List) {
+          return response.data as List<dynamic>;
+        }
+        if (response.data is Map && response.data['data'] is List) {
+          return response.data['data'] as List<dynamic>;
+        }
+      }
+      return null;
+    } catch (e) {
+      logger.w('Error al obtener lista de todos los estudiantes: $e');
+      return null;
+    }
+  }
+
   static Future<Map<String, dynamic>?> getStudentByUserId(String id) async {
     try {
       final response = await _api.get('/Students/user/$id');

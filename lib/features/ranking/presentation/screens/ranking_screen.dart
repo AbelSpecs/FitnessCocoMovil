@@ -1,3 +1,6 @@
+import 'package:pyrosfitmovil/core/services/storage_service.dart';
+import 'package:pyrosfitmovil/core/services/student_service.dart';
+import 'package:pyrosfitmovil/core/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -25,6 +28,7 @@ class _RankingScreenState extends State<RankingScreen> {
 
   List<StreakLeaderboardItemDto> _globalLeaderboard = [];
   List<StreakLeaderboardItemDto> _coachLeaderboard = [];
+  Map<int, int> _studentToUserMap = {};
 
   final List<String> _periods = const ['Semana', 'Mes', 'Temporada'];
 
@@ -44,12 +48,29 @@ class _RankingScreenState extends State<RankingScreen> {
         coachId > 0
             ? StreakService.getCoachStreakLeaderboard(coachId, limit: 50)
             : Future.value(<StreakLeaderboardItemDto>[]),
+        StudentService.getAllStudents(),
       ]);
+
+      final Map<int, int> studentMap = {};
+      final rawStudents = results[2];
+      if (rawStudents != null) {
+        for (final item in rawStudents) {
+          if (item is Map) {
+            final sId = item['id'] as int? ?? item['studentId'] as int?;
+            final uId = item['userId'] as int? ??
+                (item['user'] is Map ? item['user']['id'] as int? : null);
+            if (sId != null && uId != null) {
+              studentMap[sId] = uId;
+            }
+          }
+        }
+      }
 
       if (mounted) {
         setState(() {
-          _globalLeaderboard = results[0];
-          _coachLeaderboard = results[1];
+          _globalLeaderboard = results[0] as dynamic;
+          _coachLeaderboard = results[1] as dynamic;
+          _studentToUserMap = studentMap;
           _isLoading = false;
         });
       }
@@ -99,6 +120,7 @@ class _RankingScreenState extends State<RankingScreen> {
       rawList,
       currentStudentId: currentStudentId,
       coachLabel: coachLabel,
+      studentToUserMap: _studentToUserMap,
     );
   }
 
@@ -526,35 +548,29 @@ class _RankingScreenState extends State<RankingScreen> {
                         const SizedBox(height: 24),
                       const SizedBox(height: 4),
 
-                      // Avatar
+                      // Avatar Dinámico de Podio con Cloudflare R2
                       Container(
-                        width: isFirst ? 54 : 44,
-                        height: isFirst ? 54 : 44,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          gradient: isFirst ? AppTheme.fireGradient : null,
-                          color: isFirst ? null : const Color(0xFF27272A),
-                          border: Border.all(
-                            color: isFirst ? AppTheme.primaryGlow : AppTheme.border,
-                            width: isFirst ? 2 : 1,
-                          ),
                           boxShadow: isFirst
                               ? [
                                   BoxShadow(
-                                    color: AppTheme.primary.withValues(alpha: 0.4),
-                                    blurRadius: 12,
+                                    color: AppTheme.primary.withValues(alpha: 0.5),
+                                    blurRadius: 14,
+                                    spreadRadius: 2,
                                   )
                                 ]
                               : null,
                         ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          a.initials,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: isFirst ? 16 : 13,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        child: UserAvatar(
+                          size: isFirst ? 56 : 46,
+                          userId: a.userId ?? _studentToUserMap[int.tryParse(a.id) ?? 0],
+                          imageUrl: a.avatarUrl ?? (_studentToUserMap[int.tryParse(a.id) ?? 0] != null
+                              ? StorageService.getUserProfileUrl(_studentToUserMap[int.tryParse(a.id) ?? 0]!)
+                              : null),
+                          initial: a.initials,
+                          showBorder: true,
+                          borderColor: isFirst ? AppTheme.primaryGlow : AppTheme.border,
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -817,26 +833,14 @@ class _RankingScreenState extends State<RankingScreen> {
                 ),
                 const SizedBox(width: 10),
 
-                // Avatar
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: athlete.me ? AppTheme.primary : const Color(0xFF27272A),
-                    border: Border.all(
-                      color: athlete.me ? AppTheme.primaryGlow : AppTheme.border,
-                    ),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    athlete.initials,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                // Avatar Dinámico en Fila de Clasificación
+                UserAvatar(
+                  size: 40,
+                  userId: athlete.userId,
+                  imageUrl: athlete.avatarUrl,
+                  initial: athlete.initials,
+                  showBorder: true,
+                  borderColor: athlete.me ? AppTheme.primaryGlow : AppTheme.border,
                 ),
                 const SizedBox(width: 12),
 

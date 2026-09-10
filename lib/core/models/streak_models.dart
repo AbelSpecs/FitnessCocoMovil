@@ -244,6 +244,8 @@ class StreakLeaderboardItemDto {
   final int longestStreak;
   final String? lastCompletedDate;
   final int freezeShieldsAvailable;
+  final int? userId;
+  final String? avatarUrl;
 
   const StreakLeaderboardItemDto({
     required this.rank,
@@ -253,6 +255,8 @@ class StreakLeaderboardItemDto {
     required this.longestStreak,
     this.lastCompletedDate,
     required this.freezeShieldsAvailable,
+    this.userId,
+    this.avatarUrl,
   });
 
   factory StreakLeaderboardItemDto.fromJson(Map<String, dynamic> json) {
@@ -272,6 +276,8 @@ class StreakLeaderboardItemDto {
       longestStreak: parseInt(json['longestStreak']) ?? 0,
       lastCompletedDate: json['lastCompletedDate'] as String?,
       freezeShieldsAvailable: parseInt(json['freezeShieldsAvailable']) ?? 0,
+      userId: parseInt(json['userId'] ?? (json['user'] is Map ? json['user']['id'] : null)),
+      avatarUrl: (json['avatarUrl'] ?? json['profilePicture'] ?? json['avatar']) as String?,
     );
   }
 }
@@ -289,6 +295,8 @@ class AthleteRankingInfo {
   final int delta;
   final String title;
   final bool me;
+  final int? userId;
+  final String? avatarUrl;
 
   const AthleteRankingInfo({
     required this.id,
@@ -303,6 +311,8 @@ class AthleteRankingInfo {
     required this.delta,
     required this.title,
     this.me = false,
+    this.userId,
+    this.avatarUrl,
   });
 }
 

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:pyrosfitmovil/core/utils/globals.dart';
 import 'package:pyrosfitmovil/core/models/student_info_model.dart';
 import 'package:pyrosfitmovil/core/services/coach_service.dart';
+import 'package:pyrosfitmovil/core/services/student_service.dart';
+import 'package:pyrosfitmovil/core/services/storage_service.dart';
 import 'package:pyrosfitmovil/features/auth/presentation/controllers/auth_provider.dart';
 
 class ClientsProvider extends ChangeNotifier {
@@ -36,14 +38,44 @@ class ClientsProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final rawData = await CoachService.getCoachStudents(coachId);
-      if (rawData != null) {
-        _clients = rawData.map((e) => StudentInfo.fromJson(e)).toList();
+      final results = await Future.wait([
+        CoachService.getCoachStudents(coachId),
+        StudentService.getAllStudents(),
+      ]);
+
+      final rawCoachStudents = results[0];
+      final rawAllStudents = results[1];
+
+      final Map<int, int> studentToUserMap = {};
+      if (rawAllStudents != null) {
+        for (final item in rawAllStudents) {
+          if (item is Map) {
+            final sId = item['id'] as int? ?? item['studentId'] as int?;
+            final uId = item['userId'] as int? ?? (item['user'] is Map ? item['user']['id'] as int? : null);
+            if (sId != null && uId != null) {
+              studentToUserMap[sId] = uId;
+            }
+          }
+        }
+      }
+
+      if (rawCoachStudents != null) {
+        _clients = rawCoachStudents.map((e) {
+          final student = StudentInfo.fromJson(e as Map<String, dynamic>);
+          final resolvedUserId = student.userId ?? studentToUserMap[student.studentId];
+          if (resolvedUserId != null && (student.profilePictureUrl == null || student.profilePictureUrl!.isEmpty)) {
+            return student.copyWith(
+              userId: resolvedUserId,
+              profilePictureUrl: StorageService.getUserProfileUrl(resolvedUserId),
+            );
+          }
+          return student.copyWith(userId: resolvedUserId);
+        }).toList();
       }
     } catch (e) {
       scaffoldMessengerKey.currentState?.showSnackBar(
         const SnackBar(
-          content: Text('Ocurrió un error, por favor intenta de nuevo.'),
+          content: Text('Ocurrió un error al cargar la lista de clientes.'),
           backgroundColor: Colors.red,
         ),
       );
