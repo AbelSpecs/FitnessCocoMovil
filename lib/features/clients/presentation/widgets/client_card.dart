@@ -1,7 +1,6 @@
 import 'package:pyrosfitmovil/core/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:pyrosfitmovil/core/models/student_info_model.dart';
-import 'package:pyrosfitmovil/theme/app_theme.dart';
 
 class ClientCard extends StatelessWidget {
   final StudentInfo client;
@@ -31,9 +30,10 @@ class ClientCard extends StatelessWidget {
           padding: const EdgeInsets.all(16.0),
           child: Row(
             children: [
-              // Avatar
+              // Avatar dinámico de Cloudflare R2
               UserAvatar(
                 size: 56,
+                userId: client.userId,
                 storageKey: client.profilePictureKey,
                 imageUrl: client.profilePictureUrl,
                 initial: initial,

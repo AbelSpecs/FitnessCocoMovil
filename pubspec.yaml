@@ -88,6 +88,8 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/icons/dumbbell.png
+    - assets/icons/pyros_flame.png
+    - assets/brand/
     - .env.development
     - .env.production
   #   - images/a_dot_burr.jpeg
@@ -119,8 +121,8 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages
 flutter_launcher_icons:
-  android: "dumbbell" # Nombre del icono en Android
-  ios: true # Generar iconos para iOS
-  image_path: "assets/icons/dumbbell.png"
-  adaptive_icon_background: "#FFFFFF" # Color de fondo (blanco en este caso)
-  # adaptive_icon_foreground: "#FFFFFF"
+  android: true
+  ios: true
+  image_path: "assets/icons/pyros_flame.png"
+  adaptive_icon_background: "#0F172A"
+  adaptive_icon_foreground: "assets/icons/pyros_flame.png"

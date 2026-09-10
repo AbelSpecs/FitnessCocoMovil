@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/widgets/pyros_flame_logo.dart';
 import 'package:pyrosfitmovil/core/services/storage_service.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -233,21 +234,11 @@ class _LoginPageState extends State<LoginPage> {
                         Column(
                           spacing: 12.0, // gap-3
                           children: [
-                            // Contenedor del Icono con Sombra de Neón (Shadow Glow)
-                            Container(
-                              width: 64,
-                              height: 64,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(16),
-                                gradient: context.pyrosStyles.gradientPrimary,
-                                boxShadow: context.pyrosStyles.shadowGlow,
-                              ),
-                              child: const Icon(
-                                Icons
-                                    .fitness_center, // Equivalente a Dumbbell de lucide-react
-                                size: 32,
-                                color: Colors.white,
-                              ),
+                            // Isotipo Oficial de Llama PyrosFit
+                            const PyrosFlameLogo(
+                              size: 72,
+                              showGlow: true,
+                              borderRadius: 18,
                             ),
                             Text('PyrosFit',
                                 style:

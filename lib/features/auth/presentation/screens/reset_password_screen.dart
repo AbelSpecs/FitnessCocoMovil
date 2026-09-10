@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/widgets/pyros_flame_logo.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pyrosfitmovil/theme/app_theme.dart';

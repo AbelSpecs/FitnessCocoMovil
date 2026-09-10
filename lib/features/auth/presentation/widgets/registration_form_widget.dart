@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/widgets/pyros_flame_logo.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -10,7 +11,6 @@ import 'package:pyrosfitmovil/core/utils/notify.dart';
 import 'package:pyrosfitmovil/theme/app_theme.dart';
 import 'package:pyrosfitmovil/core/widgets/spinner.dart';
 import 'package:logger/logger.dart';
-import 'dart:developer';
 
 final logger = Logger();
 
@@ -307,23 +307,10 @@ class _RegistrationFormWidgetState extends State<RegistrationFormWidget> {
                   Column(
                     spacing: 12,
                     children: [
-                      Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          gradient: const LinearGradient(colors: [
-                            Color.fromRGBO(253, 91, 11, 1),
-                            Color.fromRGBO(255, 170, 48, 1)
-                          ]),
-                          boxShadow: const [
-                            BoxShadow(
-                                color: Color.fromRGBO(253, 91, 11, 0.4),
-                                blurRadius: 16)
-                          ],
-                        ),
-                        child: const Icon(Icons.fitness_center,
-                            size: 32, color: Colors.white),
+                      const PyrosFlameLogo(
+                        size: 72,
+                        showGlow: true,
+                        borderRadius: 18,
                       ),
                       Text('PYROSFIT',
                           style: Theme.of(context).textTheme.displayLarge),

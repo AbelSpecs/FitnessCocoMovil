@@ -4,6 +4,7 @@ import 'package:pyrosfitmovil/core/services/storage_service.dart';
 import 'package:pyrosfitmovil/theme/app_theme.dart';
 
 class UserAvatar extends StatelessWidget {
+  final dynamic userId;
   final String? imageUrl;
   final String? storageKey;
   final String? initial;
@@ -16,6 +17,7 @@ class UserAvatar extends StatelessWidget {
 
   const UserAvatar({
     super.key,
+    this.userId,
     this.imageUrl,
     this.storageKey,
     this.initial,
@@ -34,9 +36,24 @@ class UserAvatar extends StatelessWidget {
     return 'U';
   }
 
+  String _resolveAvatarUrl() {
+    if (imageUrl != null && imageUrl!.trim().isNotEmpty) {
+      return StorageService.getServeUrl(imageUrl);
+    }
+    if (storageKey != null && storageKey!.trim().isNotEmpty) {
+      return StorageService.getServeUrl(storageKey);
+    }
+    if (userId != null &&
+        userId.toString().trim().isNotEmpty &&
+        userId.toString().trim() != '0') {
+      return StorageService.getUserProfileUrl(userId);
+    }
+    return '';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final effectiveUrl = StorageService.getServeUrl(storageKey ?? imageUrl);
+    final effectiveUrl = _resolveAvatarUrl();
     final isCircle = shape == BoxShape.circle;
     final rBorder = isCircle ? BorderRadius.circular(size / 2) : BorderRadius.circular(borderRadius);
 
@@ -115,8 +132,8 @@ class UserAvatar extends StatelessWidget {
       alignment: Alignment.center,
       child: isPlaceholder
           ? SizedBox(
-              width: size * 0.4,
-              height: size * 0.4,
+              width: size * 0.35,
+              height: size * 0.35,
               child: const CircularProgressIndicator(
                 strokeWidth: 2,
                 valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
