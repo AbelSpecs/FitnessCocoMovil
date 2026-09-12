@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/features/clients/presentation/widgets/student_clinical_overview_card.dart';
 import 'package:pyrosfitmovil/core/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -135,7 +136,13 @@ class _ClientRoutinesScreenContent extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+
+              // Ficha Clínica y Antropométrica del Alumno (Actividad T-19)
+              StudentClinicalOverviewCard(
+                studentId: client.studentId,
+                initiallyExpanded: false,
+              ),
 
               // 2. Controles de Fecha y Botón de añadir
               Row(
