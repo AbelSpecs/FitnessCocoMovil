@@ -137,7 +137,7 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   filled: true,
                   fillColor: theme.colorScheme.surfaceContainerHighest
-                      .withOpacity(0.3),
+                      .withValues(alpha: 0.3),
                 ),
                 dropdownColor: theme.colorScheme.surfaceContainerHighest,
               ),
@@ -171,7 +171,7 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   filled: true,
                   fillColor: theme.colorScheme.surfaceContainerHighest
-                      .withOpacity(0.3),
+                      .withValues(alpha: 0.3),
                 ),
                 dropdownColor: theme.colorScheme.surfaceContainerHighest,
               ),

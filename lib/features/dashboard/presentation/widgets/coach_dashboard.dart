@@ -148,7 +148,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
                       ),
                       const SizedBox(height: 4),
                       const Text(
-                        'Churn Risk Radar',
+                        'Radar de Riesgo de Abandono',
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w900,
@@ -158,7 +158,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
                         ),
                       ),
                       const Text(
-                        'Detectá alumnos en riesgo de abandono antes de perderlos.',
+                        'Detecta alumnos en riesgo de abandono antes de perderlos.',
                         style: TextStyle(
                           color: Colors.grey,
                           fontSize: 13,
@@ -681,6 +681,65 @@ class _MotivationalMessageDialog extends StatefulWidget {
 class _MotivationalMessageDialogState extends State<_MotivationalMessageDialog> {
   late TextEditingController _textController;
   bool _sent = false;
+  bool _isSending = false;
+
+  Future<void> _sendMotivation() async {
+    final message = _textController.text.trim();
+    if (message.isEmpty || _isSending) return;
+
+    final studentId = int.tryParse(widget.student.studentId);
+    if (studentId == null || studentId <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('ID de estudiante no válido'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final auth = context.read<AuthProvider>();
+    final coachName = auth.user?.firstName?.trim() ?? 'Tu Coach';
+
+    setState(() => _isSending = true);
+
+    try {
+      final success = await StreakService.sendStudentMotivation(
+        studentId,
+        SendMotivationEmailRequest(
+          message: message,
+          coachName: coachName,
+        ),
+      );
+
+      if (mounted) {
+        if (success) {
+          setState(() {
+            _sent = true;
+            _isSending = false;
+          });
+        } else {
+          setState(() => _isSending = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No se pudo enviar el mensaje motivacional. Intenta nuevamente.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSending = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al transmitir el mensaje: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -750,7 +809,7 @@ class _MotivationalMessageDialogState extends State<_MotivationalMessageDialog> 
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Le llegará por WhatsApp y notificación en la app.',
+                    'Notificación enviada al alumno exitosamente.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.grey,
@@ -799,6 +858,7 @@ class _MotivationalMessageDialogState extends State<_MotivationalMessageDialog> 
                   TextField(
                     controller: _textController,
                     maxLines: 4,
+                    enabled: !_isSending,
                     style: const TextStyle(color: Colors.white, fontSize: 13),
                     decoration: InputDecoration(
                       filled: true,
@@ -822,7 +882,7 @@ class _MotivationalMessageDialogState extends State<_MotivationalMessageDialog> 
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: widget.onDismiss,
+                          onPressed: _isSending ? null : widget.onDismiss,
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.grey,
                             side: BorderSide(color: AppTheme.border.withValues(alpha: 0.8)),
@@ -837,11 +897,20 @@ class _MotivationalMessageDialogState extends State<_MotivationalMessageDialog> 
                       const SizedBox(width: 12),
                       Expanded(
                         child: ElevatedButton.icon(
-                          onPressed: () => setState(() => _sent = true),
-                          icon: const Icon(Icons.send, size: 16),
-                          label: const Text(
-                            'Enviar',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                          onPressed: _isSending ? null : _sendMotivation,
+                          icon: _isSending
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.send, size: 16),
+                          label: Text(
+                            _isSending ? 'Enviando...' : 'Enviar',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.primary,

@@ -204,6 +204,25 @@ class StreakService {
   }
   /// Calcula y retorna el promedio de días de racha activa de los alumnos de un coach.
   /// Endpoint: GET /Streaks/coach/{coachId}/leaderboard
+  /// Envía una notificación / mensaje de motivación a un alumno desde el Radar de Riesgo de Abandono.
+  /// Endpoint: POST /Streaks/student/{studentId}/send-motivation
+  static Future<bool> sendStudentMotivation(
+    int studentId,
+    SendMotivationEmailRequest request,
+  ) async {
+    try {
+      final response = await _api.post(
+        '/Streaks/student/$studentId/send-motivation',
+        data: request.toJson(),
+      );
+      final statusCode = response.statusCode ?? 200;
+      return statusCode >= 200 && statusCode < 300;
+    } catch (e) {
+      logError('Error al enviar mensaje motivacional al estudiante $studentId: $e');
+      rethrow;
+    }
+  }
+
   static Future<int> getCoachAverageStreak(int coachId) async {
     try {
       final list = await getCoachStreakLeaderboard(coachId);

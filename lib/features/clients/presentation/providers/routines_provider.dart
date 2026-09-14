@@ -166,18 +166,24 @@ class RoutinesProvider extends ChangeNotifier {
     return false;
   }
 
-  Future<bool> createCustomExercise(String name, int muscleGroupId) async {
+  Future<ExerciseModel?> createCustomExercise(
+    String name,
+    int muscleGroupId, {
+    String? videoKey,
+    String? videoUrl,
+  }) async {
     try {
       final coachId = authProvider.user?.coachId;
-      if (coachId == null) return false;
+      if (coachId == null) return null;
 
       final data = {
         "exercise": {
           "coachId": coachId,
-          "name": name,
+          "name": name.trim(),
           "description": "",
           "muscleGroupId": muscleGroupId,
-          "videoUrl": "",
+          "videoKey": videoKey?.trim().isNotEmpty == true ? videoKey!.trim() : null,
+          "videoUrl": videoUrl?.trim().isNotEmpty == true ? videoUrl!.trim() : null,
           "isCustom": true
         }
       };
@@ -185,17 +191,29 @@ class RoutinesProvider extends ChangeNotifier {
       final response = await RoutineService.postExercise(data);
       if (response != null) {
         await loadExercisesForMuscleGroup(muscleGroupId);
-        return true;
+        final created = _exercises.firstWhere(
+          (e) => e.name.toLowerCase() == name.trim().toLowerCase(),
+          orElse: () => ExerciseModel(
+            id: response['id'] ?? response['exercise']?['id'] ?? 0,
+            coachId: coachId,
+            name: name.trim(),
+            muscleGroupId: muscleGroupId,
+            videoKey: videoKey,
+            videoUrl: videoUrl,
+            isCustom: true,
+          ),
+        );
+        return created;
       }
     } catch (e) {
       scaffoldMessengerKey.currentState?.showSnackBar(
         const SnackBar(
-          content: Text('Ocurrió un error, por favor intenta de nuevo.'),
+          content: Text('Ocurrió un error al crear el ejercicio.'),
           backgroundColor: Colors.red,
         ),
       );
       debugPrint("Error creating custom exercise: $e");
     }
-    return false;
+    return null;
   }
 }

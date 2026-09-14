@@ -339,3 +339,22 @@ class AdjustStreakDto {
   }
 }
 
+class SendMotivationEmailRequest {
+  final String? studentEmail;
+  final String message;
+  final String? coachName;
+
+  SendMotivationEmailRequest({
+    this.studentEmail,
+    required this.message,
+    this.coachName,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (studentEmail != null && studentEmail!.trim().isNotEmpty) 'studentEmail': studentEmail!.trim(),
+      'message': message.trim(),
+      if (coachName != null && coachName!.trim().isNotEmpty) 'coachName': coachName!.trim(),
+    };
+  }
+}
