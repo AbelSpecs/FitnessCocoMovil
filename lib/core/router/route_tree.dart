@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/features/legal/presentation/screens/terms_screen.dart';
 import 'package:pyrosfitmovil/features/exercises/presentation/screens/exercises_screen.dart';
 import 'package:pyrosfitmovil/features/auth/presentation/screens/reset_password_screen.dart';
 import 'package:pyrosfitmovil/features/auth/presentation/screens/forgot_password_screen.dart';
@@ -105,6 +106,10 @@ class AppRouter {
               builder: (context, state) => const ProfileScreen(),
             ),
           ],
+        ),
+        GoRoute(
+          path: '/terms',
+          builder: (context, state) => const TermsScreen(),
         ),
         GoRoute(
           path: '/login',

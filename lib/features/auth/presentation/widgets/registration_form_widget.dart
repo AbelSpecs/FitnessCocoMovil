@@ -314,11 +314,12 @@ class _RegistrationFormWidgetState extends State<RegistrationFormWidget> {
                       ),
                       Text('PYROSFIT',
                           style: Theme.of(context).textTheme.displayLarge),
-                      const Text('TRAINING CO.',
+                      const Text('BY GEEKSOLUTIONS',
                           style: TextStyle(
-                              color: textMuted,
-                              fontSize: 10,
-                              letterSpacing: 2)),
+                              color: Color(0xFFA1A1AA),
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 2.2)),
                     ],
                   ),
 
