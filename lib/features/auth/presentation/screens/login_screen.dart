@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/widgets/legal/terms_dialog.dart';
 import 'package:pyrosfitmovil/core/widgets/pyros_flame_logo.dart';
 import 'package:pyrosfitmovil/core/services/storage_service.dart';
 import 'dart:ui';
@@ -30,6 +31,7 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
 
   bool _isLoading = false;
+  bool _acceptedTerms = false;
   String _error = "";
 
   @override
@@ -41,6 +43,16 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (!_acceptedTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Debes aceptar los Términos y Condiciones y la Política de Privacidad.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     setState(() {
       _error = "";
@@ -243,6 +255,16 @@ class _LoginPageState extends State<LoginPage> {
                             Text('PyrosFit',
                                 style:
                                     Theme.of(context).textTheme.displayLarge),
+                            const SizedBox(height: 2),
+                            const Text(
+                              'BY GEEKSOLUTIONS',
+                              style: TextStyle(
+                                color: Color(0xFFA1A1AA),
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 2.2,
+                              ),
+                            ),
                           ],
                         ),
 
@@ -389,22 +411,97 @@ class _LoginPageState extends State<LoginPage> {
                                       ],
                                     ),
 
+                                    // Checkbox Términos y Condiciones (Actividad T-23)
+                                    Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: Checkbox(
+                                            value: _acceptedTerms,
+                                            activeColor: AppTheme.primary,
+                                            checkColor: Colors.black,
+                                            side: const BorderSide(color: borderColor),
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                            onChanged: (val) => setState(() => _acceptedTerms = val ?? false),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: GestureDetector(
+                                            onTap: () => setState(() => _acceptedTerms = !_acceptedTerms),
+                                            child: RichText(
+                                              text: TextSpan(
+                                                style: const TextStyle(color: textMuted, fontSize: 11, height: 1.35),
+                                                children: [
+                                                  const TextSpan(text: 'He leído y acepto los '),
+                                                  WidgetSpan(
+                                                    alignment: PlaceholderAlignment.baseline,
+                                                    baseline: TextBaseline.alphabetic,
+                                                    child: GestureDetector(
+                                                      onTap: () => TermsDialog.show(
+                                                        context,
+                                                        initialTab: 0,
+                                                        onAccept: () => setState(() => _acceptedTerms = true),
+                                                      ),
+                                                      child: const Text(
+                                                        'Términos y Condiciones',
+                                                        style: TextStyle(
+                                                          color: AppTheme.primaryGlow,
+                                                          fontSize: 11,
+                                                          fontWeight: FontWeight.bold,
+                                                          decoration: TextDecoration.underline,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const TextSpan(text: ' y la '),
+                                                  WidgetSpan(
+                                                    alignment: PlaceholderAlignment.baseline,
+                                                    baseline: TextBaseline.alphabetic,
+                                                    child: GestureDetector(
+                                                      onTap: () => TermsDialog.show(
+                                                        context,
+                                                        initialTab: 1,
+                                                        onAccept: () => setState(() => _acceptedTerms = true),
+                                                      ),
+                                                      child: const Text(
+                                                        'Política de Privacidad',
+                                                        style: TextStyle(
+                                                          color: AppTheme.primaryGlow,
+                                                          fontSize: 11,
+                                                          fontWeight: FontWeight.bold,
+                                                          decoration: TextDecoration.underline,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const TextSpan(text: '.'),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+
                                     // Botón Submit (Hero Variant / Gran gradiente)
                                     Container(
                                       height: 48,
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(8),
-                                        gradient: _isLoading
+                                        gradient: (_isLoading || !_acceptedTerms)
                                             ? null
                                             : const LinearGradient(
                                                 colors: primaryGradient),
-                                        color: _isLoading
-                                            ? Colors.grey[800]
+                                        color: (_isLoading || !_acceptedTerms)
+                                            ? Colors.grey[850]
                                             : null,
                                       ),
                                       child: ElevatedButton(
                                         onPressed:
-                                            _isLoading ? null : _handleLogin,
+                                            (_isLoading || !_acceptedTerms) ? null : _handleLogin,
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: Colors.transparent,
                                           shadowColor: Colors.transparent,
