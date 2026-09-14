@@ -6,6 +6,8 @@ import 'package:pyrosfitmovil/theme/app_theme.dart';
 import 'package:pyrosfitmovil/features/student_routines/presentation/providers/student_routines_provider.dart';
 import 'package:pyrosfitmovil/features/dashboard/data/models/dashboard_models.dart';
 import 'package:pyrosfitmovil/core/services/streak_service.dart';
+import 'package:pyrosfitmovil/core/widgets/rest_timer_widget.dart';
+import 'package:pyrosfitmovil/core/utils/time_utils.dart';
 
 class StudentDailyRoutineScreen extends StatefulWidget {
   final int studentId;
@@ -20,6 +22,21 @@ class StudentDailyRoutineScreen extends StatefulWidget {
 }
 
 class _StudentDailyRoutineScreenState extends State<StudentDailyRoutineScreen> {
+  bool _isTimerActive = false;
+  int _timerSeconds = 0;
+  String? _timerLabel;
+  int _timerKey = 0;
+
+  void _startRestTimer(String rawRestTime, String label) {
+    final seconds = parseRestTimeToSeconds(rawRestTime);
+    final actualSeconds = seconds > 0 ? seconds : 60;
+    setState(() {
+      _timerSeconds = actualSeconds;
+      _timerLabel = label;
+      _timerKey++;
+      _isTimerActive = true;
+    });
+  }
   @override
   void initState() {
     super.initState();
@@ -57,7 +74,11 @@ class _StudentDailyRoutineScreenState extends State<StudentDailyRoutineScreen> {
         ),
         body: provider.isLoading
             ? const Center(child: CircularProgressIndicator())
-            : SingleChildScrollView(
+            : SizedBox.expand(
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -147,8 +168,24 @@ class _StudentDailyRoutineScreenState extends State<StudentDailyRoutineScreen> {
                         return _ExerciseRow(
                           exercise: entry.value,
                           index: entry.key + 1,
+                          onStartTimer: _startRestTimer,
                         );
                       }),
+                  ],
+                ),
+              ),
+                    ),
+                    if (_isTimerActive && _timerSeconds > 0)
+                      RestTimerWidget(
+                        key: ValueKey('rest_timer_$_timerKey'),
+                        seconds: _timerSeconds,
+                        label: _timerLabel,
+                        onClose: () {
+                          setState(() {
+                            _isTimerActive = false;
+                          });
+                        },
+                      ),
                   ],
                 ),
               ),
@@ -160,8 +197,13 @@ class _StudentDailyRoutineScreenState extends State<StudentDailyRoutineScreen> {
 class _ExerciseRow extends StatefulWidget {
   final GetDailyStudentExerciseDto exercise;
   final int index;
+  final void Function(String restTime, String label)? onStartTimer;
 
-  const _ExerciseRow({required this.exercise, required this.index});
+  const _ExerciseRow({
+    required this.exercise,
+    required this.index,
+    this.onStartTimer,
+  });
 
   @override
   State<_ExerciseRow> createState() => _ExerciseRowState();
@@ -449,10 +491,27 @@ class _ExerciseRowState extends State<_ExerciseRow> {
                       index: idx,
                       set: set,
                       isChecked: checked,
+                      onStartTimer: () {
+                        widget.onStartTimer?.call(
+                          set.restTime,
+                          '${widget.exercise.exerciseName} • Serie #${set.setNumber}',
+                        );
+                      },
                       onToggle: (val, actualReps, actualWeight) async {
                         setState(() {
                           _setsCompleted[idx] = val;
                         });
+
+                        // Disparar inmediatamente el cronómetro de descanso si se marca como completada
+                        if (val) {
+                          final restSec = parseRestTimeToSeconds(set.restTime);
+                          if (restSec > 0) {
+                            widget.onStartTimer?.call(
+                              set.restTime,
+                              '${widget.exercise.exerciseName} • Serie #${set.setNumber}',
+                            );
+                          }
+                        }
 
                         final provider =
                             context.read<StudentRoutinesProvider>();
@@ -551,12 +610,14 @@ class _SetRow extends StatefulWidget {
   final GetDailyExerciseSetsDto set;
   final bool isChecked;
   final void Function(bool, int?, int?) onToggle;
+  final VoidCallback? onStartTimer;
 
   const _SetRow({
     required this.index,
     required this.set,
     required this.isChecked,
     required this.onToggle,
+    this.onStartTimer,
   });
 
   @override
@@ -617,6 +678,46 @@ class _SetRowState extends State<_SetRow> {
               Text('Serie ${widget.index + 1}',
                   style: const TextStyle(
                       fontWeight: FontWeight.bold, fontSize: 14)),
+              if (widget.set.restTime.isNotEmpty) ...[
+                Builder(
+                  builder: (context) {
+                    final restSec = parseRestTimeToSeconds(widget.set.restTime);
+                    if (restSec <= 0) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 8.0),
+                      child: GestureDetector(
+                        onTap: widget.onStartTimer,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 2.5),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primary.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                                color: AppTheme.primary.withValues(alpha: 0.4)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.timer_outlined,
+                                  size: 11, color: AppTheme.primary),
+                              const SizedBox(width: 3),
+                              Text(
+                                '${restSec}s',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
               const Spacer(),
               Text('Objetivo: ',
                   style: TextStyle(
