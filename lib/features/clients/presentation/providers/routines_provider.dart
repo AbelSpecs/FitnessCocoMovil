@@ -42,8 +42,25 @@ class RoutinesProvider extends ChangeNotifier {
       logDebug('Loaded routines for student $studentId on $dateStr: $rawData');
       if (rawData != null) {
         logDebug('Raw data for routines: $rawData');
-        _routines =
+        final parsed =
             rawData.map((e) => DailyStudentExercise.fromJson(e)).toList();
+        // Enriquecer con información de video si no vino en el DTO
+        final enriched = await Future.wait(parsed.map((e) async {
+          if (!e.hasVideo && e.exerciseId > 0) {
+            try {
+              final exData = await RoutineService.getExercise(e.exerciseId);
+              if (exData != null) {
+                final vKey = exData['videoKey']?.toString();
+                final vUrl = exData['videoUrl']?.toString();
+                if ((vKey != null && vKey.isNotEmpty) || (vUrl != null && vUrl.isNotEmpty)) {
+                  return e.copyWith(videoKey: vKey, videoUrl: vUrl);
+                }
+              }
+            } catch (_) {}
+          }
+          return e;
+        }));
+        _routines = enriched;
         logDebug('Parsed routines: $_routines');
       } else {
         _routines = [];

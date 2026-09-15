@@ -1,3 +1,5 @@
+import 'package:pyrosfitmovil/features/exercises/presentation/widgets/exercise_video_modal.dart';
+import 'package:pyrosfitmovil/features/exercises/presentation/widgets/video_thumbnail_badge.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -426,6 +428,41 @@ class _ExerciseRowState extends State<_ExerciseRow> {
                       ],
                     ),
                   ),
+                  if (widget.exercise.hasVideo)
+                    GestureDetector(
+                      onTap: () {
+                        ExerciseVideoModal.show(
+                          context,
+                          widget.exercise.toExerciseModel(),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        margin: const EdgeInsets.only(right: 6),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primary.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: AppTheme.primary.withValues(alpha: 0.45),
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.play_circle_fill_rounded, size: 14, color: AppTheme.primary),
+                            SizedBox(width: 4),
+                            Text(
+                              'Video',
+                              style: TextStyle(
+                                color: AppTheme.primary,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   Icon(
                     _expanded
                         ? Icons.keyboard_arrow_up
@@ -447,6 +484,101 @@ class _ExerciseRowState extends State<_ExerciseRow> {
                 children: [
                   const Divider(color: AppTheme.border),
                   const SizedBox(height: 12),
+
+                  // Miniatura interactiva de video si está disponible (como en la web)
+                  if (widget.exercise.hasVideo) ...[
+                    GestureDetector(
+                      onTap: () {
+                        ExerciseVideoModal.show(
+                          context,
+                          widget.exercise.toExerciseModel(),
+                        );
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: AppTheme.border.withValues(alpha: 0.7),
+                          ),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: Stack(
+                          children: [
+                            VideoThumbnailBadge(
+                              videoKey: widget.exercise.videoKey,
+                              videoUrl: widget.exercise.videoUrl,
+                              height: 140,
+                              width: double.infinity,
+                              onTap: () {
+                                ExerciseVideoModal.show(
+                                  context,
+                                  widget.exercise.toExerciseModel(),
+                                );
+                              },
+                            ),
+                            Positioned(
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.transparent,
+                                      Colors.black.withValues(alpha: 0.85),
+                                      Colors.black.withValues(alpha: 0.95),
+                                    ],
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.play_circle_fill_rounded,
+                                      color: AppTheme.primary,
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        'Ver técnica de ${widget.exercise.exerciseName}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.primary,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Text(
+                                        'Reproducir',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+
                   // Notas del coach enteras si existen
                   if (widget.exercise.coachNotes.isNotEmpty) ...[
                     Container(

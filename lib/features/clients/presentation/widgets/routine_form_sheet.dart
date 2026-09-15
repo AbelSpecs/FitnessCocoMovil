@@ -5,6 +5,8 @@ import 'package:pyrosfitmovil/core/models/muscle_group_model.dart';
 import 'package:pyrosfitmovil/core/models/exercise_model.dart';
 import 'package:pyrosfitmovil/core/utils/logger.dart';
 import 'package:pyrosfitmovil/features/clients/presentation/providers/routines_provider.dart';
+import 'package:pyrosfitmovil/features/exercises/presentation/widgets/quick_create_exercise_dialog.dart';
+import 'package:pyrosfitmovil/theme/app_theme.dart';
 
 class RoutineFormSheet extends StatefulWidget {
   final DailyStudentExercise? routineToEdit;
@@ -141,6 +143,77 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
                 ),
                 dropdownColor: theme.colorScheme.surfaceContainerHighest,
               ),
+              if (!isEditing) ...[
+                const SizedBox(height: 8),
+                Center(
+                  child: InkWell(
+                    onTap: () async {
+                      final newEx = await showDialog<ExerciseModel>(
+                        context: context,
+                        builder: (_) => ChangeNotifierProvider.value(
+                          value: provider,
+                          child: QuickCreateExerciseDialog(
+                            initialMuscleGroupId: _selectedMuscleGroup?.id,
+                          ),
+                        ),
+                      );
+                      if (newEx != null && mounted) {
+                        // Si el grupo muscular del ejercicio creado difiere, sincronizarlo
+                        if (_selectedMuscleGroup == null ||
+                            _selectedMuscleGroup!.id != newEx.muscleGroupId) {
+                          final matchingGroup = provider.muscleGroups.firstWhere(
+                            (m) => m.id == newEx.muscleGroupId,
+                            orElse: () => provider.muscleGroups.first,
+                          );
+                          setState(() {
+                            _selectedMuscleGroup = matchingGroup;
+                          });
+                        }
+                        await provider.loadExercisesForMuscleGroup(newEx.muscleGroupId);
+                        if (!mounted || !context.mounted) return;
+                        setState(() {
+                          _selectedExercise = provider.exercises.firstWhere(
+                            (e) =>
+                                e.id == newEx.id ||
+                                e.name.toLowerCase() == newEx.name.toLowerCase(),
+                            orElse: () => newEx,
+                          );
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Ejercicio creado y seleccionado'),
+                            backgroundColor: Color(0xFF10B981),
+                          ),
+                        );
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(6),
+                    child: Padding(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      child: RichText(
+                        text: const TextSpan(
+                          text: '¿No encuentras el ejercicio? ',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.white60,
+                          ),
+                          children: [
+                            TextSpan(
+                              text: 'Crea uno',
+                              style: TextStyle(
+                                color: AppTheme.primaryGlow,
+                                fontWeight: FontWeight.bold,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
 
               const SizedBox(height: 16),
 
