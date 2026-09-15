@@ -56,7 +56,7 @@ class _ExerciseFormSheetState extends State<ExerciseFormSheet> {
     _youtubeController = TextEditingController(text: isYt ? existingUrl : '');
     _selectedMuscleGroupId = ex?.muscleGroupId ?? 1;
     _isCustom = ex?.isCustom ?? true;
-    _videoMode = isYt ? 1 : 0;
+    _videoMode = isYt ? 0 : 1;
   }
 
   @override
@@ -104,8 +104,8 @@ class _ExerciseFormSheetState extends State<ExerciseFormSheet> {
     String? finalVideoUrl = widget.exercise?.videoUrl;
 
     try {
-      // 1. Si eligió subir un archivo de video
-      if (_videoMode == 0 && _selectedVideo != null && _videoBytes != null) {
+      // 1. Si eligió subir un archivo de video a R2 (_videoMode == 1 en ExerciseVideoSelector)
+      if (_videoMode == 1 && _selectedVideo != null && _videoBytes != null) {
         final ext = _selectedVideo!.name.split('.').last.toLowerCase();
         final contentType = ext == 'mp4' ? 'video/mp4' : (ext == 'mov' ? 'video/quicktime' : 'video/webm');
 
@@ -121,7 +121,8 @@ class _ExerciseFormSheetState extends State<ExerciseFormSheet> {
           finalVideoKey = uploadedKey;
           finalVideoUrl = uploadedKey;
         }
-      } else if (_videoMode == 1) {
+      } else if (_videoMode == 0) {
+        // Enlace Web (_videoMode == 0 en ExerciseVideoSelector)
         final ytUrl = _youtubeController.text.trim();
         if (ytUrl.isNotEmpty) {
           finalVideoKey = ytUrl;

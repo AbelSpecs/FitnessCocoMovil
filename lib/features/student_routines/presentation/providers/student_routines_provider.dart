@@ -42,7 +42,25 @@ class StudentRoutinesProvider extends ChangeNotifier {
     try {
       final data = await DashboardService.getDailyStudentExercisesByStudentIdAndDate(
           studentId, date);
-      _dailyExercises = data;
+
+      // Enriquecer proactivamente con video de RoutineService si el backend no lo devolvió en el DTO (como hace la web)
+      final enriched = await Future.wait(data.map((e) async {
+        if (!e.hasVideo && e.exerciseId > 0) {
+          try {
+            final exData = await RoutineService.getExercise(e.exerciseId);
+            if (exData != null) {
+              final vKey = exData['videoKey']?.toString();
+              final vUrl = exData['videoUrl']?.toString();
+              if ((vKey != null && vKey.isNotEmpty) || (vUrl != null && vUrl.isNotEmpty)) {
+                return e.copyWith(videoKey: vKey, videoUrl: vUrl);
+              }
+            }
+          } catch (_) {}
+        }
+        return e;
+      }));
+
+      _dailyExercises = enriched;
     } catch (e) {
       scaffoldMessengerKey.currentState?.showSnackBar(
         const SnackBar(

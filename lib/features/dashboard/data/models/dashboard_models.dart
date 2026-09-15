@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/models/exercise_model.dart';
 class CoachStudentsDto {
   final int studentId;
   final String name;
@@ -76,6 +77,8 @@ class GetDailyStudentExerciseDto {
   final String coachNotes;
   final String studentNotes;
   final bool isCompleted;
+  final String? videoKey;
+  final String? videoUrl;
 
   GetDailyStudentExerciseDto({
     required this.id,
@@ -89,7 +92,23 @@ class GetDailyStudentExerciseDto {
     required this.coachNotes,
     required this.studentNotes,
     required this.isCompleted,
+    this.videoKey,
+    this.videoUrl,
   });
+
+  bool get hasVideo =>
+      (videoKey != null && videoKey!.trim().isNotEmpty) ||
+      (videoUrl != null && videoUrl!.trim().isNotEmpty);
+
+  ExerciseModel toExerciseModel() => ExerciseModel(
+        id: exerciseId,
+        name: exerciseName,
+        muscleGroupId: 0,
+        muscleGroup: muscleGroupName,
+        videoKey: videoKey,
+        videoUrl: videoUrl,
+        coachId: coachId,
+      );
 
   factory GetDailyStudentExerciseDto.fromJson(Map<String, dynamic> json) {
     int? parseInt(dynamic value) {
@@ -115,6 +134,8 @@ class GetDailyStudentExerciseDto {
       coachNotes: json['coachNotes']?.toString() ?? '',
       studentNotes: json['studentNotes']?.toString() ?? '',
       isCompleted: json['isCompleted'] == true || json['isCompleted'] == 1 || json['isCompleted'] == 'true',
+      videoKey: json['videoKey']?.toString() ?? json['exercise']?['videoKey']?.toString(),
+      videoUrl: json['videoUrl']?.toString() ?? json['exercise']?['videoUrl']?.toString(),
     );
   }
 
@@ -130,6 +151,8 @@ class GetDailyStudentExerciseDto {
     String? coachNotes,
     String? studentNotes,
     bool? isCompleted,
+    String? videoKey,
+    String? videoUrl,
   }) {
     return GetDailyStudentExerciseDto(
       id: id ?? this.id,
@@ -143,6 +166,8 @@ class GetDailyStudentExerciseDto {
       coachNotes: coachNotes ?? this.coachNotes,
       studentNotes: studentNotes ?? this.studentNotes,
       isCompleted: isCompleted ?? this.isCompleted,
+      videoKey: videoKey ?? this.videoKey,
+      videoUrl: videoUrl ?? this.videoUrl,
     );
   }
 }

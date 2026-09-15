@@ -1,3 +1,5 @@
+import 'package:pyrosfitmovil/features/exercises/presentation/widgets/exercise_video_modal.dart';
+import 'package:pyrosfitmovil/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:pyrosfitmovil/core/models/daily_student_exercise_model.dart';
 import 'package:pyrosfitmovil/core/models/daily_exercise_set_model.dart';
@@ -58,6 +60,17 @@ class RoutineCard extends StatelessWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    if (routine.hasVideo)
+                      IconButton(
+                        icon: const Icon(Icons.play_circle_outline, size: 22),
+                        onPressed: () {
+                          ExerciseVideoModal.show(context, routine.toExerciseModel());
+                        },
+                        color: AppTheme.primary,
+                        tooltip: 'Ver video',
+                        constraints: const BoxConstraints(),
+                        padding: const EdgeInsets.all(8),
+                      ),
                     if (onEdit != null)
                       IconButton(
                         icon: const Icon(Icons.edit_outlined, size: 20),
@@ -85,7 +98,7 @@ class RoutineCard extends StatelessWidget {
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surfaceContainerHighest
-                      .withOpacity(0.5),
+                      .withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -139,7 +152,7 @@ class RoutineCard extends StatelessWidget {
             height: 24,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withOpacity(0.1),
+              color: theme.colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
