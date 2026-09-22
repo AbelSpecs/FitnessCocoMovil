@@ -5,14 +5,14 @@ workflows:
     environment:
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.geeksolutions.pyrosfit
+        bundle_identifier: com.geekssolutions.pyrosfit
       flutter: stable
       xcode: latest
       cocoapods: default
     scripts:
       - name: Set up code signing
         script: |
-          app-store-connect fetch-signing-files $([ -z "$CM_BUNDLE_ID" ] && echo "com.geeksolutions.pyrosfit" || echo "$CM_BUNDLE_ID") \
+          app-store-connect fetch-signing-files $([ -z "$CM_BUNDLE_ID" ] && echo "com.geekssolutions.pyrosfit" || echo "$CM_BUNDLE_ID") \
             --type IOS_APP_STORE \
             --create
           xcode-project use-profiles
