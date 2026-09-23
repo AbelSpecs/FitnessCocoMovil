@@ -3,7 +3,7 @@ workflows:
     name: iOS Release Build
     instance_type: mac_mini_m2
     integrations:
-      app_store_connect: PyrosFit_Key
+      app_store_connect: CodemagicBuild_Key
     environment:
       ios_signing:
         distribution_type: app_store
@@ -16,9 +16,8 @@ workflows:
         script: |
           keychain initialize
           app-store-connect fetch-signing-files "com.geeksolutions.pyrosfit" \
-            --type IOS_APP_STORE \
-            --create
-          keychain add-certificates
+            --type IOS_APP_STORE
+          keychain add-certificates 
           xcode-project use-profiles
       - name: Get Flutter packages
         script: |
