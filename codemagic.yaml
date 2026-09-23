@@ -5,9 +5,6 @@ workflows:
     integrations:
       app_store_connect: CodemagicBuild_Key
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.geeksolutions.pyrosfit
       flutter: stable
       xcode: latest
       cocoapods: default
@@ -17,6 +14,7 @@ workflows:
           keychain initialize
           app-store-connect fetch-signing-files "com.geeksolutions.pyrosfit" \
             --type IOS_APP_STORE
+            --create
           keychain add-certificates 
           xcode-project use-profiles
       - name: Get Flutter packages
