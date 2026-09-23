@@ -20,11 +20,15 @@ workflows:
       - name: Get Flutter packages
         script: |
           flutter packages pub get
-      - name: Build IPA
+      - name: Build iOS Archive
         script: |
-          flutter build ipa --release \
-            --no-codesign \
-            --export-options-plist=/Users/builder/export_options.plist
+          flutter build ipa --release --no-codesign
+      - name: Export IPA
+        script: |
+          xcodebuild -exportArchive \
+            -archivePath build/ios/archive/Runner.xcarchive \
+            -exportPath build/ios/ipa \
+            -exportOptionsPlist /Users/builder/export_options.plist
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
