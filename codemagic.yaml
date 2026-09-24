@@ -12,24 +12,20 @@ workflows:
       - name: Set up code signing
         script: |
           keychain initialize
+          # Descarga e instala el certificado .p12 y el perfil subidos a Codemagic
           app-store-connect fetch-signing-files "com.geeksolutions.pyrosfit" \
-            --type IOS_APP_STORE \
-            --create
+            --type IOS_APP_STORE
           keychain add-certificates
           xcode-project use-profiles
-      - name: Disable automatic signing in Xcode project
-        script: |
-          # Desactiva la firma automática forzando manual en el pbxproj para evitar el error "No Accounts"
-          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' ios/Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = Manual;/g' ios/Runner.xcodeproj/project.pbxproj
       - name: Get Flutter packages
         script: |
           flutter packages pub get
-      - name: Build IPA
+      - name: Build and Export IPA
         script: |
           xcode-project build-ipa \
             --workspace ios/Runner.xcworkspace \
-            --scheme Runner
+            --scheme Runner \
+            --archive-flags="CODE_SIGNING_ALLOWED=NO"
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
