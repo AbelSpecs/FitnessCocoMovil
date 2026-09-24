@@ -17,25 +17,20 @@ workflows:
             --create
           keychain add-certificates
           xcode-project use-profiles
-          echo "=== REVISIÓN DE EXPORT OPTIONS ==="
-          cat /Users/builder/export_options.plist
       - name: Get Flutter packages
         script: |
           flutter packages pub get
-      - name: Build iOS Archive
+      - name: Build and Package IPA
         script: |
-          flutter build ipa --release --no-codesign
-      - name: Export IPA
-        script: |
-          # 1. Encontrar el archivo de perfil descargado
-          PROFILE_PATH=$(find "$HOME/Library/MobileDevice/Provisioning Profiles" -name "*.mobileprovision" | head -n 1)
+          # 1. Obtenemos la ruta real del perfil descargado por Codemagic
+          PROFILE_PATH=$(find /Users/builder -name "*.mobileprovision" 2>/dev/null | head -n 1)
+          echo "Perfil localizado en: $PROFILE_PATH"
 
-          # 2. Extraer el UUID oficial del perfil
-          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" /dev/stdin <<< $(security cms -D -i "$PROFILE_PATH"))
+          # 2. Extraemos el UUID real
+          PROFILE_UUID=$(security cms -D -i "$PROFILE_PATH" | plutil -extract UUID raw -)
+          echo "UUID detectado: $PROFILE_UUID"
 
-          echo "Usando Perfil UUID: $PROFILE_UUID"
-
-          # 3. Crear el archivo con formato de diccionario estricto
+          # 3. Generamos el ExportOptions.plist con formato estricto
           cat <<EOF > ExportOptions.plist
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -56,7 +51,10 @@ workflows:
           </plist>
           EOF
 
-          # 4. Exportar el IPA usando el archivo creado
+          # 4. Compilamos el archive sin firma previa
+          flutter build ipa --release --no-codesign
+
+          # 5. Exportamos el IPA firmado con el perfil verificado
           xcodebuild -exportArchive \
             -archivePath build/ios/archive/Runner.xcarchive \
             -exportPath build/ios/ipa \
