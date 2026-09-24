@@ -25,9 +25,30 @@ workflows:
           flutter build ipa --release --no-codesign
       - name: Export IPA
         script: |
-          xcode-project package-app \
-            --archive build/ios/archive/Runner.xcarchive \
-            --ipa-directory build/ios/ipa
+          PROFILE_NAME=$(find "$HOME/Library/MobileDevice/Provisioning Profiles" -name "*.mobileprovision" -exec basename {} .mobileprovision \; | head -n 1)
+          cat <<EOF > export_options.plist
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>teamID</key>
+            <string>Z7554MJ336</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.geeksolutions.pyrosfit</key>
+              <string>$PROFILE_NAME</string>
+            </dict>
+          </dict>
+          </plist>
+          EOF
+          xcodebuild -exportArchive \
+            -archivePath build/ios/archive/Runner.xcarchive \
+            -exportPath build/ios/ipa \
+            -exportOptionsPlist export_options.plist
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
