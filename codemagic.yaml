@@ -27,15 +27,22 @@ workflows:
           flutter build ipa --release --no-codesign
       - name: Export IPA
         script: |
-          PROFILE_UUID=$(find "$HOME/Library/MobileDevice/Provisioning Profiles" -name "*.mobileprovision" -exec basename {} .mobileprovision \; | head -n 1)
+          # 1. Encontrar el archivo de perfil descargado
+          PROFILE_PATH=$(find "$HOME/Library/MobileDevice/Provisioning Profiles" -name "*.mobileprovision" | head -n 1)
 
-          cat <<EOF > /Users/builder/custom_export_options.plist
+          # 2. Extraer el UUID oficial del perfil
+          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" /dev/stdin <<< $(security cms -D -i "$PROFILE_PATH"))
+
+          echo "Usando Perfil UUID: $PROFILE_UUID"
+
+          # 3. Crear el archivo con formato de diccionario estricto
+          cat <<EOF > ExportOptions.plist
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
             <key>method</key>
-            <string>app-store</string>
+            <string>app-store-connect</string>
             <key>signingStyle</key>
             <string>manual</string>
             <key>teamID</key>
@@ -49,10 +56,11 @@ workflows:
           </plist>
           EOF
 
+          # 4. Exportar el IPA usando el archivo creado
           xcodebuild -exportArchive \
             -archivePath build/ios/archive/Runner.xcarchive \
             -exportPath build/ios/ipa \
-            -exportOptionsPlist /Users/builder/export_options.plist
+            -exportOptionsPlist ExportOptions.plist
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
