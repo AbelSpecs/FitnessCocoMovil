@@ -25,10 +25,9 @@ workflows:
           flutter build ipa --release --no-codesign
       - name: Export IPA
         script: |
-          xcodebuild -exportArchive \
-            -archivePath build/ios/archive/Runner.xcarchive \
-            -exportPath build/ios/ipa \
-            -exportOptionsPlist /Users/builder/export_options.plist
+          xcode-project package-app \
+            --archive build/ios/archive/Runner.xcarchive \
+            --ipa-directory build/ios/ipa
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
