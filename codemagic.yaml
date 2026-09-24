@@ -12,8 +12,6 @@ workflows:
       - name: Set up code signing
         script: |
           keychain initialize
-          app-store-connect fetch-signing-files "com.geeksolutions.pyrosfit" \
-            --type IOS_APP_STORE
           keychain add-certificates
           xcode-project use-profiles
       - name: Get Flutter packages
@@ -24,17 +22,20 @@ workflows:
           flutter build ipa --release --no-codesign
       - name: Export and Sign IPA
         script: |
-          # 1. Extraer el nombre del perfil provisto por Codemagic en el export_options original
-          PROFILE_NAME=$(/usr/libexec/PlistBuddy -c "Print :provisioningProfiles:0" /Users/builder/export_options.plist 2>/dev/null)
+          # 1. Encontrar la ruta del perfil instalado por Codemagic en el sistema
+          PROFILE_PATH=$(find "$HOME/Library/MobileDevice/Provisioning Profiles" -name "*.mobileprovision" 2>/dev/null | head -n 1)
 
-          # En caso de que no esté como array o venga vacío, extraer el nombre del archivo instalado
-          if [ -z "$PROFILE_NAME" ]; then
-            PROFILE_NAME=$(find "$HOME/Library/MobileDevice/Provisioning Profiles" -name "*.mobileprovision" -exec basename {} .mobileprovision \; 2>/dev/null | head -n 1)
+          if [ -z "$PROFILE_PATH" ]; then
+            PROFILE_PATH=$(find /Users/builder -name "*.mobileprovision" 2>/dev/null | head -n 1)
           fi
 
-          echo "Usando perfil de aprovisionamiento: $PROFILE_NAME"
+          echo "Ruta encontrada del perfil: $PROFILE_PATH"
 
-          # 2. Crear el export_options con el formato estricto Dictionary <dict>
+          # 2. Extraer el UUID oficial embebido en el perfil
+          PROFILE_UUID=$(security cms -D -i "$PROFILE_PATH" | plutil -extract UUID raw -)
+          echo "Usando Perfil UUID: $PROFILE_UUID"
+
+          # 3. Crear el ExportOptions con estructura Dictionary y Apple Distribution explícito
           cat <<EOF > /Users/builder/custom_export_options.plist
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -44,18 +45,20 @@ workflows:
             <string>app-store-connect</string>
             <key>signingStyle</key>
             <string>manual</string>
+            <key>signingCertificate</key>
+            <string>Apple Distribution</string>
             <key>teamID</key>
             <string>Z7554MJ336</string>
             <key>provisioningProfiles</key>
             <dict>
               <key>com.geeksolutions.pyrosfit</key>
-              <string>$PROFILE_NAME</string>
+              <string>$PROFILE_UUID</string>
             </dict>
           </dict>
           </plist>
           EOF
 
-          # 3. Exportar el binario final
+          # 4. Exportar el IPA
           xcodebuild -exportArchive \
             -archivePath build/ios/archive/Runner.xcarchive \
             -exportPath build/ios/ipa \
