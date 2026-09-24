@@ -5,6 +5,9 @@ workflows:
     integrations:
       app_store_connect: CodemagicBuild_Key
     environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.geeksolutions.pyrosfit
       flutter: stable
       xcode: latest
       cocoapods: default
@@ -14,6 +17,12 @@ workflows:
           keychain initialize
           keychain add-certificates
           xcode-project use-profiles
+      - name: Debug and Verify Profiles
+        script: |
+          echo "=== Listando perfiles en el sistema ==="
+          ls -la "$HOME/Library/MobileDevice/Provisioning Profiles" || true
+          echo "=== Listando identidades en Keychain ==="
+          security find-identity -v -p codesigning || true
       - name: Get Flutter packages
         script: |
           flutter packages pub get
@@ -22,20 +31,19 @@ workflows:
           flutter build ipa --release --no-codesign
       - name: Export and Sign IPA
         script: |
-          # 1. Encontrar la ruta del perfil instalado por Codemagic en el sistema
-          PROFILE_PATH=$(find "$HOME/Library/MobileDevice/Provisioning Profiles" -name "*.mobileprovision" 2>/dev/null | head -n 1)
+          # 1. Localizar el perfil instalado
+          PROFILE_PATH=$(find "$HOME/Library/MobileDevice/Provisioning Profiles" -name "*.mobileprovision" | head -n 1)
 
           if [ -z "$PROFILE_PATH" ]; then
-            PROFILE_PATH=$(find /Users/builder -name "*.mobileprovision" 2>/dev/null | head -n 1)
+            echo "ERROR CRÍTICO: No se encontró ningún archivo .mobileprovision en la máquina virtual."
+            exit 1
           fi
 
-          echo "Ruta encontrada del perfil: $PROFILE_PATH"
+          echo "Ruta encontrada: $PROFILE_PATH"
+          PROFILE_NAME=$(/usr/libexec/PlistBuddy -c "Print :Name" /dev/stdin <<< $(security cms -D -i "$PROFILE_PATH"))
+          echo "Nombre del Perfil: $PROFILE_NAME"
 
-          # 2. Extraer el UUID oficial embebido en el perfil
-          PROFILE_UUID=$(security cms -D -i "$PROFILE_PATH" | plutil -extract UUID raw -)
-          echo "Usando Perfil UUID: $PROFILE_UUID"
-
-          # 3. Crear el ExportOptions con estructura Dictionary y Apple Distribution explícito
+          # 2. Generar el export options válido
           cat <<EOF > /Users/builder/custom_export_options.plist
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -52,13 +60,13 @@ workflows:
             <key>provisioningProfiles</key>
             <dict>
               <key>com.geeksolutions.pyrosfit</key>
-              <string>$PROFILE_UUID</string>
+              <string>$PROFILE_NAME</string>
             </dict>
           </dict>
           </plist>
           EOF
 
-          # 4. Exportar el IPA
+          # 3. Exportar IPA
           xcodebuild -exportArchive \
             -archivePath build/ios/archive/Runner.xcarchive \
             -exportPath build/ios/ipa \
