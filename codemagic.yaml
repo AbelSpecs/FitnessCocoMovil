@@ -24,10 +24,42 @@ workflows:
           flutter build ipa --release --no-codesign
       - name: Export and Sign IPA
         script: |
+          # 1. Extraer el nombre del perfil provisto por Codemagic en el export_options original
+          PROFILE_NAME=$(/usr/libexec/PlistBuddy -c "Print :provisioningProfiles:0" /Users/builder/export_options.plist 2>/dev/null)
+
+          # En caso de que no esté como array o venga vacío, extraer el nombre del archivo instalado
+          if [ -z "$PROFILE_NAME" ]; then
+            PROFILE_NAME=$(find "$HOME/Library/MobileDevice/Provisioning Profiles" -name "*.mobileprovision" -exec basename {} .mobileprovision \; 2>/dev/null | head -n 1)
+          fi
+
+          echo "Usando perfil de aprovisionamiento: $PROFILE_NAME"
+
+          # 2. Crear el export_options con el formato estricto Dictionary <dict>
+          cat <<EOF > /Users/builder/custom_export_options.plist
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>teamID</key>
+            <string>Z7554MJ336</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.geeksolutions.pyrosfit</key>
+              <string>$PROFILE_NAME</string>
+            </dict>
+          </dict>
+          </plist>
+          EOF
+
+          # 3. Exportar el binario final
           xcodebuild -exportArchive \
             -archivePath build/ios/archive/Runner.xcarchive \
             -exportPath build/ios/ipa \
-            -exportOptionsPlist /Users/builder/export_options.plist
+            -exportOptionsPlist /Users/builder/custom_export_options.plist
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
