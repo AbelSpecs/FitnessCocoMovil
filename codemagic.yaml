@@ -14,7 +14,8 @@ workflows:
           keychain initialize
           app-store-connect fetch-signing-files "com.geeksolutions.pyrosfit" \
             --type IOS_APP_STORE \
-            --create
+            --create \
+            --fetch-private-keys
           keychain add-certificates
           xcode-project use-profiles
       - name: Get Flutter packages
@@ -35,8 +36,6 @@ workflows:
             <string>app-store-connect</string>
             <key>signingStyle</key>
             <string>manual</string>
-            <key>signingCertificate</key>
-            <string>Apple Distribution: Abel Colina (Z7554MJ336)</string>
             <key>teamID</key>
             <string>Z7554MJ336</string>
             <key>provisioningProfiles</key>
