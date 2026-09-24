@@ -17,13 +17,19 @@ workflows:
             --create
           keychain add-certificates
           xcode-project use-profiles
+      - name: Disable automatic signing in Xcode project
+        script: |
+          # Desactiva la firma automática forzando manual en el pbxproj para evitar el error "No Accounts"
+          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' ios/Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = Manual;/g' ios/Runner.xcodeproj/project.pbxproj
       - name: Get Flutter packages
         script: |
           flutter packages pub get
       - name: Build IPA
         script: |
-          flutter build ipa --release \
-            --export-options-plist=/Users/builder/export_options.plist
+          xcode-project build-ipa \
+            --workspace ios/Runner.xcworkspace \
+            --scheme Runner
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
