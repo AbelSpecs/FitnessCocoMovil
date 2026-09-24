@@ -20,10 +20,45 @@ workflows:
       - name: Get Flutter packages
         script: |
           flutter packages pub get
-      - name: Flutter build ipa
+      - name: Build iOS Archive
         script: |
-          flutter build ipa --release \
-            --export-options-plist=/Users/builder/export_options.plist
+          flutter build ipa --release --no-codesign
+      - name: Export IPA
+        script: |
+          # 1. Encontrar el archivo de perfil descargado en cualquier ubicación del usuario
+          PROFILE_PATH=$(find "$HOME" -name "*.mobileprovision" 2>/dev/null | head -n 1)
+          echo "Perfil localizado en: $PROFILE_PATH"
+
+          # 2. Extraer el UUID oficial
+          PROFILE_UUID=$(security cms -D -i "$PROFILE_PATH" | plutil -extract UUID raw -)
+          echo "UUID del Perfil: $PROFILE_UUID"
+
+          # 3. Generar ExportOptions.plist estrictamente tipado como Dictionary
+          cat <<EOF > ExportOptions.plist
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>teamID</key>
+            <string>Z7554MJ336</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.geeksolutions.pyrosfit</key>
+              <string>$PROFILE_UUID</string>
+            </dict>
+          </dict>
+          </plist>
+          EOF
+
+          # 4. Exportar el IPA
+          xcodebuild -exportArchive \
+            -archivePath build/ios/archive/Runner.xcarchive \
+            -exportPath build/ios/ipa \
+            -exportOptionsPlist ExportOptions.plist
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
