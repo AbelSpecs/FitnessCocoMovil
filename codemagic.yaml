@@ -74,3 +74,8 @@ workflows:
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        # Envía la app directamente a TestFlight
+        submit_to_testflight: true
