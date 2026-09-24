@@ -20,47 +20,10 @@ workflows:
       - name: Get Flutter packages
         script: |
           flutter packages pub get
-      - name: Build iOS Archive
+      - name: Flutter build ipa
         script: |
-          flutter build ipa --release --no-codesign
-      - name: Export IPA
-        script: |
-          # 1. Localizar el perfil descargado en la máquina virtual
-          PROFILE_PATH=$(find /Users/builder -name "*.mobileprovision" 2>/dev/null | head -n 1)
-          echo "Perfil encontrado: $PROFILE_PATH"
-
-          # 2. Extraer el UUID real del provisioning profile
-          PROFILE_UUID=$(security cms -D -i "$PROFILE_PATH" | plutil -extract UUID raw -)
-          echo "UUID asociado: $PROFILE_UUID"
-
-          # 3. Generar ExportOptions.plist con Apple Distribution explícito
-          cat <<EOF > ExportOptions.plist
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>method</key>
-            <string>app-store-connect</string>
-            <key>signingStyle</key>
-            <string>manual</string>
-            <key>signingCertificate</key>
-            <string>Apple Distribution</string>
-            <key>teamID</key>
-            <string>Z7554MJ336</string>
-            <key>provisioningProfiles</key>
-            <dict>
-              <key>com.geeksolutions.pyrosfit</key>
-              <string>$PROFILE_UUID</string>
-            </dict>
-          </dict>
-          </plist>
-          EOF
-
-          # 4. Exportar el IPA usando el archivo recién generado
-          xcodebuild -exportArchive \
-            -archivePath build/ios/archive/Runner.xcarchive \
-            -exportPath build/ios/ipa \
-            -exportOptionsPlist ExportOptions.plist
+          flutter build ipa --release \
+            --export-options-plist=/Users/builder/export_options.plist
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
