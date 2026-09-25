@@ -90,7 +90,7 @@ flutter:
     - assets/icons/dumbbell.png
     - assets/icons/pyros_flame.png
     - assets/brand/
-    #- .env.production
+    - .env.production
     #- .env.development
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg

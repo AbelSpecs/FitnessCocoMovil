@@ -5,6 +5,8 @@ workflows:
     integrations:
       app_store_connect: CodemagicBuild_Key
     environment:
+      groups:
+        - pyrosfit_prod
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.geeksolutions.pyrosfit
@@ -17,6 +19,14 @@ workflows:
           keychain initialize
           keychain add-certificates
           xcode-project use-profiles
+      - name: Generate production environment file
+        script: |
+          echo "Creando .env.production para modo Release..."
+          cat <<EOF > .env.production
+          API_BASE_URL=$API_BASE_URL
+          EOF
+          echo "Contenido generado (verificación):"
+          cat .env.production
       - name: Debug and Verify Profiles
         script: |
           echo "=== Listando perfiles en el sistema ==="
