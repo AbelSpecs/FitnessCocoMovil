@@ -25,6 +25,7 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
   final TextEditingController _coachNotesController = TextEditingController();
 
   final List<Map<String, dynamic>> _sets = [];
+  Map<String, dynamic>? _copiedSet;
   late DateTime _selectedDate;
 
   @override
@@ -42,6 +43,7 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
           'targetReps': s.targetReps.toString(),
           'targetWeight': s.targetWeight.toString(),
           'restTime': s.restTime,
+          '_key': 'set_${s.id}',
         });
       }
     } else {
@@ -52,13 +54,76 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
 
   void _addEmptySet() {
     setState(() {
-      _sets.add({
+      _sets.insert(0, {
         'id': 0, // 0 implies new
         'targetReps': '',
         'targetWeight': '',
         'restTime': '',
+        '_key': 'new_${DateTime.now().microsecondsSinceEpoch}',
       });
     });
+  }
+
+  void _copySet(Map<String, dynamic> set) {
+    setState(() {
+      _copiedSet = {
+        'id': 0,
+        'targetReps': set['targetReps']?.toString() ?? '',
+        'targetWeight': set['targetWeight']?.toString() ?? '',
+        'restTime': set['restTime']?.toString() ?? '',
+      };
+    });
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Serie copiada: ${set['targetReps']?.toString().isNotEmpty == true ? set['targetReps'] : '0'} reps • ${set['targetWeight']?.toString().isNotEmpty == true ? set['targetWeight'] : '0'} kg',
+        ),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _duplicateSet(Map<String, dynamic> set) {
+    setState(() {
+      _sets.insert(0, {
+        'id': 0,
+        'targetReps': set['targetReps']?.toString() ?? '',
+        'targetWeight': set['targetWeight']?.toString() ?? '',
+        'restTime': set['restTime']?.toString() ?? '',
+        '_key': 'dup_${DateTime.now().microsecondsSinceEpoch}',
+      });
+    });
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Serie duplicada: Se añadió una copia arriba'),
+        duration: Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _pasteSet() {
+    if (_copiedSet == null) return;
+    setState(() {
+      _sets.insert(0, {
+        'id': 0,
+        'targetReps': _copiedSet!['targetReps'] ?? '',
+        'targetWeight': _copiedSet!['targetWeight'] ?? '',
+        'restTime': _copiedSet!['restTime'] ?? '',
+        '_key': 'paste_${DateTime.now().microsecondsSinceEpoch}',
+      });
+    });
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Serie pegada: Se añadió la serie copiada arriba'),
+        duration: Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   void _removeSet(int index) {
@@ -313,14 +378,36 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('SERIES', style: _labelStyle(theme)),
+                  Text('SERIES (${_sets.length})', style: _labelStyle(theme)),
                   TextButton.icon(
                     onPressed: _addEmptySet,
                     icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Añadir'),
+                    label: const Text('Añadir serie (arriba)'),
                   ),
                 ],
               ),
+              if (_copiedSet != null) ...[
+                const SizedBox(height: 4),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton.icon(
+                    onPressed: _pasteSet,
+                    icon: const Icon(Icons.paste_rounded, size: 16),
+                    label: Text(
+                      'Pegar serie (${_copiedSet!['targetReps'].toString().isNotEmpty ? _copiedSet!['targetReps'] : '0'} reps • ${_copiedSet!['targetWeight'].toString().isNotEmpty ? _copiedSet!['targetWeight'] : '0'} kg)',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 8),
 
               // Sets List
@@ -328,6 +415,7 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
                 int idx = entry.key;
                 Map<String, dynamic> set = entry.value;
                 return Container(
+                  key: ValueKey(set['_key'] ?? 'set_$idx'),
                   margin: const EdgeInsets.only(bottom: 12),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -342,14 +430,49 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
                           Text('Serie ${idx + 1}',
                               style:
                                   const TextStyle(fontWeight: FontWeight.bold)),
-                          if (_sets.length > 1)
-                            IconButton(
-                              icon: Icon(Icons.delete_outline,
-                                  color: theme.colorScheme.error, size: 20),
-                              onPressed: () => _removeSet(idx),
-                              constraints: const BoxConstraints(),
-                              padding: EdgeInsets.zero,
-                            ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TextButton.icon(
+                                onPressed: () => _copySet(set),
+                                icon: const Icon(Icons.copy_rounded, size: 13),
+                                label: const Text('Copiar',
+                                    style: TextStyle(fontSize: 11)),
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              TextButton.icon(
+                                onPressed: () => _duplicateSet(set),
+                                icon: const Icon(
+                                    Icons.control_point_duplicate_rounded,
+                                    size: 13),
+                                label: const Text('Duplicar',
+                                    style: TextStyle(fontSize: 11)),
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                              ),
+                              if (_sets.length > 1) ...[
+                                const SizedBox(width: 4),
+                                IconButton(
+                                  icon: Icon(Icons.delete_outline,
+                                      color: theme.colorScheme.error, size: 18),
+                                  onPressed: () => _removeSet(idx),
+                                  constraints: const BoxConstraints(),
+                                  padding: const EdgeInsets.all(4),
+                                  tooltip: 'Eliminar serie',
+                                ),
+                              ],
+                            ],
+                          ),
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -357,6 +480,7 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
                         children: [
                           Expanded(
                             child: TextFormField(
+                              key: ValueKey('reps_${set['_key'] ?? idx}'),
                               initialValue: set['targetReps'],
                               keyboardType: TextInputType.number,
                               decoration: const InputDecoration(
@@ -367,6 +491,7 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: TextFormField(
+                              key: ValueKey('weight_${set['_key'] ?? idx}'),
                               initialValue: set['targetWeight'],
                               keyboardType: TextInputType.number,
                               decoration: const InputDecoration(
@@ -378,6 +503,7 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
                           Expanded(
                             flex: 2,
                             child: RestTimeInputField(
+                              key: ValueKey('rest_${set['_key'] ?? idx}'),
                               initialValue: set['restTime'] ?? '',
                               onChanged: (v) => set['restTime'] = v,
                             ),

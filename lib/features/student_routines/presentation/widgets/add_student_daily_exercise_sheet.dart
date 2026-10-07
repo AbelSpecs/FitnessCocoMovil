@@ -59,8 +59,9 @@ class _AddStudentDailyExerciseSheetState
   final TextEditingController _notesController = TextEditingController();
 
   final List<Map<String, String>> _sets = [
-    {'targetReps': '12', 'targetWeight': '20', 'restTime': '90'},
+    {'targetReps': '12', 'targetWeight': '20', 'restTime': '90', '_key': 'init_0'},
   ];
+  Map<String, String>? _copiedSet;
 
   @override
   void initState() {
@@ -120,13 +121,73 @@ class _AddStudentDailyExerciseSheetState
 
   void _addSet() {
     setState(() {
-      final lastSet = _sets.isNotEmpty ? _sets.last : {'targetReps': '12', 'targetWeight': '20', 'restTime': '90'};
-      _sets.add({
-        'targetReps': lastSet['targetReps'] ?? '12',
-        'targetWeight': lastSet['targetWeight'] ?? '20',
-        'restTime': lastSet['restTime'] ?? '90',
+      final firstSet = _sets.isNotEmpty ? _sets.first : {'targetReps': '12', 'targetWeight': '20', 'restTime': '90'};
+      _sets.insert(0, {
+        'targetReps': firstSet['targetReps'] ?? '12',
+        'targetWeight': firstSet['targetWeight'] ?? '20',
+        'restTime': firstSet['restTime'] ?? '90',
+        '_key': 'new_${DateTime.now().microsecondsSinceEpoch}',
       });
     });
+  }
+
+  void _copySet(Map<String, String> set) {
+    setState(() {
+      _copiedSet = {
+        'targetReps': set['targetReps'] ?? '',
+        'targetWeight': set['targetWeight'] ?? '',
+        'restTime': set['restTime'] ?? '',
+      };
+    });
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Serie copiada: ${set['targetReps']?.isNotEmpty == true ? set['targetReps'] : '0'} reps • ${set['targetWeight']?.isNotEmpty == true ? set['targetWeight'] : '0'} kg',
+        ),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _duplicateSet(Map<String, String> set) {
+    setState(() {
+      _sets.insert(0, {
+        'targetReps': set['targetReps'] ?? '',
+        'targetWeight': set['targetWeight'] ?? '',
+        'restTime': set['restTime'] ?? '',
+        '_key': 'dup_${DateTime.now().microsecondsSinceEpoch}',
+      });
+    });
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Serie duplicada: Se añadió una copia arriba'),
+        duration: Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _pasteSet() {
+    if (_copiedSet == null) return;
+    setState(() {
+      _sets.insert(0, {
+        'targetReps': _copiedSet!['targetReps'] ?? '12',
+        'targetWeight': _copiedSet!['targetWeight'] ?? '20',
+        'restTime': _copiedSet!['restTime'] ?? '90',
+        '_key': 'paste_${DateTime.now().microsecondsSinceEpoch}',
+      });
+    });
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Serie pegada: Se añadió la serie copiada arriba'),
+        duration: Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   void _removeSet(int index) {
@@ -348,10 +409,32 @@ class _AddStudentDailyExerciseSheetState
                 TextButton.icon(
                   onPressed: _addSet,
                   icon: const Icon(Icons.add, size: 16, color: AppTheme.primary),
-                  label: const Text('Agregar serie', style: TextStyle(color: AppTheme.primary, fontSize: 12, fontWeight: FontWeight.bold)),
+                  label: const Text('Agregar serie (arriba)', style: TextStyle(color: AppTheme.primary, fontSize: 12, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
+            if (_copiedSet != null) ...[
+              const SizedBox(height: 4),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  onPressed: _pasteSet,
+                  icon: const Icon(Icons.paste_rounded, size: 14, color: AppTheme.primaryGlow),
+                  label: Text(
+                    'Pegar serie (${_copiedSet!['targetReps']} reps • ${_copiedSet!['targetWeight']} kg)',
+                    style: const TextStyle(color: AppTheme.primaryGlow, fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: AppTheme.primary.withValues(alpha: 0.6)),
+                    backgroundColor: AppTheme.primary.withValues(alpha: 0.1),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 6),
 
             // Filas de Series
@@ -360,6 +443,7 @@ class _AddStudentDailyExerciseSheetState
               final set = entry.value;
 
               return Container(
+                key: ValueKey(set['_key'] ?? 'set_$idx'),
                 margin: const EdgeInsets.only(bottom: 10),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -376,13 +460,42 @@ class _AddStudentDailyExerciseSheetState
                           'Serie #${idx + 1}',
                           style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold, fontSize: 12),
                         ),
-                        if (_sets.length > 1)
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 18),
-                            onPressed: () => _removeSet(idx),
-                            constraints: const BoxConstraints(),
-                            padding: EdgeInsets.zero,
-                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            TextButton.icon(
+                              onPressed: () => _copySet(set),
+                              icon: const Icon(Icons.copy_rounded, size: 13, color: Colors.white70),
+                              label: const Text('Copiar', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            TextButton.icon(
+                              onPressed: () => _duplicateSet(set),
+                              icon: const Icon(Icons.control_point_duplicate_rounded, size: 13, color: Colors.white70),
+                              label: const Text('Duplicar', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                            ),
+                            if (_sets.length > 1) ...[
+                              const SizedBox(width: 4),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 16),
+                                onPressed: () => _removeSet(idx),
+                                constraints: const BoxConstraints(),
+                                padding: const EdgeInsets.all(4),
+                                tooltip: 'Eliminar serie',
+                              ),
+                            ],
+                          ],
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -391,6 +504,7 @@ class _AddStudentDailyExerciseSheetState
                       children: [
                         Expanded(
                           child: TextFormField(
+                            key: ValueKey('reps_${set['_key'] ?? idx}'),
                             initialValue: set['targetReps'],
                             keyboardType: TextInputType.number,
                             style: const TextStyle(color: Colors.white, fontSize: 13),
@@ -401,6 +515,7 @@ class _AddStudentDailyExerciseSheetState
                         const SizedBox(width: 8),
                         Expanded(
                           child: TextFormField(
+                            key: ValueKey('weight_${set['_key'] ?? idx}'),
                             initialValue: set['targetWeight'],
                             keyboardType: TextInputType.number,
                             style: const TextStyle(color: Colors.white, fontSize: 13),
@@ -412,6 +527,7 @@ class _AddStudentDailyExerciseSheetState
                         Expanded(
                           flex: 2,
                           child: RestTimeInputField(
+                            key: ValueKey('rest_${set['_key'] ?? idx}'),
                             initialValue: set['restTime'] ?? '90',
                             onChanged: (v) => set['restTime'] = v,
                           ),
