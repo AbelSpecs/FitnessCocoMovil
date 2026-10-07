@@ -1,3 +1,6 @@
+import 'package:pyrosfitmovil/core/utils/exercise_filter.dart';
+import 'package:pyrosfitmovil/features/auth/presentation/controllers/auth_provider.dart';
+import 'package:pyrosfitmovil/features/student_routines/presentation/widgets/add_student_daily_exercise_sheet.dart';
 import 'package:pyrosfitmovil/features/exercises/presentation/widgets/exercise_video_modal.dart';
 import 'package:pyrosfitmovil/features/exercises/presentation/widgets/video_thumbnail_badge.dart';
 import 'package:flutter/material.dart';
@@ -52,6 +55,8 @@ class _StudentDailyRoutineScreenState extends State<StudentDailyRoutineScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<StudentRoutinesProvider>();
+    final auth = context.watch<AuthProvider>();
+    final isIndependent = isUserIndependent(auth.user);
     final theme = Theme.of(context);
     final exercises = provider.dailyExercises;
 
@@ -116,23 +121,46 @@ class _StudentDailyRoutineScreenState extends State<StudentDailyRoutineScreen> {
                               height: 1.0,
                             ),
                           ),
-                          if (!isRest) ...[
-                            const SizedBox(height: 16),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color:
-                                    theme.colorScheme.surfaceContainerHighest,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '${exercises.length} ejercicios',
-                                style: const TextStyle(
-                                    fontSize: 12, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ]
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              if (!isRest)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        theme.colorScheme.surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '${exercises.length} ejercicios',
+                                    style: const TextStyle(
+                                        fontSize: 12, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              if (isIndependent) ...[
+                                if (!isRest) const SizedBox(width: 8),
+                                ElevatedButton.icon(
+                                  onPressed: () {
+                                    AddStudentDailyExerciseSheet.show(
+                                      context,
+                                      studentId: widget.studentId,
+                                      scheduledDate: widget.dayId,
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.primary,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                  icon: const Icon(Icons.add, size: 16),
+                                  label: const Text('Agregar ejercicio', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                ),
+                              ],
+                            ],
+                          )
                         ],
                       ),
                     ),
@@ -147,21 +175,44 @@ class _StudentDailyRoutineScreenState extends State<StudentDailyRoutineScreen> {
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(color: AppTheme.border),
                         ),
-                        child: const Column(
+                        child: Column(
                           children: [
-                            Text('🌿', style: TextStyle(fontSize: 72)),
-                            SizedBox(height: 16),
-                            Text(
+                            const Text('🌿', style: TextStyle(fontSize: 72)),
+                            const SizedBox(height: 16),
+                            const Text(
                               'Descanso',
                               style: TextStyle(
                                   fontFamily: 'BebasNeue', fontSize: 32),
                             ),
-                            SizedBox(height: 8),
-                            Text(
+                            const SizedBox(height: 8),
+                            const Text(
                               'Recuperarse es parte del entrenamiento. Hidrátate, duerme bien y mueve el cuerpo con calma.',
                               textAlign: TextAlign.center,
                               style: TextStyle(color: Colors.grey),
                             ),
+                            if (isIndependent) ...[
+                              const SizedBox(height: 20),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  AddStudentDailyExerciseSheet.show(
+                                    context,
+                                    studentId: widget.studentId,
+                                    scheduledDate: widget.dayId,
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primary,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                icon: const Icon(Icons.add, size: 18),
+                                label: const Text(
+                                  'Agregar ejercicio a este día',
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       )

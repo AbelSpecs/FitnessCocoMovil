@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/widgets/rest_time_input_field.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pyrosfitmovil/core/models/daily_student_exercise_model.dart';
@@ -375,10 +376,9 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
                           ),
                           const SizedBox(width: 8),
                           Expanded(
-                            child: TextFormField(
-                              initialValue: set['restTime'],
-                              decoration: const InputDecoration(
-                                  labelText: 'Descanso', isDense: true),
+                            flex: 2,
+                            child: RestTimeInputField(
+                              initialValue: set['restTime'] ?? '',
                               onChanged: (v) => set['restTime'] = v,
                             ),
                           ),

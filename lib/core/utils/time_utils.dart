@@ -44,3 +44,26 @@ String formatSecondsToMS(int totalSeconds) {
   final s = safeSec % 60;
   return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
 }
+
+/// Formatea el tiempo de descanso para visualización amigable en la interfaz.
+/// Ejemplos:
+/// - 120 -> "2 min"
+/// - 90 -> "1m 30s"
+/// - 60 -> "1 min"
+/// - 45 -> "45s"
+/// - "1:30" -> "1m 30s"
+String formatRestTimeDisplay(dynamic raw) {
+  final totalSeconds = parseRestTimeToSeconds(raw?.toString());
+  if (totalSeconds <= 0) return '0s';
+
+  final minutes = totalSeconds ~/ 60;
+  final seconds = totalSeconds % 60;
+
+  if (minutes == 0) {
+    return '${seconds}s';
+  }
+  if (seconds == 0) {
+    return '$minutes min';
+  }
+  return '${minutes}m ${seconds}s';
+}

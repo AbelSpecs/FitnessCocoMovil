@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/utils/exercise_filter.dart';
 import 'package:pyrosfitmovil/core/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -16,13 +17,12 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    final role = auth.user?.role;
-    logger.i('HomeScreen: Rol del usuario actual: $role');
-    final isCoach = role?.name == 'coach';
-    logger.i('isCoach: $isCoach');
+    final user = auth.user;
+    final isIndependent = isUserIndependent(user);
+    // Un usuario solo ve el panel de Coach si no es independiente, su rol es coach y tiene coachId válido
+    final isCoach = !isIndependent && user?.role?.name == 'coach' && (user?.coachId ?? 0) > 0;
+    logger.i('HomeScreen: Rol=${user?.role}, isIndependent=$isIndependent, isCoach=$isCoach');
     final firstName = auth.user?.firstName ?? '';
-    final initial =
-        firstName.isNotEmpty ? firstName.substring(0, 1).toUpperCase() : 'U';
 
     return Scaffold(
       backgroundColor: AppTheme.background,

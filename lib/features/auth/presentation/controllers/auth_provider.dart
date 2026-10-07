@@ -98,8 +98,18 @@ class AuthProvider extends ChangeNotifier {
   Future<void> refreshUserProfile() async {
     if (_user == null) return;
     try {
-      final details = await UserService.getUserDetails(_user!.id.toString());
-      final data = details['data'] as Map<String, dynamic>?;
+      Map<String, dynamic>? data;
+      try {
+        final details = await UserService.getUserDetails(_user!.id.toString());
+        data = details['data'] as Map<String, dynamic>?;
+      } catch (_) {}
+
+      if (data == null) {
+        try {
+          final base = await UserService.getUser(_user!.id.toString());
+          data = base['data'] as Map<String, dynamic>?;
+        } catch (_) {}
+      }
       if (data != null) {
         final coach = data['coach'] as Map<String, dynamic>?;
         final student = data['student'] as Map<String, dynamic>?;

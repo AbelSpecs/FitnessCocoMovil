@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/utils/exercise_filter.dart';
 import 'package:flutter/material.dart';
 import 'package:pyrosfitmovil/core/models/exercise_model.dart';
 import 'package:pyrosfitmovil/features/exercises/presentation/widgets/video_thumbnail_badge.dart';
@@ -135,7 +136,7 @@ class ExerciseCard extends StatelessWidget {
                 // Descripción o Técnica
                 Text(
                   exercise.description?.trim().isNotEmpty == true
-                      ? exercise.description!
+                      ? cleanExerciseDescription(exercise.description)
                       : 'Sin descripción técnica registrada.',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,

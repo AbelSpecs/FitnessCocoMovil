@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/utils/exercise_filter.dart';
 import 'package:flutter/material.dart';
 import 'package:pyrosfitmovil/core/utils/globals.dart';
 import 'package:pyrosfitmovil/core/models/daily_student_exercise_model.dart';
@@ -104,7 +105,8 @@ class RoutinesProvider extends ChangeNotifier {
       final rawData =
           await RoutineService.getExerciseByMuscleGroupId(muscleGroupId);
       if (rawData != null) {
-        _exercises = rawData.map((e) => ExerciseModel.fromJson(e)).toList();
+        final list = rawData.map((e) => ExerciseModel.fromJson(e)).toList();
+        _exercises = filterExercisesForUser(list, authProvider.user, _currentStudentId);
         notifyListeners();
       }
     } catch (e) {
@@ -188,6 +190,7 @@ class RoutinesProvider extends ChangeNotifier {
     int muscleGroupId, {
     String? videoKey,
     String? videoUrl,
+    String? description,
   }) async {
     try {
       final coachId = authProvider.user?.coachId;
