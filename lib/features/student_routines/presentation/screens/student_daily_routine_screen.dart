@@ -13,6 +13,7 @@ import 'package:pyrosfitmovil/features/dashboard/data/models/dashboard_models.da
 import 'package:pyrosfitmovil/core/services/streak_service.dart';
 import 'package:pyrosfitmovil/core/widgets/rest_timer_widget.dart';
 import 'package:pyrosfitmovil/core/utils/time_utils.dart';
+import 'package:pyrosfitmovil/core/utils/weight_utils.dart';
 
 class StudentDailyRoutineScreen extends StatefulWidget {
   final int studentId;
@@ -907,7 +908,7 @@ class _SetRowState extends State<_SetRow> {
                       fontSize: 12,
                       color: Colors.white.withValues(alpha: 0.7))),
               Text(
-                '${widget.set.targetReps} reps • ${widget.set.targetWeight} kg',
+                '${widget.set.targetReps} reps • ${formatWeightWithEquivalent(widget.set.targetWeight)}',
                 style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,

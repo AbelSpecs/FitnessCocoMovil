@@ -1,4 +1,6 @@
 import 'package:pyrosfitmovil/core/widgets/rest_time_input_field.dart';
+import 'package:pyrosfitmovil/core/utils/weight_utils.dart';
+import 'package:pyrosfitmovil/core/widgets/weight_input_field.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pyrosfitmovil/core/models/daily_student_exercise_model.dart';
@@ -77,7 +79,7 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Serie copiada: ${set['targetReps']?.toString().isNotEmpty == true ? set['targetReps'] : '0'} reps • ${set['targetWeight']?.toString().isNotEmpty == true ? set['targetWeight'] : '0'} kg',
+          'Serie copiada: ${set['targetReps']?.toString().isNotEmpty == true ? set['targetReps'] : '0'} reps • ${formatWeightWithEquivalent(set['targetWeight'])}',
         ),
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
@@ -394,7 +396,7 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
                     onPressed: _pasteSet,
                     icon: const Icon(Icons.paste_rounded, size: 16),
                     label: Text(
-                      'Pegar serie (${_copiedSet!['targetReps'].toString().isNotEmpty ? _copiedSet!['targetReps'] : '0'} reps • ${_copiedSet!['targetWeight'].toString().isNotEmpty ? _copiedSet!['targetWeight'] : '0'} kg)',
+                      'Pegar serie (${_copiedSet!['targetReps'].toString().isNotEmpty ? _copiedSet!['targetReps'] : '0'} reps • ${formatWeightWithEquivalent(_copiedSet!['targetWeight'])})',
                       style: const TextStyle(fontSize: 12),
                     ),
                     style: OutlinedButton.styleFrom(
@@ -490,12 +492,10 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
                           ),
                           const SizedBox(width: 8),
                           Expanded(
-                            child: TextFormField(
+                            flex: 2,
+                            child: WeightInputField(
                               key: ValueKey('weight_${set['_key'] ?? idx}'),
                               initialValue: set['targetWeight'],
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                  labelText: 'Peso (kg)', isDense: true),
                               onChanged: (v) => set['targetWeight'] = v,
                             ),
                           ),

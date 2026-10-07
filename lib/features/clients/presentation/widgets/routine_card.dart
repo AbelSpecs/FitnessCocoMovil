@@ -2,6 +2,7 @@ import 'package:pyrosfitmovil/features/exercises/presentation/widgets/exercise_v
 import 'package:pyrosfitmovil/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:pyrosfitmovil/core/models/daily_student_exercise_model.dart';
+import 'package:pyrosfitmovil/core/utils/weight_utils.dart';
 import 'package:pyrosfitmovil/core/models/daily_exercise_set_model.dart';
 
 class RoutineCard extends StatelessWidget {
@@ -170,7 +171,7 @@ class RoutineCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _Stat(label: 'Reps', value: '${set.targetReps}'),
-                _Stat(label: 'Peso', value: '${set.targetWeight} kg'),
+                _Stat(label: 'Peso', value: formatWeightWithEquivalent(set.targetWeight)),
                 _Stat(
                     label: 'Descanso',
                     value: set.restTime.isNotEmpty ? set.restTime : '-'),

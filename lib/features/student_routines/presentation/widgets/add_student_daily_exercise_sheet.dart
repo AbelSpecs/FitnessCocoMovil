@@ -5,6 +5,8 @@ import 'package:pyrosfitmovil/core/models/muscle_group_model.dart';
 import 'package:pyrosfitmovil/core/services/routine_service.dart';
 import 'package:pyrosfitmovil/core/utils/exercise_filter.dart';
 import 'package:pyrosfitmovil/core/widgets/rest_time_input_field.dart';
+import 'package:pyrosfitmovil/core/utils/weight_utils.dart';
+import 'package:pyrosfitmovil/core/widgets/weight_input_field.dart';
 import 'package:pyrosfitmovil/features/auth/presentation/controllers/auth_provider.dart';
 import 'package:pyrosfitmovil/features/exercises/presentation/widgets/quick_create_exercise_dialog.dart';
 import 'package:pyrosfitmovil/features/student_routines/presentation/providers/student_routines_provider.dart';
@@ -143,7 +145,7 @@ class _AddStudentDailyExerciseSheetState
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Serie copiada: ${set['targetReps']?.isNotEmpty == true ? set['targetReps'] : '0'} reps • ${set['targetWeight']?.isNotEmpty == true ? set['targetWeight'] : '0'} kg',
+          'Serie copiada: ${set['targetReps']?.isNotEmpty == true ? set['targetReps'] : '0'} reps • ${formatWeightWithEquivalent(set['targetWeight'])}',
         ),
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
@@ -421,7 +423,7 @@ class _AddStudentDailyExerciseSheetState
                   onPressed: _pasteSet,
                   icon: const Icon(Icons.paste_rounded, size: 14, color: AppTheme.primaryGlow),
                   label: Text(
-                    'Pegar serie (${_copiedSet!['targetReps']} reps • ${_copiedSet!['targetWeight']} kg)',
+                    'Pegar serie (${_copiedSet!['targetReps']} reps • ${formatWeightWithEquivalent(_copiedSet!['targetWeight'])})',
                     style: const TextStyle(color: AppTheme.primaryGlow, fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                   style: OutlinedButton.styleFrom(
@@ -514,12 +516,10 @@ class _AddStudentDailyExerciseSheetState
                         ),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: TextFormField(
+                          flex: 2,
+                          child: WeightInputField(
                             key: ValueKey('weight_${set['_key'] ?? idx}'),
-                            initialValue: set['targetWeight'],
-                            keyboardType: TextInputType.number,
-                            style: const TextStyle(color: Colors.white, fontSize: 13),
-                            decoration: const InputDecoration(labelText: 'Peso (kg)', isDense: true),
+                            initialValue: set['targetWeight'] ?? '',
                             onChanged: (v) => set['targetWeight'] = v,
                           ),
                         ),
