@@ -12,6 +12,7 @@ class RestTimerWidget extends StatefulWidget {
   final String? label;
   final VoidCallback onClose;
   final VoidCallback? onFinished;
+  final VoidCallback? onRestart;
 
   const RestTimerWidget({
     super.key,
@@ -19,6 +20,7 @@ class RestTimerWidget extends StatefulWidget {
     this.label,
     required this.onClose,
     this.onFinished,
+    this.onRestart,
   });
 
   @override
@@ -104,6 +106,7 @@ class _RestTimerWidgetState extends State<RestTimerWidget>
       _isPaused = false;
     });
     _startTimer();
+    widget.onRestart?.call();
   }
 
   void _togglePause() {

@@ -29,6 +29,7 @@ class StudentDailyRoutineScreen extends StatefulWidget {
 
 class _StudentDailyRoutineScreenState extends State<StudentDailyRoutineScreen> {
   bool _isTimerActive = false;
+  bool _isTimerRunning = false;
   int _timerSeconds = 0;
   String? _timerLabel;
   int _timerKey = 0;
@@ -41,6 +42,51 @@ class _StudentDailyRoutineScreenState extends State<StudentDailyRoutineScreen> {
       _timerLabel = label;
       _timerKey++;
       _isTimerActive = true;
+      _isTimerRunning = true;
+    });
+  }
+
+  void _handleTimerFinish() {
+    setState(() {
+      _isTimerRunning = false;
+    });
+    if (mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.timer_off_outlined, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '¡Descanso completado! Listo para continuar con tu siguiente serie 🔥',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF10B981),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  void _handleTimerRestart() {
+    setState(() {
+      _isTimerRunning = true;
+    });
+  }
+
+  void _closeRestTimer() {
+    setState(() {
+      _isTimerActive = false;
+      _isTimerRunning = false;
     });
   }
   @override
@@ -222,6 +268,7 @@ class _StudentDailyRoutineScreenState extends State<StudentDailyRoutineScreen> {
                         return _ExerciseRow(
                           exercise: entry.value,
                           index: entry.key + 1,
+                          isRestTimerRunning: _isTimerRunning,
                           onStartTimer: _startRestTimer,
                         );
                       }),
@@ -234,11 +281,9 @@ class _StudentDailyRoutineScreenState extends State<StudentDailyRoutineScreen> {
                         key: ValueKey('rest_timer_$_timerKey'),
                         seconds: _timerSeconds,
                         label: _timerLabel,
-                        onClose: () {
-                          setState(() {
-                            _isTimerActive = false;
-                          });
-                        },
+                        onClose: _closeRestTimer,
+                        onFinished: _handleTimerFinish,
+                        onRestart: _handleTimerRestart,
                       ),
                   ],
                 ),
@@ -251,11 +296,13 @@ class _StudentDailyRoutineScreenState extends State<StudentDailyRoutineScreen> {
 class _ExerciseRow extends StatefulWidget {
   final GetDailyStudentExerciseDto exercise;
   final int index;
+  final bool isRestTimerRunning;
   final void Function(String restTime, String label)? onStartTimer;
 
   const _ExerciseRow({
     required this.exercise,
     required this.index,
+    this.isRestTimerRunning = false,
     this.onStartTimer,
   });
 
@@ -675,6 +722,7 @@ class _ExerciseRowState extends State<_ExerciseRow> {
                       index: idx,
                       set: set,
                       isChecked: checked,
+                      isRestTimerRunning: widget.isRestTimerRunning,
                       onStartTimer: () {
                         widget.onStartTimer?.call(
                           set.restTime,
@@ -757,9 +805,11 @@ class _ExerciseRowState extends State<_ExerciseRow> {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed:
-                          (_isSaving || isDone) ? null : _completeExercise,
+                          (_isSaving || isDone || widget.isRestTimerRunning) ? null : _completeExercise,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primary,
+                        backgroundColor: (!isDone && widget.isRestTimerRunning)
+                            ? AppTheme.primary.withValues(alpha: 0.4)
+                            : AppTheme.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
@@ -771,8 +821,12 @@ class _ExerciseRowState extends State<_ExerciseRow> {
                               height: 20,
                               child: CircularProgressIndicator(
                                   color: Colors.white, strokeWidth: 2))
-                          : const Text('Terminar Ejercicio',
-                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          : Text(
+                              (!isDone && widget.isRestTimerRunning)
+                                  ? 'Descanso en curso...'
+                                  : 'Terminar Ejercicio',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
                     ),
                   ),
                 ],
@@ -793,6 +847,7 @@ class _SetRow extends StatefulWidget {
   final int index;
   final GetDailyExerciseSetsDto set;
   final bool isChecked;
+  final bool isRestTimerRunning;
   final void Function(bool, int?, int?) onToggle;
   final VoidCallback? onStartTimer;
 
@@ -800,6 +855,7 @@ class _SetRow extends StatefulWidget {
     required this.index,
     required this.set,
     required this.isChecked,
+    this.isRestTimerRunning = false,
     required this.onToggle,
     this.onStartTimer,
   });
@@ -870,28 +926,38 @@ class _SetRowState extends State<_SetRow> {
                     return Padding(
                       padding: const EdgeInsets.only(left: 8.0),
                       child: GestureDetector(
-                        onTap: widget.onStartTimer,
+                        onTap: widget.isRestTimerRunning ? null : widget.onStartTimer,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 7, vertical: 2.5),
                           decoration: BoxDecoration(
-                            color: AppTheme.primary.withValues(alpha: 0.15),
+                            color: widget.isRestTimerRunning
+                                ? Colors.white10
+                                : AppTheme.primary.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(
-                                color: AppTheme.primary.withValues(alpha: 0.4)),
+                              color: widget.isRestTimerRunning
+                                  ? Colors.white24
+                                  : AppTheme.primary.withValues(alpha: 0.4),
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.timer_outlined,
-                                  size: 11, color: AppTheme.primary),
+                              Icon(Icons.timer_outlined,
+                                  size: 11,
+                                  color: widget.isRestTimerRunning
+                                      ? Colors.white54
+                                      : AppTheme.primary),
                               const SizedBox(width: 3),
                               Text(
                                 '${restSec}s',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
-                                  color: AppTheme.primary,
+                                  color: widget.isRestTimerRunning
+                                      ? Colors.white54
+                                      : AppTheme.primary,
                                 ),
                               ),
                             ],
@@ -1000,6 +1066,19 @@ class _SetRowState extends State<_SetRow> {
                   const SizedBox(height: 4),
                   GestureDetector(
                     onTap: () {
+                      if (!checked && widget.isRestTimerRunning) {
+                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Descanso en curso. Espera a que el cronómetro termine o ciérralo.',
+                            ),
+                            duration: Duration(seconds: 2),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                        return;
+                      }
                       final reps = int.tryParse(_repsController.text) ??
                           int.tryParse(widget.set.targetReps);
                       final weight = int.tryParse(_weightController.text) ??
@@ -1011,15 +1090,27 @@ class _SetRowState extends State<_SetRow> {
                       width: 38,
                       height: 38,
                       decoration: BoxDecoration(
-                        color: checked ? Colors.green : Colors.transparent,
+                        color: checked
+                            ? Colors.green
+                            : (!checked && widget.isRestTimerRunning)
+                                ? Colors.white10
+                                : Colors.transparent,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                            color: checked ? Colors.green : Colors.grey),
+                          color: checked
+                              ? Colors.green
+                              : (!checked && widget.isRestTimerRunning)
+                                  ? Colors.white24
+                                  : Colors.grey,
+                        ),
                       ),
                       child: checked
                           ? const Icon(Icons.check,
                               size: 20, color: Colors.white)
-                          : null,
+                          : (!checked && widget.isRestTimerRunning)
+                              ? const Icon(Icons.timer_outlined,
+                                  size: 16, color: Colors.white38)
+                              : null,
                     ),
                   ),
                 ],
