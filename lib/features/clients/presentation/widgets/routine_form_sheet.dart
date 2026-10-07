@@ -77,7 +77,7 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Serie copiada: ${set['targetReps']?.toString().isNotEmpty == true ? set['targetReps'] : '0'} reps • ${formatWeightWithEquivalent(set['targetWeight'])}',
+          'Serie copiada: ${set['targetReps']?.toString().isNotEmpty == true ? set['targetReps'] : '0'} reps • ${set['targetWeight']?.toString().isNotEmpty == true ? set['targetWeight'] : '0'} kg',
         ),
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
@@ -394,7 +394,7 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
                     onPressed: _pasteSet,
                     icon: const Icon(Icons.paste_rounded, size: 16),
                     label: Text(
-                      'Pegar serie (${_copiedSet!['targetReps'].toString().isNotEmpty ? _copiedSet!['targetReps'] : '0'} reps • ${formatWeightWithEquivalent(_copiedSet!['targetWeight'])})',
+                      'Pegar serie (${_copiedSet!['targetReps'].toString().isNotEmpty ? _copiedSet!['targetReps'] : '0'} reps • ${_copiedSet!['targetWeight'].toString().isNotEmpty ? _copiedSet!['targetWeight'] : '0'} kg)',
                       style: const TextStyle(fontSize: 12),
                     ),
                     style: OutlinedButton.styleFrom(
@@ -490,8 +490,7 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
                           ),
                           const SizedBox(width: 8),
                           Expanded(
-                            flex: 2,
-                            child: WeightInputField(
+                            child: TextFormField(
                               key: ValueKey('weight_${set['_key'] ?? idx}'),
                               initialValue: set['targetWeight'],
                               onChanged: (v) => set['targetWeight'] = v,
@@ -501,6 +500,7 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
                           Expanded(
                             flex: 2,
                             child: RestTimeInputField(
+                              key: ValueKey('rest_${set['_key'] ?? idx}'),
                               initialValue: set['restTime'] ?? '',
                               onChanged: (v) => set['restTime'] = v,
                             ),
