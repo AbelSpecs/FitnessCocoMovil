@@ -1,6 +1,4 @@
 import 'package:pyrosfitmovil/core/widgets/rest_time_input_field.dart';
-import 'package:pyrosfitmovil/core/utils/weight_utils.dart';
-import 'package:pyrosfitmovil/core/widgets/weight_input_field.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pyrosfitmovil/core/models/daily_student_exercise_model.dart';
@@ -503,7 +501,6 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
                           Expanded(
                             flex: 2,
                             child: RestTimeInputField(
-                              key: ValueKey('rest_${set['_key'] ?? idx}'),
                               initialValue: set['restTime'] ?? '',
                               onChanged: (v) => set['restTime'] = v,
                             ),
