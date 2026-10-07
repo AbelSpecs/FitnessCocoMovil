@@ -1077,7 +1077,7 @@ class _SetRowState extends State<_SetRow> {
                           color: Colors.white.withValues(alpha: 0.5))),
                   const SizedBox(height: 4),
                   GestureDetector(
-                    onTap: _isSaving ? null : () async {
+                    onTap: () {
                       if (!checked && widget.isRestTimerRunning) {
                         ScaffoldMessenger.of(context).hideCurrentSnackBar();
                         ScaffoldMessenger.of(context).showSnackBar(
