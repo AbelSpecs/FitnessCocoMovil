@@ -91,6 +91,21 @@ class StudentRoutinesProvider extends ChangeNotifier {
       };
       final response = await RoutineService.updateDailyExercisesSets(set.id, data);
       if (response != null) {
+        for (int i = 0; i < _dailyExercises.length; i++) {
+          final ex = _dailyExercises[i];
+          final setIndex = ex.dailyExerciseSets.indexWhere((s) => s.id == set.id);
+          if (setIndex != -1) {
+            final updatedSets = List<GetDailyExerciseSetsDto>.from(ex.dailyExerciseSets);
+            updatedSets[setIndex] = set.copyWith(
+              isAchieved: isAchieved,
+              actualReps: actualReps,
+              actualWeight: actualWeight,
+            );
+            _dailyExercises[i] = ex.copyWith(dailyExerciseSets: updatedSets);
+            notifyListeners();
+            break;
+          }
+        }
         return true;
       }
       return false;

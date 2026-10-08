@@ -63,6 +63,30 @@ class GetDailyExerciseSetsDto {
       isAchieved: json['isAchieved'] == true || json['isAchieved'] == 1 || json['isAchieved'] == 'true',
     );
   }
+
+  GetDailyExerciseSetsDto copyWith({
+    int? id,
+    int? dailyStudentExerciseId,
+    String? setNumber,
+    String? targetReps,
+    String? targetWeight,
+    String? restTime,
+    int? actualReps,
+    int? actualWeight,
+    bool? isAchieved,
+  }) {
+    return GetDailyExerciseSetsDto(
+      id: id ?? this.id,
+      dailyStudentExerciseId: dailyStudentExerciseId ?? this.dailyStudentExerciseId,
+      setNumber: setNumber ?? this.setNumber,
+      targetReps: targetReps ?? this.targetReps,
+      targetWeight: targetWeight ?? this.targetWeight,
+      restTime: restTime ?? this.restTime,
+      actualReps: actualReps ?? this.actualReps,
+      actualWeight: actualWeight ?? this.actualWeight,
+      isAchieved: isAchieved ?? this.isAchieved,
+    );
+  }
 }
 
 class GetDailyStudentExerciseDto {

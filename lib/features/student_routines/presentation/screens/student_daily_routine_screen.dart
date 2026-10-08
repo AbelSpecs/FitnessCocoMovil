@@ -331,13 +331,10 @@ class _ExerciseRowState extends State<_ExerciseRow> {
   @override
   void didUpdateWidget(covariant _ExerciseRow oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.exercise.id != oldWidget.exercise.id ||
-        widget.exercise.isCompleted != oldWidget.exercise.isCompleted) {
-      _isDone = widget.exercise.isCompleted;
-      _notesController.text = widget.exercise.studentNotes;
-      _setsCompleted =
-          widget.exercise.dailyExerciseSets.map((s) => s.isAchieved).toList();
-    }
+    _isDone = widget.exercise.isCompleted;
+    _notesController.text = widget.exercise.studentNotes;
+    _setsCompleted =
+        widget.exercise.dailyExerciseSets.map((s) => s.isAchieved).toList();
   }
 
   @override
@@ -867,26 +864,41 @@ class _SetRow extends StatefulWidget {
 class _SetRowState extends State<_SetRow> {
   late TextEditingController _repsController;
   late TextEditingController _weightController;
+  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
     _repsController = TextEditingController(
-      text: widget.set.actualReps?.toString() ?? "",
+      text: widget.set.actualReps != null
+          ? widget.set.actualReps.toString()
+          : (widget.isChecked ? widget.set.targetReps : ""),
     );
     _weightController = TextEditingController(
-      text: widget.set.actualWeight?.toString() ?? "",
+      text: widget.set.actualWeight != null
+          ? widget.set.actualWeight.toString()
+          : (widget.isChecked ? widget.set.targetWeight : ""),
     );
   }
 
   @override
   void didUpdateWidget(covariant _SetRow oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.set.id != oldWidget.set.id) {
-      _repsController.text =
-          widget.set.actualReps?.toString() ?? widget.set.targetReps;
-      _weightController.text =
-          widget.set.actualWeight?.toString() ?? widget.set.targetWeight;
+    if (widget.set.id != oldWidget.set.id ||
+        widget.set.actualReps != oldWidget.set.actualReps ||
+        widget.set.actualWeight != oldWidget.set.actualWeight ||
+        widget.isChecked != oldWidget.isChecked) {
+      if (widget.set.actualReps != null) {
+        _repsController.text = widget.set.actualReps.toString();
+      } else if (widget.isChecked && _repsController.text.isEmpty) {
+        _repsController.text = widget.set.targetReps;
+      }
+
+      if (widget.set.actualWeight != null) {
+        _weightController.text = widget.set.actualWeight.toString();
+      } else if (widget.isChecked && _weightController.text.isEmpty) {
+        _weightController.text = widget.set.targetWeight;
+      }
     }
   }
 
@@ -1065,7 +1077,7 @@ class _SetRowState extends State<_SetRow> {
                           color: Colors.white.withValues(alpha: 0.5))),
                   const SizedBox(height: 4),
                   GestureDetector(
-                    onTap: () {
+                    onTap: _isSaving ? null : () async {
                       if (!checked && widget.isRestTimerRunning) {
                         ScaffoldMessenger.of(context).hideCurrentSnackBar();
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -1083,7 +1095,12 @@ class _SetRowState extends State<_SetRow> {
                           int.tryParse(widget.set.targetReps);
                       final weight = int.tryParse(_weightController.text) ??
                           int.tryParse(widget.set.targetWeight);
-                      widget.onToggle(!checked, reps, weight);
+                      setState(() => _isSaving = true);
+                      try {
+                        widget.onToggle(!checked, reps, weight);
+                      } finally {
+                        if (mounted) setState(() => _isSaving = false);
+                      }
                     },
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
