@@ -7,7 +7,15 @@ import 'package:pyrosfitmovil/features/auth/data/models/user_auth_model.dart'; /
 
 class AuthProvider extends ChangeNotifier {
   // Instancia del almacenamiento seguro del teléfono (Keychain/Keystore)
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  // Instancia configurada para persistencia robusta ante cambios de contexto o reinicio
+  static const FlutterSecureStorage _storage = FlutterSecureStorage(
+    aOptions: AndroidOptions(
+      resetOnError: true,
+    ),
+    iOptions: IOSOptions(
+      accessibility: KeychainAccessibility.first_unlock,
+    ),
+  );
 
   // Variables de Estado (Equivalente a las propiedades de Zustand)
   UserAuth? _user;
@@ -27,6 +35,7 @@ class AuthProvider extends ChangeNotifier {
 
   /// Inicializa y recupera la sesión asíncronamente (Equivalente al getAuth/lectura inicial)
   Future<void> initAuth() async {
+    if (_isInitialized && _token != null) return;
     try {
       final tokenData = await _storage.read(key: "pyrosfit_token");
       final userData = await _storage.read(key: "pyrosfit_user");
@@ -41,7 +50,7 @@ class AuthProvider extends ChangeNotifier {
       debugPrint("Error inicializando autenticación: $e");
     } finally {
       _isInitialized = true;
-      notifyListeners(); // ⬅️ Le avisa a Flutter que redibuje si cambió algo
+      notifyListeners();
     }
   }
 
