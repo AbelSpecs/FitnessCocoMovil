@@ -37,13 +37,30 @@ class _StudentDailyRoutineScreenState extends State<StudentDailyRoutineScreen> {
   void _startRestTimer(String rawRestTime, String label) {
     final seconds = parseRestTimeToSeconds(rawRestTime);
     final actualSeconds = seconds > 0 ? seconds : 60;
-    setState(() {
-      _timerSeconds = actualSeconds;
-      _timerLabel = label;
-      _timerKey++;
-      _isTimerActive = true;
-      _isTimerRunning = true;
-    });
+
+    // Si ya existe un cronómetro activo o visible, cerrarlo primero para garantizar una única instancia
+    if (_isTimerActive) {
+      _closeRestTimer();
+      // Desmontar completamente la instancia anterior antes de montar la nueva
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() {
+          _timerSeconds = actualSeconds;
+          _timerLabel = label;
+          _timerKey++;
+          _isTimerActive = true;
+          _isTimerRunning = true;
+        });
+      });
+    } else {
+      setState(() {
+        _timerSeconds = actualSeconds;
+        _timerLabel = label;
+        _timerKey++;
+        _isTimerActive = true;
+        _isTimerRunning = true;
+      });
+    }
   }
 
   void _handleTimerFinish() {
@@ -806,7 +823,9 @@ class _ExerciseRowState extends State<_ExerciseRow> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: (!isDone && widget.isRestTimerRunning)
                             ? AppTheme.primary.withValues(alpha: 0.4)
-                            : AppTheme.primary,
+                            : (isDone
+                                ? Colors.grey.withValues(alpha: 0.3)
+                                : AppTheme.primary),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
@@ -821,7 +840,7 @@ class _ExerciseRowState extends State<_ExerciseRow> {
                           : Text(
                               (!isDone && widget.isRestTimerRunning)
                                   ? 'Descanso en curso...'
-                                  : 'Terminar Ejercicio',
+                                  : (isDone ? 'Completado' : 'Terminar Ejercicio'),
                               style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                     ),
