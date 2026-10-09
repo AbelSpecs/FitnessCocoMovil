@@ -335,6 +335,13 @@ class _ExerciseRowState extends State<_ExerciseRow> {
   bool _isDone = false;
   bool _isSaving = false;
 
+  List<GetDailyExerciseSetsDto> get _sortedSets {
+    final list = [...widget.exercise.dailyExerciseSets];
+    list.sort((a, b) =>
+        (int.tryParse(a.setNumber) ?? 0).compareTo(int.tryParse(b.setNumber) ?? 0));
+    return list;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -342,7 +349,7 @@ class _ExerciseRowState extends State<_ExerciseRow> {
     _notesController =
         TextEditingController(text: widget.exercise.studentNotes);
     _setsCompleted =
-        widget.exercise.dailyExerciseSets.map((s) => s.isAchieved).toList();
+        _sortedSets.map((s) => s.isAchieved).toList();
   }
 
   @override
@@ -351,7 +358,7 @@ class _ExerciseRowState extends State<_ExerciseRow> {
     _isDone = widget.exercise.isCompleted;
     _notesController.text = widget.exercise.studentNotes;
     _setsCompleted =
-        widget.exercise.dailyExerciseSets.map((s) => s.isAchieved).toList();
+        _sortedSets.map((s) => s.isAchieved).toList();
   }
 
   @override
@@ -723,19 +730,21 @@ class _ExerciseRowState extends State<_ExerciseRow> {
 
                   const SizedBox(height: 8),
 
-                  // Filas de series
-                  ...widget.exercise.dailyExerciseSets
-                      .asMap()
-                      .entries
-                      .map((entry) {
+                  // Filas de series ordenadas por setNumber
+                  ..._sortedSets.asMap().entries.map((entry) {
                     final idx = entry.key;
                     final set = entry.value;
-                    final checked = _setsCompleted[idx];
+                    final checked = idx < _setsCompleted.length ? _setsCompleted[idx] : false;
+
+                    // Una serie se bloquea si alguna serie anterior aún no está completada
+                    final isLocked = idx > 0 &&
+                        !_setsCompleted.sublist(0, idx).every((achieved) => achieved);
 
                     return _SetRow(
                       index: idx,
                       set: set,
                       isChecked: checked,
+                      isLocked: isLocked,
                       isRestTimerRunning: widget.isRestTimerRunning,
                       onStartTimer: () {
                         widget.onStartTimer?.call(
@@ -745,7 +754,9 @@ class _ExerciseRowState extends State<_ExerciseRow> {
                       },
                       onToggle: (val, actualReps, actualWeight) async {
                         setState(() {
-                          _setsCompleted[idx] = val;
+                          if (idx < _setsCompleted.length) {
+                            _setsCompleted[idx] = val;
+                          }
                         });
 
                         // Disparar inmediatamente el cronómetro de descanso si se marca como completada
@@ -863,6 +874,7 @@ class _SetRow extends StatefulWidget {
   final int index;
   final GetDailyExerciseSetsDto set;
   final bool isChecked;
+  final bool isLocked;
   final bool isRestTimerRunning;
   final void Function(bool, int?, int?) onToggle;
   final VoidCallback? onStartTimer;
@@ -871,6 +883,7 @@ class _SetRow extends StatefulWidget {
     required this.index,
     required this.set,
     required this.isChecked,
+    this.isLocked = false,
     this.isRestTimerRunning = false,
     required this.onToggle,
     this.onStartTimer,
@@ -931,229 +944,284 @@ class _SetRowState extends State<_SetRow> {
   @override
   Widget build(BuildContext context) {
     final checked = widget.isChecked;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      decoration: BoxDecoration(
-        color: checked ? Colors.green.withValues(alpha: 0.1) : Colors.black12,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-            color:
-                checked ? Colors.green.withValues(alpha: 0.3) : Colors.white24),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text('Serie ${widget.index + 1}',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 14)),
-              if (widget.set.restTime.isNotEmpty) ...[
-                Builder(
-                  builder: (context) {
-                    final restSec = parseRestTimeToSeconds(widget.set.restTime);
-                    if (restSec <= 0) return const SizedBox.shrink();
-                    return Padding(
-                      padding: const EdgeInsets.only(left: 8.0),
-                      child: GestureDetector(
-                        onTap: widget.isRestTimerRunning ? null : widget.onStartTimer,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 7, vertical: 2.5),
-                          decoration: BoxDecoration(
-                            color: widget.isRestTimerRunning
-                                ? Colors.white10
-                                : AppTheme.primary.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: widget.isRestTimerRunning
-                                  ? Colors.white24
-                                  : AppTheme.primary.withValues(alpha: 0.4),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.timer_outlined,
-                                  size: 11,
-                                  color: widget.isRestTimerRunning
-                                      ? Colors.white54
-                                      : AppTheme.primary),
-                              const SizedBox(width: 3),
-                              Text(
-                                '${restSec}s',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: widget.isRestTimerRunning
-                                      ? Colors.white54
-                                      : AppTheme.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
-              const Spacer(),
-              Text('Objetivo: ',
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.white.withValues(alpha: 0.7))),
-              Text(
-                '${widget.set.targetReps} reps • ${formatWeightWithEquivalent(widget.set.targetWeight)}',
-                style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white),
-              ),
-            ],
+    final isLocked = widget.isLocked;
+
+    return Opacity(
+      opacity: isLocked ? 0.6 : 1.0,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: checked
+              ? Colors.green.withValues(alpha: 0.1)
+              : (isLocked
+                  ? Colors.black.withValues(alpha: 0.05)
+                  : Colors.black12),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: checked
+                ? Colors.green.withValues(alpha: 0.3)
+                : (isLocked ? Colors.white12 : Colors.white24),
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Reps logradas',
-                        style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.white.withValues(alpha: 0.5))),
-                    const SizedBox(height: 4),
-                    TextField(
-                      controller: _repsController,
-                      textAlign: TextAlign.center,
-                      keyboardType: TextInputType.number,
-                      style: TextStyle(
-                          color: checked ? Colors.green : Colors.white,
-                          fontSize: 14),
-                      decoration: InputDecoration(
-                        isDense: true,
-                        contentPadding:
-                            const EdgeInsets.symmetric(vertical: 10),
-                        hintText: "Reps",
-                        hintStyle: const TextStyle(color: Colors.grey),
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide.none),
-                        filled: true,
-                        fillColor: Colors.white10,
-                      ),
-                      onChanged: (val) {
-                        if (checked) widget.onToggle(false, null, null);
-                      },
-                    ),
-                  ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Serie #${widget.set.setNumber}',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 14),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Peso logrado (kg)',
-                        style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.white.withValues(alpha: 0.5))),
-                    const SizedBox(height: 4),
-                    TextField(
-                      controller: _weightController,
-                      textAlign: TextAlign.center,
-                      keyboardType: TextInputType.number,
-                      style: TextStyle(
-                          color: checked ? Colors.green : Colors.white,
-                          fontSize: 14),
-                      decoration: InputDecoration(
-                        isDense: true,
-                        contentPadding:
-                            const EdgeInsets.symmetric(vertical: 10),
-                        hintText: "Kg",
-                        hintStyle: const TextStyle(color: Colors.grey),
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide.none),
-                        filled: true,
-                        fillColor: Colors.white10,
-                      ),
-                      onChanged: (val) {
-                        if (checked) widget.onToggle(false, null, null);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              Column(
-                children: [
-                  Text('Hecho',
-                      style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.white.withValues(alpha: 0.5))),
-                  const SizedBox(height: 4),
-                  GestureDetector(
-                    onTap: _isSaving ? null : () async {
-                      if (!checked && widget.isRestTimerRunning) {
-                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Descanso en curso. Espera a que el cronómetro termine o ciérralo.',
-                            ),
-                            duration: Duration(seconds: 2),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                        return;
-                      }
-                      final reps = int.tryParse(_repsController.text) ??
-                          int.tryParse(widget.set.targetReps);
-                      final weight = int.tryParse(_weightController.text) ??
-                          int.tryParse(widget.set.targetWeight);
-                      setState(() => _isSaving = true);
-                      try {
-                        widget.onToggle(!checked, reps, weight);
-                      } finally {
-                        if (mounted) setState(() => _isSaving = false);
-                      }
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: checked
-                            ? Colors.green
-                            : (!checked && widget.isRestTimerRunning)
-                                ? Colors.white10
-                                : Colors.transparent,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: checked
-                              ? Colors.green
-                              : (!checked && widget.isRestTimerRunning)
-                                  ? Colors.white24
-                                  : Colors.grey,
-                        ),
-                      ),
-                      child: checked
-                          ? const Icon(Icons.check,
-                              size: 20, color: Colors.white)
-                          : (!checked && widget.isRestTimerRunning)
-                              ? const Icon(Icons.timer_outlined,
-                                  size: 16, color: Colors.white38)
-                              : null,
-                    ),
+                if (isLocked) ...[
+                  const SizedBox(width: 6),
+                  const Tooltip(
+                    message: 'Bloqueada hasta completar la serie anterior',
+                    child: Icon(Icons.lock_outline,
+                        size: 14, color: Colors.white54),
                   ),
                 ],
-              ),
-            ],
-          ),
-        ],
+                if (widget.set.restTime.isNotEmpty) ...[
+                  Builder(
+                    builder: (context) {
+                      final restSec =
+                          parseRestTimeToSeconds(widget.set.restTime);
+                      if (restSec <= 0) return const SizedBox.shrink();
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 8.0),
+                        child: GestureDetector(
+                          onTap: (widget.isRestTimerRunning || isLocked)
+                              ? null
+                              : widget.onStartTimer,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 7, vertical: 2.5),
+                            decoration: BoxDecoration(
+                              color: (widget.isRestTimerRunning || isLocked)
+                                  ? Colors.white10
+                                  : AppTheme.primary.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: (widget.isRestTimerRunning || isLocked)
+                                    ? Colors.white24
+                                    : AppTheme.primary.withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.timer_outlined,
+                                    size: 11,
+                                    color: (widget.isRestTimerRunning || isLocked)
+                                        ? Colors.white54
+                                        : AppTheme.primary),
+                                const SizedBox(width: 3),
+                                Text(
+                                  '${restSec}s',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: (widget.isRestTimerRunning || isLocked)
+                                        ? Colors.white54
+                                        : AppTheme.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+                const Spacer(),
+                Text('Objetivo: ',
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white.withValues(alpha: 0.7))),
+                Text(
+                  '${widget.set.targetReps} reps • ${formatWeightWithEquivalent(widget.set.targetWeight)}',
+                  style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Reps logradas',
+                          style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.white.withValues(alpha: 0.5))),
+                      const SizedBox(height: 4),
+                      TextField(
+                        controller: _repsController,
+                        enabled: !checked && !isLocked,
+                        textAlign: TextAlign.center,
+                        keyboardType: TextInputType.number,
+                        style: TextStyle(
+                            color: checked
+                                ? Colors.green
+                                : (isLocked ? Colors.white38 : Colors.white),
+                            fontSize: 14),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 10),
+                          hintText: "Reps",
+                          hintStyle: const TextStyle(color: Colors.grey),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide.none),
+                          filled: true,
+                          fillColor: Colors.white10,
+                        ),
+                        onChanged: (val) {
+                          if (checked) widget.onToggle(false, null, null);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Peso logrado (kg)',
+                          style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.white.withValues(alpha: 0.5))),
+                      const SizedBox(height: 4),
+                      TextField(
+                        controller: _weightController,
+                        enabled: !checked && !isLocked,
+                        textAlign: TextAlign.center,
+                        keyboardType: TextInputType.number,
+                        style: TextStyle(
+                            color: checked
+                                ? Colors.green
+                                : (isLocked ? Colors.white38 : Colors.white),
+                            fontSize: 14),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 10),
+                          hintText: "Kg",
+                          hintStyle: const TextStyle(color: Colors.grey),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide.none),
+                          filled: true,
+                          fillColor: Colors.white10,
+                        ),
+                        onChanged: (val) {
+                          if (checked) widget.onToggle(false, null, null);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Column(
+                  children: [
+                    Text('Hecho',
+                        style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.white.withValues(alpha: 0.5))),
+                    const SizedBox(height: 4),
+                    GestureDetector(
+                      onTap: _isSaving
+                          ? null
+                          : () async {
+                              if (isLocked) {
+                                ScaffoldMessenger.of(context)
+                                    .hideCurrentSnackBar();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Debes completar la serie anterior antes de continuar',
+                                    ),
+                                    duration: Duration(seconds: 2),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                                return;
+                              }
+
+                              if (!checked && widget.isRestTimerRunning) {
+                                ScaffoldMessenger.of(context)
+                                    .hideCurrentSnackBar();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Descanso en curso. Espera a que el cronómetro termine o ciérralo.',
+                                    ),
+                                    duration: Duration(seconds: 2),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                                return;
+                              }
+                              final reps =
+                                  int.tryParse(_repsController.text) ??
+                                      int.tryParse(widget.set.targetReps);
+                              final weight =
+                                  int.tryParse(_weightController.text) ??
+                                      int.tryParse(widget.set.targetWeight);
+                              setState(() => _isSaving = true);
+                              try {
+                                widget.onToggle(!checked, reps, weight);
+                              } finally {
+                                if (mounted) setState(() => _isSaving = false);
+                              }
+                            },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: checked
+                              ? Colors.green
+                              : (!checked &&
+                                      (widget.isRestTimerRunning || isLocked))
+                                  ? Colors.white10
+                                  : Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: checked
+                                ? Colors.green
+                                : (!checked &&
+                                        (widget.isRestTimerRunning || isLocked))
+                                    ? Colors.white24
+                                    : Colors.grey,
+                          ),
+                        ),
+                        child: checked
+                            ? const Icon(Icons.check,
+                                size: 20, color: Colors.white)
+                            : isLocked
+                                ? const Icon(Icons.lock_outline,
+                                    size: 16, color: Colors.white38)
+                                : (!checked && widget.isRestTimerRunning)
+                                    ? const Icon(Icons.timer_outlined,
+                                        size: 16, color: Colors.white38)
+                                    : null,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
