@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/utils/exercise_filter.dart';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -23,6 +24,7 @@ class QuickCreateExerciseDialog extends StatefulWidget {
 class _QuickCreateExerciseDialogState extends State<QuickCreateExerciseDialog> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
+  late TextEditingController _descriptionController;
 
   int? _selectedMuscleGroupId;
   int _videoMode = 0; // 0: Enlace Web (YouTube), 1: Subir Video a R2
@@ -39,6 +41,7 @@ class _QuickCreateExerciseDialogState extends State<QuickCreateExerciseDialog> {
   void initState() {
     super.initState();
     _nameController = TextEditingController();
+    _descriptionController = TextEditingController();
     _selectedMuscleGroupId = widget.initialMuscleGroupId;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -54,6 +57,7 @@ class _QuickCreateExerciseDialogState extends State<QuickCreateExerciseDialog> {
   @override
   void dispose() {
     _nameController.dispose();
+    _descriptionController.dispose();
     super.dispose();
   }
 
@@ -124,14 +128,24 @@ class _QuickCreateExerciseDialogState extends State<QuickCreateExerciseDialog> {
         }
       }
 
-      // 2. Persistir ejercicio en el backend
+      // 2. Persistir ejercicio en el backend (con soporte de usuario independiente)
       if (!mounted) return;
+      final currentUser = auth.user;
+      final isIndependent = isUserIndependent(currentUser);
+
+      final userDesc = _descriptionController.text.trim();
+      final effectiveStudentId = currentUser?.studentId ?? 0;
+      final finalDesc = isIndependent && effectiveStudentId > 0
+          ? formatExerciseDescriptionWithStudentId(userDesc, effectiveStudentId)
+          : userDesc;
+
       final provider = context.read<RoutinesProvider>();
       final created = await provider.createCustomExercise(
         _nameController.text.trim(),
         _selectedMuscleGroupId!,
         videoKey: finalVideoKey,
         videoUrl: finalVideoUrl,
+        description: finalDesc,
       );
 
       if (mounted) {
@@ -312,6 +326,46 @@ class _QuickCreateExerciseDialogState extends State<QuickCreateExerciseDialog> {
                       }
                       return null;
                     },
+                  ),
+                  const SizedBox(height: 14),
+
+                  // 2.5 Descripción (Opcional)
+                  const Text(
+                    'DESCRIPCIÓN (OPCIONAL)',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                      color: Colors.white70,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: _descriptionController,
+                    enabled: !_isSaving && !_isUploadingVideo,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    maxLength: 150,
+                    decoration: InputDecoration(
+                      hintText: 'Instrucciones o notas del ejercicio',
+                      hintStyle: const TextStyle(color: Colors.grey, fontSize: 12),
+                      counterText: '',
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      filled: true,
+                      fillColor: const Color(0xFF141416),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppTheme.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppTheme.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppTheme.primary),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 14),
 

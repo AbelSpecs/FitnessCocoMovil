@@ -122,8 +122,9 @@ class _StudentWeeklyRoutineScreenState extends State<StudentWeeklyRoutineScreen>
                   'Rutina semanal',
                   style: TextStyle(
                     fontFamily: 'BebasNeue',
-                    fontSize: 40,
+                    fontSize: 32,
                     letterSpacing: 1,
+                    wordSpacing: 1.5,
                   ),
                 ),
                 const SizedBox(height: 8),

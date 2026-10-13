@@ -1,3 +1,7 @@
+import 'package:pyrosfitmovil/core/widgets/expandable_text.dart';
+import 'package:pyrosfitmovil/core/utils/exercise_filter.dart';
+import 'package:pyrosfitmovil/features/auth/presentation/controllers/auth_provider.dart';
+import 'package:pyrosfitmovil/features/student_routines/presentation/widgets/add_student_daily_exercise_sheet.dart';
 import 'package:pyrosfitmovil/features/exercises/presentation/widgets/exercise_video_modal.dart';
 import 'package:pyrosfitmovil/features/exercises/presentation/widgets/video_thumbnail_badge.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +14,7 @@ import 'package:pyrosfitmovil/features/dashboard/data/models/dashboard_models.da
 import 'package:pyrosfitmovil/core/services/streak_service.dart';
 import 'package:pyrosfitmovil/core/widgets/rest_timer_widget.dart';
 import 'package:pyrosfitmovil/core/utils/time_utils.dart';
+import 'package:pyrosfitmovil/core/utils/weight_utils.dart';
 
 class StudentDailyRoutineScreen extends StatefulWidget {
   final int studentId;
@@ -25,6 +30,7 @@ class StudentDailyRoutineScreen extends StatefulWidget {
 
 class _StudentDailyRoutineScreenState extends State<StudentDailyRoutineScreen> {
   bool _isTimerActive = false;
+  bool _isTimerRunning = false;
   int _timerSeconds = 0;
   String? _timerLabel;
   int _timerKey = 0;
@@ -32,11 +38,73 @@ class _StudentDailyRoutineScreenState extends State<StudentDailyRoutineScreen> {
   void _startRestTimer(String rawRestTime, String label) {
     final seconds = parseRestTimeToSeconds(rawRestTime);
     final actualSeconds = seconds > 0 ? seconds : 60;
+
+    // Si ya existe un cronómetro activo o visible, cerrarlo primero para garantizar una única instancia
+    if (_isTimerActive) {
+      _closeRestTimer();
+      // Desmontar completamente la instancia anterior antes de montar la nueva
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() {
+          _timerSeconds = actualSeconds;
+          _timerLabel = label;
+          _timerKey++;
+          _isTimerActive = true;
+          _isTimerRunning = true;
+        });
+      });
+    } else {
+      setState(() {
+        _timerSeconds = actualSeconds;
+        _timerLabel = label;
+        _timerKey++;
+        _isTimerActive = true;
+        _isTimerRunning = true;
+      });
+    }
+  }
+
+  void _handleTimerFinish() {
     setState(() {
-      _timerSeconds = actualSeconds;
-      _timerLabel = label;
-      _timerKey++;
-      _isTimerActive = true;
+      _isTimerRunning = false;
+    });
+    if (mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.timer_off_outlined, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '¡Descanso completado! Listo para continuar con tu siguiente serie 🔥',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF10B981),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  void _handleTimerRestart() {
+    setState(() {
+      _isTimerRunning = true;
+    });
+  }
+
+  void _closeRestTimer() {
+    setState(() {
+      _isTimerActive = false;
+      _isTimerRunning = false;
     });
   }
   @override
@@ -52,6 +120,8 @@ class _StudentDailyRoutineScreenState extends State<StudentDailyRoutineScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<StudentRoutinesProvider>();
+    final auth = context.watch<AuthProvider>();
+    final isIndependent = isUserIndependent(auth.user);
     final theme = Theme.of(context);
     final exercises = provider.dailyExercises;
 
@@ -59,7 +129,7 @@ class _StudentDailyRoutineScreenState extends State<StudentDailyRoutineScreen> {
     final isRest = exercises.isEmpty;
     final date = DateTime.tryParse(widget.dayId) ?? DateTime.now();
     final dayName = DateFormat('EEEE', 'es_US').format(date);
-    final muscleGroup = isRest ? 'Descanso' : exercises.first.muscleGroupName;
+    final muscleGroup = isRest ? 'Descanso' : getMuscleGroupsTitle(exercises);
 
     return context.pyrosStyles.buildMeshBackground(
       child: Scaffold(
@@ -110,29 +180,57 @@ class _StudentDailyRoutineScreenState extends State<StudentDailyRoutineScreen> {
                           const SizedBox(height: 8),
                           Text(
                             muscleGroup,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontFamily: 'BebasNeue',
-                              fontSize: 48,
-                              height: 1.0,
+                              fontSize: 32,
+                              height: 1.05,
+                              letterSpacing: 0.5,
+                              wordSpacing: 1.5,
                             ),
                           ),
-                          if (!isRest) ...[
-                            const SizedBox(height: 16),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color:
-                                    theme.colorScheme.surfaceContainerHighest,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '${exercises.length} ejercicios',
-                                style: const TextStyle(
-                                    fontSize: 12, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ]
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              if (!isRest)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        theme.colorScheme.surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '${exercises.length} ejercicios',
+                                    style: const TextStyle(
+                                        fontSize: 12, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              if (isIndependent) ...[
+                                if (!isRest) const SizedBox(width: 8),
+                                ElevatedButton.icon(
+                                  onPressed: () {
+                                    AddStudentDailyExerciseSheet.show(
+                                      context,
+                                      studentId: widget.studentId,
+                                      scheduledDate: widget.dayId,
+                                      existingExercises: exercises,
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.primary,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                  icon: const Icon(Icons.add, size: 16),
+                                  label: const Text('Agregar ejercicio', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                ),
+                              ],
+                            ],
+                          )
                         ],
                       ),
                     ),
@@ -147,31 +245,124 @@ class _StudentDailyRoutineScreenState extends State<StudentDailyRoutineScreen> {
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(color: AppTheme.border),
                         ),
-                        child: const Column(
+                        child: Column(
                           children: [
-                            Text('🌿', style: TextStyle(fontSize: 72)),
-                            SizedBox(height: 16),
-                            Text(
+                            const Text('🌿', style: TextStyle(fontSize: 72)),
+                            const SizedBox(height: 16),
+                            const Text(
                               'Descanso',
                               style: TextStyle(
-                                  fontFamily: 'BebasNeue', fontSize: 32),
+                                  fontFamily: 'BebasNeue', fontSize: 26, wordSpacing: 1.5),
                             ),
-                            SizedBox(height: 8),
-                            Text(
+                            const SizedBox(height: 8),
+                            const Text(
                               'Recuperarse es parte del entrenamiento. Hidrátate, duerme bien y mueve el cuerpo con calma.',
                               textAlign: TextAlign.center,
                               style: TextStyle(color: Colors.grey),
                             ),
+                            if (isIndependent) ...[
+                              const SizedBox(height: 20),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  AddStudentDailyExerciseSheet.show(
+                                    context,
+                                    studentId: widget.studentId,
+                                    scheduledDate: widget.dayId,
+                                    existingExercises: exercises,
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primary,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                icon: const Icon(Icons.add, size: 18),
+                                label: const Text(
+                                  'Agregar ejercicio a este día',
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       )
                     else
-                      ...exercises.asMap().entries.map((entry) {
-                        return _ExerciseRow(
-                          exercise: entry.value,
-                          index: entry.key + 1,
-                          onStartTimer: _startRestTimer,
-                        );
+                      ...exercises.asMap().entries.expand((entry) {
+                        final i = entry.key;
+                        final ex = entry.value;
+                        final prevEx = i > 0 ? exercises[i - 1] : null;
+                        final isNewSuperSetBlock = (ex.superSetTag != null &&
+                            ex.superSetTag!.trim().isNotEmpty &&
+                            (prevEx == null || (prevEx.superSetTag ?? '').trim().toUpperCase() != ex.superSetTag!.trim().toUpperCase()));
+
+                        return [
+                          if (isNewSuperSetBlock)
+                            Container(
+                              margin: EdgeInsets.only(top: i > 0 ? 16 : 0, bottom: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: const Color(0xFFF59E0B).withValues(alpha: 0.35),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.link_rounded, color: Color(0xFFF59E0B), size: 18),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'SERIE COMBINADA #${ex.superSetTag!.trim().toUpperCase()}',
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFFF59E0B),
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 1),
+                                        Text(
+                                          'Realiza 1 set de cada ejercicio antes de descansar',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.white.withValues(alpha: 0.7),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black38,
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
+                                    ),
+                                    child: const Text(
+                                      'Descanso único al final',
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFFF59E0B),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          _ExerciseRow(
+                            exercise: ex,
+                            index: i + 1,
+                            allExercises: exercises,
+                            isRestTimerRunning: _isTimerRunning,
+                            onStartTimer: _startRestTimer,
+                          ),
+                        ];
                       }),
                   ],
                 ),
@@ -182,11 +373,9 @@ class _StudentDailyRoutineScreenState extends State<StudentDailyRoutineScreen> {
                         key: ValueKey('rest_timer_$_timerKey'),
                         seconds: _timerSeconds,
                         label: _timerLabel,
-                        onClose: () {
-                          setState(() {
-                            _isTimerActive = false;
-                          });
-                        },
+                        onClose: _closeRestTimer,
+                        onFinished: _handleTimerFinish,
+                        onRestart: _handleTimerRestart,
                       ),
                   ],
                 ),
@@ -199,11 +388,15 @@ class _StudentDailyRoutineScreenState extends State<StudentDailyRoutineScreen> {
 class _ExerciseRow extends StatefulWidget {
   final GetDailyStudentExerciseDto exercise;
   final int index;
+  final List<GetDailyStudentExerciseDto>? allExercises;
+  final bool isRestTimerRunning;
   final void Function(String restTime, String label)? onStartTimer;
 
   const _ExerciseRow({
     required this.exercise,
     required this.index,
+    this.allExercises,
+    this.isRestTimerRunning = false,
     this.onStartTimer,
   });
 
@@ -219,6 +412,52 @@ class _ExerciseRowState extends State<_ExerciseRow> {
   bool _isDone = false;
   bool _isSaving = false;
 
+  List<GetDailyStudentExerciseDto> get _superSetGroup {
+    final tag = (widget.exercise.superSetTag ?? '').trim().toUpperCase();
+    if (tag.isEmpty || widget.allExercises == null) return [];
+    final group = widget.allExercises!
+        .where((item) => (item.superSetTag ?? '').trim().toUpperCase() == tag)
+        .toList();
+    group.sort((a, b) => (a.superSetOrder ?? 0).compareTo(b.superSetOrder ?? 0));
+    return group;
+  }
+
+  bool get _isSuperSet => _superSetGroup.length > 1;
+  int get _groupIndex =>
+      _superSetGroup.indexWhere((item) => item.id == widget.exercise.id);
+  bool get _isFirstInSuperSet => _isSuperSet && _groupIndex == 0;
+  bool get _isLastInSuperSet =>
+      _isSuperSet && _groupIndex == _superSetGroup.length - 1;
+  GetDailyStudentExerciseDto? get _nextExerciseInSuperSet =>
+      _isSuperSet && _groupIndex >= 0 && _groupIndex < _superSetGroup.length - 1
+          ? _superSetGroup[_groupIndex + 1]
+          : null;
+
+  String get _combinedRestTime {
+    if (!_isSuperSet) {
+      return widget.exercise.dailyExerciseSets.isNotEmpty
+          ? widget.exercise.dailyExerciseSets.first.restTime
+          : '60';
+    }
+    for (final e in _superSetGroup) {
+      if (e.dailyExerciseSets.isNotEmpty &&
+          e.dailyExerciseSets.first.restTime.trim().isNotEmpty &&
+          e.dailyExerciseSets.first.restTime != '0') {
+        return e.dailyExerciseSets.first.restTime;
+      }
+    }
+    return widget.exercise.dailyExerciseSets.isNotEmpty
+        ? widget.exercise.dailyExerciseSets.first.restTime
+        : '60';
+  }
+
+  List<GetDailyExerciseSetsDto> get _sortedSets {
+    final list = [...widget.exercise.dailyExerciseSets];
+    list.sort((a, b) =>
+        (int.tryParse(a.setNumber) ?? 0).compareTo(int.tryParse(b.setNumber) ?? 0));
+    return list;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -226,19 +465,16 @@ class _ExerciseRowState extends State<_ExerciseRow> {
     _notesController =
         TextEditingController(text: widget.exercise.studentNotes);
     _setsCompleted =
-        widget.exercise.dailyExerciseSets.map((s) => s.isAchieved).toList();
+        _sortedSets.map((s) => s.isAchieved).toList();
   }
 
   @override
   void didUpdateWidget(covariant _ExerciseRow oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.exercise.id != oldWidget.exercise.id ||
-        widget.exercise.isCompleted != oldWidget.exercise.isCompleted) {
-      _isDone = widget.exercise.isCompleted;
-      _notesController.text = widget.exercise.studentNotes;
-      _setsCompleted =
-          widget.exercise.dailyExerciseSets.map((s) => s.isAchieved).toList();
-    }
+    _isDone = widget.exercise.isCompleted;
+    _notesController.text = widget.exercise.studentNotes;
+    _setsCompleted =
+        _sortedSets.map((s) => s.isAchieved).toList();
   }
 
   @override
@@ -351,7 +587,11 @@ class _ExerciseRowState extends State<_ExerciseRow> {
       color: AppTheme.card.withValues(alpha: 0.15),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: AppTheme.border.withValues(alpha: 0.3)),
+        side: BorderSide(
+          color: _isSuperSet
+              ? const Color(0xFFF59E0B).withValues(alpha: 0.4)
+              : AppTheme.border.withValues(alpha: 0.3),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -373,8 +613,15 @@ class _ExerciseRowState extends State<_ExerciseRow> {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: isDone ? Colors.green : AppTheme.primary,
+                      color: isDone
+                          ? Colors.green
+                          : _isSuperSet
+                              ? const Color(0xFFF59E0B).withValues(alpha: 0.25)
+                              : AppTheme.primary,
                       borderRadius: BorderRadius.circular(12),
+                      border: _isSuperSet && !isDone
+                          ? Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.6))
+                          : null,
                     ),
                     alignment: Alignment.center,
                     child: isDone
@@ -393,12 +640,74 @@ class _ExerciseRowState extends State<_ExerciseRow> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        if (_isSuperSet) ...[
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.link_rounded, size: 12, color: Color(0xFFF59E0B)),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Serie Combinada #${widget.exercise.superSetTag} • Ejercicio ${widget.exercise.superSetOrder ?? 1} de ${_superSetGroup.length}',
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFFF59E0B),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (_isFirstInSuperSet)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white10,
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
+                                  ),
+                                  child: const Text(
+                                    '1° en la combinación',
+                                    style: TextStyle(fontSize: 9, color: Color(0xFFFDE68A)),
+                                  ),
+                                ),
+                              if (_isLastInSuperSet)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.teal.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: Colors.tealAccent.withValues(alpha: 0.4)),
+                                  ),
+                                  child: const Text(
+                                    'Cierre de ronda (Activa descanso)',
+                                    style: TextStyle(fontSize: 9, color: Colors.tealAccent, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                        ],
                         Text(
                           widget.exercise.exerciseName,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontFamily: 'BebasNeue',
-                            fontSize: 24,
-                            height: 1.1,
+                            fontSize: 20,
+                            height: 1.15,
+                            letterSpacing: 0.5,
+                            wordSpacing: 1.2,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -579,27 +888,29 @@ class _ExerciseRowState extends State<_ExerciseRow> {
                     const SizedBox(height: 14),
                   ],
 
-                  // Notas del coach enteras si existen
+                  // Notas del coach enteras si existen (expandibles con espaciado correcto)
                   if (widget.exercise.coachNotes.isNotEmpty) ...[
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.black26,
-                        borderRadius: BorderRadius.circular(8),
+                        color: AppTheme.primary.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(10),
                         border:
-                            Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
+                            Border.all(color: AppTheme.primary.withValues(alpha: 0.25)),
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.format_quote,
+                          const Icon(Icons.format_quote_rounded,
                               color: AppTheme.primary, size: 16),
                           const SizedBox(width: 8),
                           Expanded(
-                            child: Text(
-                              widget.exercise.coachNotes,
+                            child: ExpandableText(
+                              text: widget.exercise.coachNotes,
+                              maxLines: 2,
+                              buttonColor: AppTheme.primary,
                               style: const TextStyle(
-                                  color: Colors.white70, fontSize: 13),
+                                  color: Colors.white70, fontSize: 13, height: 1.35),
                             ),
                           ),
                         ],
@@ -608,45 +919,159 @@ class _ExerciseRowState extends State<_ExerciseRow> {
                     const SizedBox(height: 16),
                   ],
 
+
                   const SizedBox(height: 8),
 
-                  // Filas de series
-                  ...widget.exercise.dailyExerciseSets
-                      .asMap()
-                      .entries
-                      .map((entry) {
+                  // Filas de series ordenadas por setNumber
+                  ..._sortedSets.asMap().entries.map((entry) {
                     final idx = entry.key;
                     final set = entry.value;
-                    final checked = _setsCompleted[idx];
+                    final checked = idx < _setsCompleted.length ? _setsCompleted[idx] : false;
+
+                    bool isLocked = false;
+                    String lockReason = '';
+
+                    if (_isSuperSet) {
+                      // Regla 1: Series anteriores en este mismo ejercicio deben estar completadas
+                      final prevSetsInCurrent = _setsCompleted.sublist(0, idx);
+                      if (!prevSetsInCurrent.every((achieved) => achieved)) {
+                        isLocked = true;
+                        lockReason = 'Completa tu serie anterior en este ejercicio';
+                      }
+
+                      // Regla 2: Los ejercicios anteriores de la combinación deben haber completado esta misma serie
+                      if (!isLocked) {
+                        final priorExercises = _superSetGroup.sublist(0, _groupIndex);
+                        for (final priorEx in priorExercises) {
+                          final priorSorted = [...priorEx.dailyExerciseSets]..sort(
+                            (a, b) => (int.tryParse(a.setNumber) ?? 0).compareTo(int.tryParse(b.setNumber) ?? 0),
+                          );
+                          if (idx < priorSorted.length) {
+                            final targetPriorSet = priorSorted[idx];
+                            if (!targetPriorSet.isAchieved) {
+                              isLocked = true;
+                              lockReason = 'Completa primero el Set #${idx + 1} de ${priorEx.exerciseName}';
+                              break;
+                            }
+                          }
+                        }
+                      }
+
+                      // Regla 3: Si idx > 0, los ejercicios posteriores deben haber completado la ronda anterior (idx - 1)
+                      if (!isLocked && idx > 0) {
+                        final laterExercises = _superSetGroup.sublist(_groupIndex + 1);
+                        for (final laterEx in laterExercises) {
+                          final laterSorted = [...laterEx.dailyExerciseSets]..sort(
+                            (a, b) => (int.tryParse(a.setNumber) ?? 0).compareTo(int.tryParse(b.setNumber) ?? 0),
+                          );
+                          if (idx - 1 < laterSorted.length) {
+                            final targetPrevSet = laterSorted[idx - 1];
+                            if (!targetPrevSet.isAchieved) {
+                              isLocked = true;
+                              lockReason = 'Completa la ronda anterior en ${laterEx.exerciseName} antes de iniciar el Set #${idx + 1}';
+                              break;
+                            }
+                          }
+                        }
+                      }
+                    } else {
+                      // Ejercicio estándar individual
+                      isLocked = idx > 0 &&
+                          !_setsCompleted.sublist(0, idx).every((achieved) => achieved);
+                      if (isLocked) {
+                        lockReason = 'Completa la serie anterior antes de continuar';
+                      }
+                    }
 
                     return _SetRow(
                       index: idx,
                       set: set,
                       isChecked: checked,
+                      isLocked: isLocked,
+                      lockReason: lockReason,
+                      isSuperSet: _isSuperSet,
+                      isLastInSuperSet: _isLastInSuperSet,
+                      nextExerciseName: _nextExerciseInSuperSet?.exerciseName,
+                      nextExerciseOrder: _nextExerciseInSuperSet?.superSetOrder,
+                      combinedRestTime: _combinedRestTime,
+                      isRestTimerRunning: widget.isRestTimerRunning,
                       onStartTimer: () {
-                        widget.onStartTimer?.call(
-                          set.restTime,
-                          '${widget.exercise.exerciseName} • Serie #${set.setNumber}',
-                        );
+                        final effectiveRest = _isSuperSet ? _combinedRestTime : set.restTime;
+                        final timerLabel = _isSuperSet
+                            ? 'Descanso Combinado • Ronda #${set.setNumber}'
+                            : '${widget.exercise.exerciseName} • Serie #${set.setNumber}';
+                        widget.onStartTimer?.call(effectiveRest, timerLabel);
                       },
                       onToggle: (val, actualReps, actualWeight) async {
                         setState(() {
-                          _setsCompleted[idx] = val;
+                          if (idx < _setsCompleted.length) {
+                            _setsCompleted[idx] = val;
+                          }
                         });
 
-                        // Disparar inmediatamente el cronómetro de descanso si se marca como completada
                         if (val) {
-                          final restSec = parseRestTimeToSeconds(set.restTime);
-                          if (restSec > 0) {
-                            widget.onStartTimer?.call(
-                              set.restTime,
-                              '${widget.exercise.exerciseName} • Serie #${set.setNumber}',
-                            );
+                          // Si es ejercicio combinado y NO es el último: pasar directo sin descanso
+                          if (_isSuperSet && !_isLastInSuperSet) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Row(
+                                    children: [
+                                      const Icon(Icons.bolt, color: Colors.amber, size: 20),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          _nextExerciseInSuperSet != null
+                                              ? '¡Set completado! Pasa directo a ${_nextExerciseInSuperSet!.exerciseName} (${_nextExerciseInSuperSet!.superSetOrder != null ? "Ejercicio #${_nextExerciseInSuperSet!.superSetOrder}" : "siguiente"}) sin descanso ⚡'
+                                              : '¡Set completado! Pasa directo al siguiente ejercicio de la combinación ⚡',
+                                          style: const TextStyle(fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  backgroundColor: const Color(0xFF1E1E24),
+                                  behavior: SnackBarBehavior.floating,
+                                  duration: const Duration(seconds: 3),
+                                ),
+                              );
+                            }
+                          } else {
+                            // Ejercicio normal O último de la combinación: iniciar cronómetro
+                            final effectiveRest = _isSuperSet ? _combinedRestTime : set.restTime;
+                            final restSec = parseRestTimeToSeconds(effectiveRest);
+                            if (restSec > 0) {
+                              final timerLabel = _isSuperSet
+                                  ? 'Descanso Combinado • Ronda #${set.setNumber}'
+                                  : '${widget.exercise.exerciseName} • Serie #${set.setNumber}';
+                              widget.onStartTimer?.call(effectiveRest, timerLabel);
+                              if (_isSuperSet && mounted) {
+                                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Row(
+                                      children: [
+                                        const Icon(Icons.local_fire_department, color: Colors.amber, size: 20),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            '¡Ronda combinada completada! Iniciando descanso de ${restSec}s 🔥',
+                                            style: const TextStyle(fontWeight: FontWeight.bold),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    backgroundColor: const Color(0xFF10B981),
+                                    behavior: SnackBarBehavior.floating,
+                                    duration: const Duration(seconds: 3),
+                                  ),
+                                );
+                              }
+                            }
                           }
                         }
 
-                        final provider =
-                            context.read<StudentRoutinesProvider>();
+                        final provider = context.read<StudentRoutinesProvider>();
                         final success = await provider.completeExerciseSet(
                             set, val, actualReps, actualWeight);
                         if (!success) {
@@ -656,9 +1081,8 @@ class _ExerciseRowState extends State<_ExerciseRow> {
                             });
                             if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content:
-                                        Text('Error al actualizar la serie')));
+                              const SnackBar(content: Text('Error al actualizar la serie')),
+                            );
                           }
                         }
                       },
@@ -705,9 +1129,13 @@ class _ExerciseRowState extends State<_ExerciseRow> {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed:
-                          (_isSaving || isDone) ? null : _completeExercise,
+                          (_isSaving || isDone || widget.isRestTimerRunning) ? null : _completeExercise,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primary,
+                        backgroundColor: (!isDone && widget.isRestTimerRunning)
+                            ? AppTheme.primary.withValues(alpha: 0.4)
+                            : (isDone
+                                ? Colors.grey.withValues(alpha: 0.3)
+                                : AppTheme.primary),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
@@ -719,8 +1147,12 @@ class _ExerciseRowState extends State<_ExerciseRow> {
                               height: 20,
                               child: CircularProgressIndicator(
                                   color: Colors.white, strokeWidth: 2))
-                          : const Text('Terminar Ejercicio',
-                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          : Text(
+                              (!isDone && widget.isRestTimerRunning)
+                                  ? 'Descanso en curso...'
+                                  : (isDone ? 'Completado' : 'Terminar Ejercicio'),
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
                     ),
                   ),
                 ],
@@ -741,6 +1173,14 @@ class _SetRow extends StatefulWidget {
   final int index;
   final GetDailyExerciseSetsDto set;
   final bool isChecked;
+  final bool isLocked;
+  final String lockReason;
+  final bool isSuperSet;
+  final bool isLastInSuperSet;
+  final String? nextExerciseName;
+  final int? nextExerciseOrder;
+  final String combinedRestTime;
+  final bool isRestTimerRunning;
   final void Function(bool, int?, int?) onToggle;
   final VoidCallback? onStartTimer;
 
@@ -748,6 +1188,14 @@ class _SetRow extends StatefulWidget {
     required this.index,
     required this.set,
     required this.isChecked,
+    this.isLocked = false,
+    this.lockReason = '',
+    this.isSuperSet = false,
+    this.isLastInSuperSet = false,
+    this.nextExerciseName,
+    this.nextExerciseOrder,
+    this.combinedRestTime = '60',
+    this.isRestTimerRunning = false,
     required this.onToggle,
     this.onStartTimer,
   });
@@ -759,26 +1207,41 @@ class _SetRow extends StatefulWidget {
 class _SetRowState extends State<_SetRow> {
   late TextEditingController _repsController;
   late TextEditingController _weightController;
+  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
     _repsController = TextEditingController(
-      text: widget.set.actualReps?.toString() ?? "",
+      text: widget.set.actualReps != null
+          ? widget.set.actualReps.toString()
+          : (widget.isChecked ? widget.set.targetReps : ""),
     );
     _weightController = TextEditingController(
-      text: widget.set.actualWeight?.toString() ?? "",
+      text: widget.set.actualWeight != null
+          ? widget.set.actualWeight.toString()
+          : (widget.isChecked ? widget.set.targetWeight : ""),
     );
   }
 
   @override
   void didUpdateWidget(covariant _SetRow oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.set.id != oldWidget.set.id) {
-      _repsController.text =
-          widget.set.actualReps?.toString() ?? widget.set.targetReps;
-      _weightController.text =
-          widget.set.actualWeight?.toString() ?? widget.set.targetWeight;
+    if (widget.set.id != oldWidget.set.id ||
+        widget.set.actualReps != oldWidget.set.actualReps ||
+        widget.set.actualWeight != oldWidget.set.actualWeight ||
+        widget.isChecked != oldWidget.isChecked) {
+      if (widget.set.actualReps != null) {
+        _repsController.text = widget.set.actualReps.toString();
+      } else if (widget.isChecked && _repsController.text.isEmpty) {
+        _repsController.text = widget.set.targetReps;
+      }
+
+      if (widget.set.actualWeight != null) {
+        _weightController.text = widget.set.actualWeight.toString();
+      } else if (widget.isChecked && _weightController.text.isEmpty) {
+        _weightController.text = widget.set.targetWeight;
+      }
     }
   }
 
@@ -792,189 +1255,389 @@ class _SetRowState extends State<_SetRow> {
   @override
   Widget build(BuildContext context) {
     final checked = widget.isChecked;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      decoration: BoxDecoration(
-        color: checked ? Colors.green.withValues(alpha: 0.1) : Colors.black12,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-            color:
-                checked ? Colors.green.withValues(alpha: 0.3) : Colors.white24),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text('Serie ${widget.index + 1}',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 14)),
-              if (widget.set.restTime.isNotEmpty) ...[
-                Builder(
-                  builder: (context) {
-                    final restSec = parseRestTimeToSeconds(widget.set.restTime);
-                    if (restSec <= 0) return const SizedBox.shrink();
-                    return Padding(
-                      padding: const EdgeInsets.only(left: 8.0),
-                      child: GestureDetector(
-                        onTap: widget.onStartTimer,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 7, vertical: 2.5),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primary.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                                color: AppTheme.primary.withValues(alpha: 0.4)),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.timer_outlined,
-                                  size: 11, color: AppTheme.primary),
-                              const SizedBox(width: 3),
-                              Text(
-                                '${restSec}s',
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
-              const Spacer(),
-              Text('Objetivo: ',
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.white.withValues(alpha: 0.7))),
-              Text(
-                '${widget.set.targetReps} reps • ${widget.set.targetWeight} kg',
-                style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white),
-              ),
-            ],
+    final isLocked = widget.isLocked;
+
+    return Opacity(
+      opacity: isLocked ? 0.6 : 1.0,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: checked
+              ? Colors.green.withValues(alpha: 0.1)
+              : (isLocked
+                  ? Colors.black.withValues(alpha: 0.05)
+                  : Colors.black12),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: checked
+                ? Colors.green.withValues(alpha: 0.3)
+                : (isLocked ? Colors.white12 : Colors.white24),
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Reps logradas',
-                        style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.white.withValues(alpha: 0.5))),
-                    const SizedBox(height: 4),
-                    TextField(
-                      controller: _repsController,
-                      textAlign: TextAlign.center,
-                      keyboardType: TextInputType.number,
-                      style: TextStyle(
-                          color: checked ? Colors.green : Colors.white,
-                          fontSize: 14),
-                      decoration: InputDecoration(
-                        isDense: true,
-                        contentPadding:
-                            const EdgeInsets.symmetric(vertical: 10),
-                        hintText: "Reps",
-                        hintStyle: const TextStyle(color: Colors.grey),
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide.none),
-                        filled: true,
-                        fillColor: Colors.white10,
-                      ),
-                      onChanged: (val) {
-                        if (checked) widget.onToggle(false, null, null);
-                      },
-                    ),
-                  ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Serie #${widget.set.setNumber}',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 14),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Peso logrado (kg)',
-                        style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.white.withValues(alpha: 0.5))),
-                    const SizedBox(height: 4),
-                    TextField(
-                      controller: _weightController,
-                      textAlign: TextAlign.center,
-                      keyboardType: TextInputType.number,
-                      style: TextStyle(
-                          color: checked ? Colors.green : Colors.white,
-                          fontSize: 14),
-                      decoration: InputDecoration(
-                        isDense: true,
-                        contentPadding:
-                            const EdgeInsets.symmetric(vertical: 10),
-                        hintText: "Kg",
-                        hintStyle: const TextStyle(color: Colors.grey),
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide.none),
-                        filled: true,
-                        fillColor: Colors.white10,
-                      ),
-                      onChanged: (val) {
-                        if (checked) widget.onToggle(false, null, null);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              Column(
-                children: [
-                  Text('Hecho',
-                      style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.white.withValues(alpha: 0.5))),
-                  const SizedBox(height: 4),
-                  GestureDetector(
-                    onTap: () {
-                      final reps = int.tryParse(_repsController.text) ??
-                          int.tryParse(widget.set.targetReps);
-                      final weight = int.tryParse(_weightController.text) ??
-                          int.tryParse(widget.set.targetWeight);
-                      widget.onToggle(!checked, reps, weight);
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: checked ? Colors.green : Colors.transparent,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                            color: checked ? Colors.green : Colors.grey),
-                      ),
-                      child: checked
-                          ? const Icon(Icons.check,
-                              size: 20, color: Colors.white)
-                          : null,
-                    ),
+                if (isLocked) ...[
+                  const SizedBox(width: 6),
+                  Tooltip(
+                    message: widget.lockReason.isNotEmpty
+                        ? widget.lockReason
+                        : 'Bloqueada hasta completar la serie anterior',
+                    child: const Icon(Icons.lock_outline,
+                        size: 14, color: Colors.white54),
                   ),
                 ],
-              ),
-            ],
-          ),
-        ],
+                if (widget.isSuperSet && !widget.isLastInSuperSet) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8.0),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.bolt, size: 11, color: Color(0xFFF59E0B)),
+                          SizedBox(width: 3),
+                          Text(
+                            'Directo',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFF59E0B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ] else if (widget.isSuperSet && widget.isLastInSuperSet) ...[
+                  Builder(
+                    builder: (context) {
+                      final restSec = parseRestTimeToSeconds(widget.combinedRestTime);
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 8.0),
+                        child: GestureDetector(
+                          onTap: (widget.isRestTimerRunning || isLocked)
+                              ? null
+                              : widget.onStartTimer,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                            decoration: BoxDecoration(
+                              color: (widget.isRestTimerRunning || isLocked)
+                                  ? Colors.white10
+                                  : Colors.teal.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: (widget.isRestTimerRunning || isLocked)
+                                    ? Colors.white24
+                                    : Colors.teal.withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.timer_outlined,
+                                    size: 11,
+                                    color: (widget.isRestTimerRunning || isLocked)
+                                        ? Colors.white54
+                                        : Colors.tealAccent),
+                                const SizedBox(width: 3),
+                                Text(
+                                  'Único: ${restSec}s',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: (widget.isRestTimerRunning || isLocked)
+                                        ? Colors.white54
+                                        : Colors.tealAccent,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ] else if (widget.set.restTime.isNotEmpty) ...[
+                  Builder(
+                    builder: (context) {
+                      final restSec =
+                          parseRestTimeToSeconds(widget.set.restTime);
+                      if (restSec <= 0) return const SizedBox.shrink();
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 8.0),
+                        child: GestureDetector(
+                          onTap: (widget.isRestTimerRunning || isLocked)
+                              ? null
+                              : widget.onStartTimer,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 7, vertical: 2.5),
+                            decoration: BoxDecoration(
+                              color: (widget.isRestTimerRunning || isLocked)
+                                  ? Colors.white10
+                                  : AppTheme.primary.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: (widget.isRestTimerRunning || isLocked)
+                                    ? Colors.white24
+                                    : AppTheme.primary.withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.timer_outlined,
+                                    size: 11,
+                                    color: (widget.isRestTimerRunning || isLocked)
+                                        ? Colors.white54
+                                        : AppTheme.primary),
+                                const SizedBox(width: 3),
+                                Text(
+                                  '${restSec}s',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: (widget.isRestTimerRunning || isLocked)
+                                        ? Colors.white54
+                                        : AppTheme.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+                const Spacer(),
+                Flexible(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Objetivo: ',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.white.withValues(alpha: 0.7))),
+                      Flexible(
+                        child: Text(
+                          '${widget.set.targetReps} reps • ${formatWeightWithEquivalent(widget.set.targetWeight)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Reps logradas',
+                          style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.white.withValues(alpha: 0.5))),
+                      const SizedBox(height: 4),
+                      TextField(
+                        controller: _repsController,
+                        enabled: !checked && !isLocked,
+                        textAlign: TextAlign.center,
+                        keyboardType: TextInputType.number,
+                        style: TextStyle(
+                            color: checked
+                                ? Colors.green
+                                : (isLocked ? Colors.white38 : Colors.white),
+                            fontSize: 14),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 10),
+                          hintText: "Reps",
+                          hintStyle: const TextStyle(color: Colors.grey),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide.none),
+                          filled: true,
+                          fillColor: Colors.white10,
+                        ),
+                        onChanged: (val) {
+                          if (checked) widget.onToggle(false, null, null);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Peso logrado (kg)',
+                          style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.white.withValues(alpha: 0.5))),
+                      const SizedBox(height: 4),
+                      TextField(
+                        controller: _weightController,
+                        enabled: !checked && !isLocked,
+                        textAlign: TextAlign.center,
+                        keyboardType: TextInputType.number,
+                        style: TextStyle(
+                            color: checked
+                                ? Colors.green
+                                : (isLocked ? Colors.white38 : Colors.white),
+                            fontSize: 14),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 10),
+                          hintText: "Kg",
+                          hintStyle: const TextStyle(color: Colors.grey),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide.none),
+                          filled: true,
+                          fillColor: Colors.white10,
+                        ),
+                        onChanged: (val) {
+                          if (checked) widget.onToggle(false, null, null);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Column(
+                  children: [
+                    Text('Hecho',
+                        style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.white.withValues(alpha: 0.5))),
+                    const SizedBox(height: 4),
+                    GestureDetector(
+                      onTap: _isSaving
+                          ? null
+                          : () async {
+                              if (isLocked) {
+                                ScaffoldMessenger.of(context)
+                                    .hideCurrentSnackBar();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      widget.lockReason.isNotEmpty
+                                          ? widget.lockReason
+                                          : 'Debes completar la serie anterior antes de continuar',
+                                    ),
+                                    duration: const Duration(seconds: 2),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                                return;
+                              }
+
+                              if (!checked && widget.isRestTimerRunning) {
+                                ScaffoldMessenger.of(context)
+                                    .hideCurrentSnackBar();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Descanso en curso. Espera a que el cronómetro termine o ciérralo.',
+                                    ),
+                                    duration: Duration(seconds: 2),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                                return;
+                              }
+                              final reps =
+                                  int.tryParse(_repsController.text) ??
+                                      int.tryParse(widget.set.targetReps);
+                              final parsedInputW = parseWeightNum(_weightController.text).toInt();
+                              final parsedTargetW = parseWeightNum(widget.set.targetWeight).toInt();
+                              final weight = parsedInputW > 0 ? parsedInputW : (parsedTargetW > 0 ? parsedTargetW : null);
+                              setState(() => _isSaving = true);
+                              try {
+                                widget.onToggle(!checked, reps, weight);
+                              } finally {
+                                if (mounted) setState(() => _isSaving = false);
+                              }
+                            },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: checked
+                              ? Colors.green
+                              : (!checked &&
+                                      (widget.isRestTimerRunning || isLocked))
+                                  ? Colors.white10
+                                  : (widget.isSuperSet && !widget.isLastInSuperSet)
+                                      ? const Color(0xFFF59E0B).withValues(alpha: 0.2)
+                                      : (widget.isSuperSet && widget.isLastInSuperSet)
+                                          ? Colors.teal.withValues(alpha: 0.2)
+                                          : Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: checked
+                                ? Colors.green
+                                : (!checked &&
+                                        (widget.isRestTimerRunning || isLocked))
+                                    ? Colors.white24
+                                    : (widget.isSuperSet && !widget.isLastInSuperSet)
+                                        ? const Color(0xFFF59E0B).withValues(alpha: 0.6)
+                                        : (widget.isSuperSet && widget.isLastInSuperSet)
+                                            ? Colors.tealAccent.withValues(alpha: 0.6)
+                                            : Colors.grey,
+                          ),
+                        ),
+                        child: checked
+                            ? const Icon(Icons.check,
+                                size: 20, color: Colors.white)
+                            : isLocked
+                                ? const Icon(Icons.lock_outline,
+                                    size: 16, color: Colors.white38)
+                                : (!checked && widget.isRestTimerRunning)
+                                    ? const Icon(Icons.timer_outlined,
+                                        size: 16, color: Colors.white38)
+                                    : (widget.isSuperSet && !widget.isLastInSuperSet)
+                                        ? const Icon(Icons.bolt,
+                                            size: 18, color: Color(0xFFF59E0B))
+                                        : (widget.isSuperSet && widget.isLastInSuperSet)
+                                            ? const Icon(Icons.timer_outlined,
+                                                size: 18, color: Colors.tealAccent)
+                                            : null,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

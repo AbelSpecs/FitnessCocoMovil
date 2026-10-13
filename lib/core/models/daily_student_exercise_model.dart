@@ -19,6 +19,8 @@ class DailyStudentExercise {
   final List<DailyExerciseSet> dailyExerciseSets;
   final String? videoKey;
   final String? videoUrl;
+  final String? superSetTag;
+  final int? superSetOrder;
 
   DailyStudentExercise({
     required this.exerciseId,
@@ -38,6 +40,8 @@ class DailyStudentExercise {
     required this.dailyExerciseSets,
     this.videoKey,
     this.videoUrl,
+    this.superSetTag,
+    this.superSetOrder,
   });
 
   bool get hasVideo =>
@@ -71,9 +75,9 @@ class DailyStudentExercise {
       coachId: parseInt(json['coachId']) ?? 0,
       dailyExerciseId: parseInt(json['dailyExerciseId']) ?? parseInt(json['id']) ?? 0,
       studentId: parseInt(json['studentId']) ?? 0,
-      exerciseName: json['exerciseName']?.toString() ?? '',
-      muscleGroupId: parseInt(json['muscleGroupId']),
-      muscleGroupName: json['muscleGroupName']?.toString() ?? '',
+      exerciseName: json['exerciseName']?.toString() ?? json['exercise']?['name']?.toString() ?? '',
+      muscleGroupId: parseInt(json['muscleGroupId']) ?? parseInt(json['exercise']?['muscleGroupId']),
+      muscleGroupName: json['muscleGroupName']?.toString() ?? json['exercise']?['muscleGroupName']?.toString() ?? json['exercise']?['muscleGroup']?.toString() ?? '',
       description: json['description']?.toString() ?? '',
       coachNotes: json['coachNotes']?.toString() ?? '',
       studentNotes: json['studentNotes']?.toString() ?? '',
@@ -84,6 +88,8 @@ class DailyStudentExercise {
       dailyExerciseSets: sets,
       videoKey: json['videoKey']?.toString() ?? json['exercise']?['videoKey']?.toString(),
       videoUrl: json['videoUrl']?.toString() ?? json['exercise']?['videoUrl']?.toString(),
+      superSetTag: json['superSetTag']?.toString(),
+      superSetOrder: parseInt(json['superSetOrder']),
     );
   }
 
@@ -105,6 +111,8 @@ class DailyStudentExercise {
     List<DailyExerciseSet>? dailyExerciseSets,
     String? videoKey,
     String? videoUrl,
+    String? superSetTag,
+    int? superSetOrder,
   }) {
     return DailyStudentExercise(
       exerciseId: exerciseId ?? this.exerciseId,
@@ -124,6 +132,8 @@ class DailyStudentExercise {
       dailyExerciseSets: dailyExerciseSets ?? this.dailyExerciseSets,
       videoKey: videoKey ?? this.videoKey,
       videoUrl: videoUrl ?? this.videoUrl,
+      superSetTag: superSetTag ?? this.superSetTag,
+      superSetOrder: superSetOrder ?? this.superSetOrder,
     );
   }
 }

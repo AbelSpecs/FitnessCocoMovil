@@ -92,20 +92,23 @@ class _LoginPageState extends State<LoginPage> {
       final coachMap = extractData(coachData);
       final userMap = extractData(userData);
 
-      // 3. Determinar rol y construir el objeto de sesión (UserAuth)
-      Role role = studentMap == null ? Role.coach : Role.student;
+      // 3. Determinar rol de manera robusta (idéntico a la web en fix/beta-bugs)
+      final bool isRealCoach = coachMap != null && (coachMap['id'] as int? ?? 0) > 0;
+      final Role role = isRealCoach ? Role.coach : Role.student;
 
       int studentId = studentMap?['id'] as int? ?? 0;
       int coachId = coachMap?['id'] as int? ?? 0;
 
       int myCoachId = 0;
-      if (studentMap != null) {
+      if (!isRealCoach && studentMap != null) {
         final details = await UserService.getUserDetails(id);
         final detailsMap = extractData(details);
-        
+
         if (detailsMap != null && detailsMap['coach'] != null) {
           myCoachId = detailsMap['coach']['id'] as int? ?? 0;
         }
+      } else if (isRealCoach) {
+        myCoachId = 0;
       }
 
       final profilePicKey = (userMap?['profilePictureKey'] ??

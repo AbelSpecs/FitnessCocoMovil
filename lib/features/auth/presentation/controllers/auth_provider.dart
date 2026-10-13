@@ -7,7 +7,15 @@ import 'package:pyrosfitmovil/features/auth/data/models/user_auth_model.dart'; /
 
 class AuthProvider extends ChangeNotifier {
   // Instancia del almacenamiento seguro del teléfono (Keychain/Keystore)
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  // Instancia configurada para persistencia robusta ante cambios de contexto o reinicio
+  static const FlutterSecureStorage _storage = FlutterSecureStorage(
+    aOptions: AndroidOptions(
+      resetOnError: true,
+    ),
+    iOptions: IOSOptions(
+      accessibility: KeychainAccessibility.first_unlock,
+    ),
+  );
 
   // Variables de Estado (Equivalente a las propiedades de Zustand)
   UserAuth? _user;
@@ -27,6 +35,7 @@ class AuthProvider extends ChangeNotifier {
 
   /// Inicializa y recupera la sesión asíncronamente (Equivalente al getAuth/lectura inicial)
   Future<void> initAuth() async {
+    if (_isInitialized && _token != null) return;
     try {
       final tokenData = await _storage.read(key: "pyrosfit_token");
       final userData = await _storage.read(key: "pyrosfit_user");
@@ -41,7 +50,7 @@ class AuthProvider extends ChangeNotifier {
       debugPrint("Error inicializando autenticación: $e");
     } finally {
       _isInitialized = true;
-      notifyListeners(); // ⬅️ Le avisa a Flutter que redibuje si cambió algo
+      notifyListeners();
     }
   }
 
@@ -98,8 +107,18 @@ class AuthProvider extends ChangeNotifier {
   Future<void> refreshUserProfile() async {
     if (_user == null) return;
     try {
-      final details = await UserService.getUserDetails(_user!.id.toString());
-      final data = details['data'] as Map<String, dynamic>?;
+      Map<String, dynamic>? data;
+      try {
+        final details = await UserService.getUserDetails(_user!.id.toString());
+        data = details['data'] as Map<String, dynamic>?;
+      } catch (_) {}
+
+      if (data == null) {
+        try {
+          final base = await UserService.getUser(_user!.id.toString());
+          data = base['data'] as Map<String, dynamic>?;
+        } catch (_) {}
+      }
       if (data != null) {
         final coach = data['coach'] as Map<String, dynamic>?;
         final student = data['student'] as Map<String, dynamic>?;

@@ -61,15 +61,14 @@ class _ClientRoutinesScreenContent extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 1. Tarjeta superior del cliente
+              // 1. Tarjeta superior del cliente con acento naranja PyrosFit
               Container(
                 padding: const EdgeInsets.all(16.0),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest
-                      .withValues(alpha: 0.3),
+                  color: const Color(0xFF1D1A17),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                      color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                      color: AppTheme.primary.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
@@ -250,6 +249,7 @@ class _ClientRoutinesScreenContent extends StatelessWidget {
 
                     return RoutineCard(
                       routine: routine,
+                      allRoutines: provider.routines,
                       onEdit: isFutureOrToday
                           ? () =>
                               _showEditRoutineSheet(context, provider, routine)

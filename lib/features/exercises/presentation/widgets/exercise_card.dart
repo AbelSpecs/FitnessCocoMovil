@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/widgets/expandable_text.dart';
 import 'package:flutter/material.dart';
 import 'package:pyrosfitmovil/core/models/exercise_model.dart';
 import 'package:pyrosfitmovil/features/exercises/presentation/widgets/video_thumbnail_badge.dart';
@@ -132,13 +133,12 @@ class ExerciseCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
 
-                // Descripción o Técnica
-                Text(
-                  exercise.description?.trim().isNotEmpty == true
+                // Descripción o Técnica con expansión bajo demanda
+                ExpandableText(
+                  text: exercise.description?.trim().isNotEmpty == true
                       ? exercise.description!
                       : 'Sin descripción técnica registrada.',
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 12,
                     color: Colors.white60,

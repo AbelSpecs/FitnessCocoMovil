@@ -12,6 +12,7 @@ class RestTimerWidget extends StatefulWidget {
   final String? label;
   final VoidCallback onClose;
   final VoidCallback? onFinished;
+  final VoidCallback? onRestart;
 
   const RestTimerWidget({
     super.key,
@@ -19,6 +20,7 @@ class RestTimerWidget extends StatefulWidget {
     this.label,
     required this.onClose,
     this.onFinished,
+    this.onRestart,
   });
 
   @override
@@ -32,7 +34,8 @@ class _RestTimerWidgetState extends State<RestTimerWidget>
   bool _isPaused = false;
   Timer? _timer;
 
-  // Posición flotante en pantalla
+  // Posición flotante compartida entre instancias para que no salte al reiniciar
+  static Offset? _lastPosition;
   Offset? _position;
   bool _isDragging = false;
 
@@ -104,6 +107,7 @@ class _RestTimerWidgetState extends State<RestTimerWidget>
       _isPaused = false;
     });
     _startTimer();
+    widget.onRestart?.call();
   }
 
   void _togglePause() {
@@ -128,8 +132,8 @@ class _RestTimerWidgetState extends State<RestTimerWidget>
     final screenSize = MediaQuery.of(context).size;
     const double widgetSize = 126.0;
 
-    // Posición inicial: abajo a la derecha sobre la barra de navegación
-    _position ??= Offset(
+    // Posición inicial: conservar la posición previa arrastrada o ubicar abajo a la derecha
+    _position ??= _lastPosition ?? Offset(
       screenSize.width - widgetSize - 16,
       screenSize.height - widgetSize - 120,
     );
@@ -154,6 +158,7 @@ class _RestTimerWidgetState extends State<RestTimerWidget>
             final newY = (_position!.dy + details.delta.dy)
                 .clamp(10.0, screenSize.height - widgetSize - 40.0);
             _position = Offset(newX, newY);
+            _lastPosition = _position;
           });
         },
         onPanEnd: (_) {

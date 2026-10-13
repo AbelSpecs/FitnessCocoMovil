@@ -127,7 +127,9 @@ class RoutineService {
   static Future<Map<String, dynamic>?> updateDailyStudentsExercises(
       int id, Map<String, dynamic> data) async {
     try {
-      final response = await _api.put('/DailyStudentExercises/$id', data: data);
+      final payload = Map<String, dynamic>.from(data);
+      payload['id'] = id;
+      final response = await _api.put('/DailyStudentExercises/$id', data: payload);
       if (response.data != null && response.data['data'] != null) {
         return response.data['data'] as Map<String, dynamic>;
       }
@@ -173,6 +175,16 @@ class RoutineService {
       return null;
     } catch (e) {
       return null;
+    }
+  }
+
+  static Future<bool> deleteDailyExercisesSets(int id) async {
+    try {
+      final response = await _api.delete('/DailyExerciseSets/$id');
+      return response.statusCode == 200 || response.statusCode == 204;
+    } catch (e) {
+      logError('Error deleting daily exercise set: $e');
+      return false;
     }
   }
 

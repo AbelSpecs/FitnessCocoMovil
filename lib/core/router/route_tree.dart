@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/features/auth/presentation/controllers/auth_provider.dart';
 import 'package:pyrosfitmovil/features/legal/presentation/screens/terms_screen.dart';
 import 'package:pyrosfitmovil/features/exercises/presentation/screens/exercises_screen.dart';
 import 'package:pyrosfitmovil/features/auth/presentation/screens/reset_password_screen.dart';
@@ -32,9 +33,43 @@ class AppRouter {
   static final GlobalKey<NavigatorState> _shellNavigatorKey =
       GlobalKey<NavigatorState>();
 
-  static final GoRouter router = GoRouter(
+  static GoRouter? _cachedRouter;
+
+  static GoRouter get router => _cachedRouter ?? createRouter(AuthProvider());
+
+  static GoRouter createRouter(AuthProvider authProvider) {
+    _cachedRouter = GoRouter(
       navigatorKey: _rootNavigatorKey,
-      initialLocation: '/login',
+      initialLocation: authProvider.isAuthenticated ? '/' : '/login',
+      refreshListenable: authProvider,
+      redirect: (context, state) {
+        if (!authProvider.isInitialized) {
+          return null;
+        }
+
+        final isAuthenticated = authProvider.isAuthenticated;
+        final uri = state.uri.path;
+
+        final isAuthRoute = uri == '/login' ||
+            uri == '/register' ||
+            uri == '/register-info' ||
+            uri == '/forgot-password' ||
+            uri == '/reset-password' ||
+            uri == '/confirm-email';
+        final isPublicRoute = uri == '/terms';
+
+        // 1. Si no está autenticado y trata de ir a una ruta protegida
+        if (!isAuthenticated && !isAuthRoute && !isPublicRoute) {
+          return '/login';
+        }
+
+        // 2. Si ya está autenticado e intenta ir a login o registro
+        if (isAuthenticated && isAuthRoute) {
+          return '/';
+        }
+
+        return null;
+      },
       routes: [
         ShellRoute(
           navigatorKey: _shellNavigatorKey,
@@ -164,8 +199,8 @@ class AppRouter {
             // normalmente haces un pushReplacement o limpias el estado del provider.
           },
         );
-      }
-      // const Scaffold(
-      // body: Center(child: Text('404 - Not Found')),
-      );
+      },
+    );
+    return _cachedRouter!;
+  }
 }

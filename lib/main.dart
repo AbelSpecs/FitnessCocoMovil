@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:pyrosfitmovil/features/auth/presentation/controllers/auth_provider.dart';
 import 'package:pyrosfitmovil/core/router/route_tree.dart';
 import 'package:pyrosfitmovil/theme/app_theme.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -20,27 +21,34 @@ Future<void> main() async {
   await dotenv.load(fileName: envFile);
   await initializeDateFormatting('es_US', null);
 
+  // Inicializar y esperar la sesión guardada ANTES de inicializar el router y los widgets
+  final authProvider = AuthProvider();
+  await authProvider.initAuth();
+
+  final router = AppRouter.createRouter(authProvider);
+
   runApp(MultiProvider(
     providers: [
-      ChangeNotifierProvider(create: (_) => AuthProvider()),
+      ChangeNotifierProvider.value(value: authProvider),
       ChangeNotifierProvider(create: (_) => StudentRoutinesProvider()),
       ChangeNotifierProvider(create: (_) => ExercisesProvider()),
-      // Aquí puedes agregar más providers si los necesitas
     ],
-    child: const MyApp(),
+    child: MyApp(router: router),
   ));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final GoRouter router;
+  const MyApp({super.key, required this.router});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-        scaffoldMessengerKey: scaffoldMessengerKey,
-        routerConfig: AppRouter.router,
-        title: 'PyrosFit',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.darkTheme);
+      scaffoldMessengerKey: scaffoldMessengerKey,
+      routerConfig: router,
+      title: 'PyrosFit',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.darkTheme,
+    );
   }
 }

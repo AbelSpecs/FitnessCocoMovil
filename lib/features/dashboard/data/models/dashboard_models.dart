@@ -63,6 +63,30 @@ class GetDailyExerciseSetsDto {
       isAchieved: json['isAchieved'] == true || json['isAchieved'] == 1 || json['isAchieved'] == 'true',
     );
   }
+
+  GetDailyExerciseSetsDto copyWith({
+    int? id,
+    int? dailyStudentExerciseId,
+    String? setNumber,
+    String? targetReps,
+    String? targetWeight,
+    String? restTime,
+    int? actualReps,
+    int? actualWeight,
+    bool? isAchieved,
+  }) {
+    return GetDailyExerciseSetsDto(
+      id: id ?? this.id,
+      dailyStudentExerciseId: dailyStudentExerciseId ?? this.dailyStudentExerciseId,
+      setNumber: setNumber ?? this.setNumber,
+      targetReps: targetReps ?? this.targetReps,
+      targetWeight: targetWeight ?? this.targetWeight,
+      restTime: restTime ?? this.restTime,
+      actualReps: actualReps ?? this.actualReps,
+      actualWeight: actualWeight ?? this.actualWeight,
+      isAchieved: isAchieved ?? this.isAchieved,
+    );
+  }
 }
 
 class GetDailyStudentExerciseDto {
@@ -79,6 +103,8 @@ class GetDailyStudentExerciseDto {
   final bool isCompleted;
   final String? videoKey;
   final String? videoUrl;
+  final String? superSetTag;
+  final int? superSetOrder;
 
   GetDailyStudentExerciseDto({
     required this.id,
@@ -94,6 +120,8 @@ class GetDailyStudentExerciseDto {
     required this.isCompleted,
     this.videoKey,
     this.videoUrl,
+    this.superSetTag,
+    this.superSetOrder,
   });
 
   bool get hasVideo =>
@@ -136,6 +164,8 @@ class GetDailyStudentExerciseDto {
       isCompleted: json['isCompleted'] == true || json['isCompleted'] == 1 || json['isCompleted'] == 'true',
       videoKey: json['videoKey']?.toString() ?? json['exercise']?['videoKey']?.toString(),
       videoUrl: json['videoUrl']?.toString() ?? json['exercise']?['videoUrl']?.toString(),
+      superSetTag: json['superSetTag']?.toString(),
+      superSetOrder: parseInt(json['superSetOrder']),
     );
   }
 
@@ -153,6 +183,8 @@ class GetDailyStudentExerciseDto {
     bool? isCompleted,
     String? videoKey,
     String? videoUrl,
+    String? superSetTag,
+    int? superSetOrder,
   }) {
     return GetDailyStudentExerciseDto(
       id: id ?? this.id,
@@ -168,6 +200,8 @@ class GetDailyStudentExerciseDto {
       isCompleted: isCompleted ?? this.isCompleted,
       videoKey: videoKey ?? this.videoKey,
       videoUrl: videoUrl ?? this.videoUrl,
+      superSetTag: superSetTag ?? this.superSetTag,
+      superSetOrder: superSetOrder ?? this.superSetOrder,
     );
   }
 }

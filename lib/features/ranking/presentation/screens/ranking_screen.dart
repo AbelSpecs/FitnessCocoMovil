@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/utils/exercise_filter.dart';
 import 'package:pyrosfitmovil/core/services/storage_service.dart';
 import 'package:pyrosfitmovil/core/services/student_service.dart';
 import 'package:pyrosfitmovil/core/widgets/user_avatar.dart';
@@ -112,9 +113,10 @@ class _RankingScreenState extends State<RankingScreen> {
     }
   }
 
-  List<AthleteRankingInfo> _getAthletesData(int currentStudentId) {
-    final rawList = _scope == 'coach' ? _coachLeaderboard : _globalLeaderboard;
-    final coachLabel = _scope == 'coach' ? 'Tu Equipo' : 'Global';
+  List<AthleteRankingInfo> _getAthletesData(int currentStudentId, bool isIndependent) {
+    final effectiveScope = isIndependent ? 'global' : _scope;
+    final rawList = effectiveScope == 'coach' ? _coachLeaderboard : _globalLeaderboard;
+    final coachLabel = effectiveScope == 'coach' ? 'Tu Equipo' : 'Global';
 
     return mapLeaderboardToAthletes(
       rawList,
@@ -127,9 +129,11 @@ class _RankingScreenState extends State<RankingScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    final currentStudentId = auth.user?.studentId ?? 0;
+    final user = auth.user;
+    final isIndependent = isUserIndependent(user);
+    final currentStudentId = user?.studentId ?? 0;
 
-    final athletes = _getAthletesData(currentStudentId);
+    final athletes = _getAthletesData(currentStudentId, isIndependent);
 
     // Ordenar por métrica seleccionada
     final ranked = [...athletes]..sort((a, b) {
@@ -197,9 +201,11 @@ class _RankingScreenState extends State<RankingScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Subtítulo
-                      const Text(
-                        'Compite con tu equipo y escala en la clasificación global de PyrosFit.',
-                        style: TextStyle(
+                      Text(
+                        isIndependent
+                            ? 'Escala posiciones en la clasificación global de atletas PyrosFit.'
+                            : 'Compite con tu equipo y escala en la clasificación global de PyrosFit.',
+                        style: const TextStyle(
                           color: Colors.grey,
                           fontSize: 13,
                         ),
@@ -216,14 +222,16 @@ class _RankingScreenState extends State<RankingScreen> {
                         ),
                         child: Row(
                           children: [
-                            Expanded(
-                              child: _buildScopeTab(
-                                key: 'coach',
-                                label: 'Tu Coach / Equipo',
-                                icon: Icons.groups_rounded,
+                            if (!isIndependent) ...[
+                              Expanded(
+                                child: _buildScopeTab(
+                                  key: 'coach',
+                                  label: 'Tu Coach / Equipo',
+                                  icon: Icons.groups_rounded,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 4),
+                              const SizedBox(width: 4),
+                            ],
                             Expanded(
                               child: _buildScopeTab(
                                 key: 'global',

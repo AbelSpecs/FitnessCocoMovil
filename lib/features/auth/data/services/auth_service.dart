@@ -65,6 +65,7 @@ class AuthService {
   }
 
   static Future<void> associateCoach(CoachStudent data) async {
+    if (data.coachId <= 0 || data.coachId == 9) return;
     await _api.post('/CoachStudents', data: data.toJson());
   }
 

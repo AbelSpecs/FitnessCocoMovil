@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/utils/weight_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:pyrosfitmovil/core/utils/globals.dart';
 import 'package:pyrosfitmovil/core/services/routine_service.dart';
@@ -83,7 +84,7 @@ class StudentRoutinesProvider extends ChangeNotifier {
         'dailyStudentExerciseId': set.dailyStudentExerciseId,
         'setNumber': int.tryParse(set.setNumber) ?? 0,
         'targetReps': int.tryParse(set.targetReps) ?? 0,
-        'targetWeight': int.tryParse(set.targetWeight) ?? 0,
+        'targetWeight': parseWeightNum(set.targetWeight),
         'restTime': set.restTime,
         'isAchieved': isAchieved,
         'actualReps': actualReps,
@@ -91,6 +92,21 @@ class StudentRoutinesProvider extends ChangeNotifier {
       };
       final response = await RoutineService.updateDailyExercisesSets(set.id, data);
       if (response != null) {
+        for (int i = 0; i < _dailyExercises.length; i++) {
+          final ex = _dailyExercises[i];
+          final setIndex = ex.dailyExerciseSets.indexWhere((s) => s.id == set.id);
+          if (setIndex != -1) {
+            final updatedSets = List<GetDailyExerciseSetsDto>.from(ex.dailyExerciseSets);
+            updatedSets[setIndex] = set.copyWith(
+              isAchieved: isAchieved,
+              actualReps: actualReps,
+              actualWeight: actualWeight,
+            );
+            _dailyExercises[i] = ex.copyWith(dailyExerciseSets: updatedSets);
+            notifyListeners();
+            break;
+          }
+        }
         return true;
       }
       return false;
