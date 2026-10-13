@@ -6,16 +6,88 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:pyrosfitmovil/features/auth/data/models/user_auth_model.dart'; // Importamos el modelo de arriba
 
 class AuthProvider extends ChangeNotifier {
-  // Instancia del almacenamiento seguro del teléfono (Keychain/Keystore)
-  // Instancia configurada para persistencia robusta ante cambios de contexto o reinicio
-  static const FlutterSecureStorage _storage = FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      resetOnError: true,
-    ),
-    iOptions: IOSOptions(
-      accessibility: KeychainAccessibility.first_unlock,
-    ),
+  // Configuración de opciones para iOS y Android
+  static const IOSOptions _iosOptions = IOSOptions(
+    accessibility: KeychainAccessibility.first_unlock,
+    synchronizable: false,
   );
+
+  static const AndroidOptions _androidOptions = AndroidOptions(
+    resetOnError: true,
+  );
+
+  // Instancia del almacenamiento seguro del teléfono (Keychain/Keystore)
+  static const FlutterSecureStorage _storage = FlutterSecureStorage(
+    aOptions: _androidOptions,
+    iOptions: _iosOptions,
+  );
+
+  /// Escritura segura con borrado previo o sobreescritura para evitar colisiones en iOS Keychain (-25299)
+  static Future<void> _safeWrite(String key, String value) async {
+    try {
+      // 1. Borrado previo explícito para asegurar que el ítem no exista duplicado en iOS Keychain
+      await _storage.delete(
+        key: key,
+        iOptions: _iosOptions,
+        aOptions: _androidOptions,
+      );
+    } catch (_) {}
+
+    try {
+      // 2. Escritura con las opciones de iOS configuradas
+      await _storage.write(
+        key: key,
+        value: value,
+        iOptions: _iosOptions,
+        aOptions: _androidOptions,
+      );
+    } catch (e) {
+      debugPrint("Aviso en secure storage ($key): $e. Reintentando tras borrado.");
+      try {
+        await _storage.delete(
+          key: key,
+          iOptions: _iosOptions,
+          aOptions: _androidOptions,
+        );
+        await _storage.write(
+          key: key,
+          value: value,
+          iOptions: _iosOptions,
+          aOptions: _androidOptions,
+        );
+      } catch (retryError) {
+        debugPrint("Fallo crítico en secure storage ($key): $retryError");
+        rethrow;
+      }
+    }
+  }
+
+  /// Lectura segura con opciones de iOS
+  static Future<String?> _safeRead(String key) async {
+    try {
+      return await _storage.read(
+        key: key,
+        iOptions: _iosOptions,
+        aOptions: _androidOptions,
+      );
+    } catch (e) {
+      debugPrint("Error leyendo secure storage ($key): $e");
+      return null;
+    }
+  }
+
+  /// Borrado seguro con opciones de iOS
+  static Future<void> _safeDelete(String key) async {
+    try {
+      await _storage.delete(
+        key: key,
+        iOptions: _iosOptions,
+        aOptions: _androidOptions,
+      );
+    } catch (e) {
+      debugPrint("Error borrando en secure storage ($key): $e");
+    }
+  }
 
   // Variables de Estado (Equivalente a las propiedades de Zustand)
   UserAuth? _user;
@@ -37,8 +109,8 @@ class AuthProvider extends ChangeNotifier {
   Future<void> initAuth() async {
     if (_isInitialized && _token != null) return;
     try {
-      final tokenData = await _storage.read(key: "pyrosfit_token");
-      final userData = await _storage.read(key: "pyrosfit_user");
+      final tokenData = await _safeRead("pyrosfit_token");
+      final userData = await _safeRead("pyrosfit_user");
 
       if (tokenData != null && userData != null) {
         _token = tokenData;
@@ -60,9 +132,8 @@ class AuthProvider extends ChangeNotifier {
     _token = token;
 
     // Guardado seguro encriptado en el móvil (setItem)
-    await _storage.write(key: "pyrosfit_token", value: token);
-    await _storage.write(
-        key: "pyrosfit_user", value: jsonEncode(user.toJson()));
+    await _safeWrite("pyrosfit_token", token);
+    await _safeWrite("pyrosfit_user", jsonEncode(user.toJson()));
 
     notifyListeners(); // Equivalente al 'set({ user, token })' de Zustand
   }
@@ -73,8 +144,8 @@ class AuthProvider extends ChangeNotifier {
     _token = null;
 
     // Remueve las llaves del almacenamiento seguro (removeItem)
-    await _storage.delete(key: "pyrosfit_token");
-    await _storage.delete(key: "pyrosfit_user");
+    await _safeDelete("pyrosfit_token");
+    await _safeDelete("pyrosfit_user");
 
     notifyListeners();
   }
@@ -86,8 +157,7 @@ class AuthProvider extends ChangeNotifier {
       profilePictureKey: key,
       profilePictureUrl: url,
     );
-    await _storage.write(
-        key: "pyrosfit_user", value: jsonEncode(_user!.toJson()));
+    await _safeWrite("pyrosfit_user", jsonEncode(_user!.toJson()));
     notifyListeners();
   }
 
@@ -98,8 +168,7 @@ class AuthProvider extends ChangeNotifier {
       bannerPictureKey: key,
       bannerPictureUrl: url,
     );
-    await _storage.write(
-        key: "pyrosfit_user", value: jsonEncode(_user!.toJson()));
+    await _safeWrite("pyrosfit_user", jsonEncode(_user!.toJson()));
     notifyListeners();
   }
 
@@ -150,8 +219,7 @@ class AuthProvider extends ChangeNotifier {
           bannerPictureUrl: bannerUrl,
         );
 
-        await _storage.write(
-            key: "pyrosfit_user", value: jsonEncode(_user!.toJson()));
+        await _safeWrite("pyrosfit_user", jsonEncode(_user!.toJson()));
         notifyListeners();
       }
     } catch (e) {
