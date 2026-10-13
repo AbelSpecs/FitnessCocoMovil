@@ -6,12 +6,14 @@ class RestTimeInputField extends StatefulWidget {
   final String initialValue;
   final ValueChanged<String> onChanged;
   final String label;
+  final bool enabled;
 
   const RestTimeInputField({
     super.key,
     required this.initialValue,
     required this.onChanged,
     this.label = 'Descanso',
+    this.enabled = true,
   });
 
   @override
@@ -132,17 +134,23 @@ class _RestTimeInputFieldState extends State<RestTimeInputField> {
             Expanded(
               child: TextFormField(
                 controller: _controller,
-                style: const TextStyle(color: Colors.white, fontSize: 13),
+                enabled: widget.enabled,
+                style: TextStyle(
+                  color: widget.enabled ? Colors.white : Colors.white60,
+                  fontSize: 13,
+                ),
                 decoration: InputDecoration(
                   labelText: widget.label,
                   isDense: true,
                   hintText: 'Ej. 90s, 1:30',
                   hintStyle: const TextStyle(color: Colors.grey, fontSize: 11),
-                  suffixIcon: IconButton(
-                    icon: const Icon(Icons.timer_outlined, color: AppTheme.primary, size: 18),
-                    onPressed: () => _showPresetsModal(context),
-                    tooltip: 'Sugerencias de descanso',
-                  ),
+                  suffixIcon: widget.enabled
+                      ? IconButton(
+                          icon: const Icon(Icons.timer_outlined, color: AppTheme.primary, size: 18),
+                          onPressed: () => _showPresetsModal(context),
+                          tooltip: 'Sugerencias de descanso',
+                        )
+                      : null,
                 ),
                 onChanged: (v) {
                   setState(() {});

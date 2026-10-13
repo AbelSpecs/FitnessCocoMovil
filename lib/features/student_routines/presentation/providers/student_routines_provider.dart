@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/utils/weight_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:pyrosfitmovil/core/utils/globals.dart';
 import 'package:pyrosfitmovil/core/services/routine_service.dart';
@@ -83,7 +84,7 @@ class StudentRoutinesProvider extends ChangeNotifier {
         'dailyStudentExerciseId': set.dailyStudentExerciseId,
         'setNumber': int.tryParse(set.setNumber) ?? 0,
         'targetReps': int.tryParse(set.targetReps) ?? 0,
-        'targetWeight': int.tryParse(set.targetWeight) ?? 0,
+        'targetWeight': parseWeightNum(set.targetWeight),
         'restTime': set.restTime,
         'isAchieved': isAchieved,
         'actualReps': actualReps,

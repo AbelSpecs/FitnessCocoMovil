@@ -55,3 +55,14 @@ String formatWeightWithEquivalent(dynamic rawKg) {
 
   return '$kgDisplay kg ($lbsDisplay lbs)';
 }
+
+/// Parsea un valor de peso a numérico (int si es entero, double si tiene decimales).
+/// Si recibe "20.0" o "20", devuelve 20. Si recibe "20.5", devuelve 20.5.
+num parseWeightNum(dynamic rawVal) {
+  if (rawVal == null) return 0;
+  final str = rawVal.toString().trim();
+  if (str.isEmpty) return 0;
+  final n = num.tryParse(str);
+  if (n == null || n <= 0) return 0;
+  return n == n.toInt() ? n.toInt() : double.parse(n.toDouble().toStringAsFixed(1));
+}

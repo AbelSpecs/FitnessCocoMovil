@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/widgets/expandable_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -370,8 +371,9 @@ class _ExerciseVideoModalState extends State<ExerciseVideoModal> {
                       ],
                     ),
                     const SizedBox(height: 6),
-                    Text(
-                      widget.exercise.description!,
+                    ExpandableText(
+                      text: widget.exercise.description!,
+                      maxLines: 3,
                       style: const TextStyle(fontSize: 12, color: Colors.white70, height: 1.35),
                     ),
                   ],

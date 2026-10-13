@@ -43,7 +43,11 @@ class _WeightInputFieldState extends State<WeightInputField> {
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.initialValue);
+    final numVal = double.tryParse(widget.initialValue);
+    final initialText = numVal != null && numVal > 0
+        ? formatWeightNumber(numVal)
+        : widget.initialValue;
+    _controller = TextEditingController(text: initialText);
   }
 
   @override

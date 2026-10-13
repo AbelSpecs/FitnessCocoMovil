@@ -49,9 +49,23 @@ String formatExerciseDescriptionWithStudentId(String? description, int? studentI
 }
 
 /// Limpia el tag de studentId de la descripción para mostrar un texto limpio en la interfaz.
+/// Limpia el tag de studentId de la descripcion para mostrar un texto limpio en la interfaz,
+/// asegurando separacion correcta entre palabras y signos de puntuacion para evitar palabras pegadas.
 String cleanExerciseDescription(String? description) {
   if (description == null || description.isEmpty) return '';
-  return description.replaceAll(RegExp(r'\[student(?:Id)?:\s*\d+\]', caseSensitive: false), '').trim();
+  // 1. Quitar tags de studentId reemplazandolos con un espacio para evitar fusionar palabras adyacentes
+  var text = description.replaceAll(RegExp(r'\[student(?:Id)?:\s*\d+\]', caseSensitive: false), ' ');
+  // 2. Limpiar etiquetas HTML residuales
+  text = text.replaceAll(RegExp(r'<[^>]*>'), ' ');
+  // 3. Separar signos de puntuacion si estan pegados a letras (ej: "espalda.Pies" -> "espalda. Pies")
+  text = text.replaceAllMapped(RegExp(r'([.,:;!?])([A-Za-z\u00C0-\u00FF])'), (m) => '${m[1]} ${m[2]}');
+  // 4. Separar dos puntos o signos pegados a digitos (ej: "Series:3" -> "Series: 3")
+  text = text.replaceAllMapped(RegExp(r'([:;!?])(\d)'), (m) => '${m[1]} ${m[2]}');
+  // 5. Separar punto o coma pegado a digito si NO es decimal (evitar tocar 12.5 o 12,5)
+  text = text.replaceAllMapped(RegExp(r'(?<!\d)([.,])(\d)'), (m) => '${m[1]} ${m[2]}');
+  // 6. Normalizar espacios repetidos sin eliminar saltos de linea intencionales
+  text = text.replaceAll(RegExp(r'[ \t]+'), ' ').trim();
+  return text;
 }
 
 /// Filtra la lista de ejercicios según el usuario y alcance:
@@ -89,4 +103,43 @@ List<ExerciseModel> filterExercisesForUser(
         desc.contains('studentId:$idStr') ||
         desc.contains('student:$idStr');
   }).toList();
+}
+
+
+const List<String> supersetTagLetters = [
+  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+  'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
+];
+
+/// Devuelve la siguiente letra disponible para una nueva serie combinada (ej. 'A', 'B'...).
+String getNextAvailableSuperSetTag(List<String> usedTags) {
+  final upperUsed = usedTags
+      .map((t) => t.trim().toUpperCase())
+      .where((t) => t.isNotEmpty)
+      .toSet();
+  for (final letter in supersetTagLetters) {
+    if (!upperUsed.contains(letter)) {
+      return letter;
+    }
+  }
+  return 'C${upperUsed.length + 1}';
+}
+
+/// Genera el título combinado de grupos musculares para una lista de ejercicios (ej. "Pecho + Espalda").
+String getMuscleGroupsTitle(List<dynamic> exercises) {
+  final uniqueGroups = <String>{};
+  for (final ex in exercises) {
+    String? groupName;
+    if (ex is Map) {
+      groupName = ex['muscleGroupName']?.toString();
+    } else {
+      try {
+        groupName = (ex as dynamic).muscleGroupName?.toString();
+      } catch (_) {}
+    }
+    if (groupName != null && groupName.trim().isNotEmpty) {
+      uniqueGroups.add(groupName.trim());
+    }
+  }
+  return uniqueGroups.isNotEmpty ? uniqueGroups.join(' + ') : 'Entrenamiento';
 }
