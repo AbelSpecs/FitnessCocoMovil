@@ -72,4 +72,23 @@ class StudentService {
       return null;
     }
   }
+
+  static Future<Map<String, dynamic>?> createStudent(
+      Map<String, dynamic> studentData) async {
+    try {
+      final response = await _api.post('/Students', data: studentData);
+      if (response.data != null) {
+        if (response.data is Map<String, dynamic>) {
+          final data = response.data['data'] ?? response.data;
+          if (data is Map<String, dynamic>) {
+            return data;
+          }
+          return response.data as Map<String, dynamic>;
+        }
+      }
+      return null;
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

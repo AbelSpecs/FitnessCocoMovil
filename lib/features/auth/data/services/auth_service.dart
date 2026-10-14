@@ -42,12 +42,22 @@ class AuthService {
     }
   }
 
-  static Future<void> register(RegisterCredentials data) async {
+  static Future<Map<String, dynamic>?> register(RegisterCredentials data) async {
     try {
       final response = await _api.post('/Users/RegisterUser', data: data.toJson());
       if (response.data != null && response.data['success'] == false) {
          throw Exception(response.data['message'] ?? 'Error de servidor');
       }
+      if (response.data != null) {
+        final resData = response.data['data'] ?? response.data;
+        if (resData is Map<String, dynamic>) {
+          return resData;
+        }
+        if (response.data is Map<String, dynamic>) {
+          return response.data as Map<String, dynamic>;
+        }
+      }
+      return null;
     } on DioException catch (e) {
       if (e.response != null && e.response?.data != null) {
          final respData = e.response!.data;

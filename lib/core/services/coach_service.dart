@@ -59,4 +59,23 @@ class CoachService {
       return null;
     }
   }
+
+  static Future<Map<String, dynamic>?> createCoach(
+      Map<String, dynamic> coachData) async {
+    try {
+      final response = await _api.post('/Coaches', data: coachData);
+      if (response.data != null) {
+        if (response.data is Map<String, dynamic>) {
+          final data = response.data['data'] ?? response.data;
+          if (data is Map<String, dynamic>) {
+            return data;
+          }
+          return response.data as Map<String, dynamic>;
+        }
+      }
+      return null;
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

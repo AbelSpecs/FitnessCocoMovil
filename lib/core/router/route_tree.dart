@@ -158,7 +158,10 @@ class AppRouter {
         ),
         GoRoute(
           path: '/register-info',
-          builder: (context, state) => const RegisterInfoScreen(),
+          builder: (context, state) {
+            final coachId = int.tryParse(state.uri.queryParameters['coachId'] ?? '');
+            return RegisterInfoScreen(coachId: coachId);
+          },
         ),
         GoRoute(
           path: '/forgot-password',
