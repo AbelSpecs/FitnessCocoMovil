@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:pyrosfitmovil/core/models/student_clinical_data_model.dart';
 import 'package:pyrosfitmovil/core/network/api_client.dart';
 import 'package:logger/logger.dart';
@@ -76,17 +77,44 @@ class StudentService {
   static Future<Map<String, dynamic>?> createStudent(
       Map<String, dynamic> studentData) async {
     try {
-      final response = await _api.post('/Students', data: studentData);
+      // El backend ASP.NET Core requiere que el objeto vaya encapsulado en la propiedad 'student'
+      final payload = studentData.containsKey('student')
+          ? studentData
+          : {'student': studentData};
+
+      final response = await _api.post('/Students', data: payload);
       if (response.data != null) {
         if (response.data is Map<String, dynamic>) {
-          final data = response.data['data'] ?? response.data;
+          final data = response.data['data'];
           if (data is Map<String, dynamic>) {
             return data;
+          } else if (data is int || data is num) {
+            return {'id': data, ...response.data as Map<String, dynamic>};
           }
           return response.data as Map<String, dynamic>;
         }
       }
       return null;
+    } on DioException catch (e) {
+      String? errorMsg;
+      if (e.response != null && e.response?.data != null) {
+        final respData = e.response!.data;
+        if (respData is Map) {
+          errorMsg = respData['message'] ?? respData['title'] ?? respData['error'];
+          if (errorMsg == null && respData['errors'] != null && respData['errors'] is Map) {
+            final errMap = respData['errors'] as Map;
+            final firstList = errMap.values.firstOrNull;
+            if (firstList is List && firstList.isNotEmpty) {
+              errorMsg = firstList.first.toString();
+            } else {
+              errorMsg = firstList?.toString();
+            }
+          }
+        } else if (respData is String && respData.isNotEmpty) {
+          errorMsg = respData;
+        }
+      }
+      throw Exception(errorMsg ?? 'Error al registrar perfil de estudiante');
     } catch (e) {
       rethrow;
     }

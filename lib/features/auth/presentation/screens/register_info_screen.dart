@@ -62,34 +62,43 @@ class _RegisterInfoScreenState extends State<RegisterInfoScreen> {
         final int? userId =
             rawId != null ? int.tryParse(rawId.toString()) : null;
 
-        if (userId != null && userId > 0) {
-          final clientData = await StudentService.createStudent({
-            'userId': userId,
-            'weight': form.weight,
-            'height': 0,
-            'bodyFatPercentage': 0,
-            'fitnessGoal': form.fitnessGoal,
-            'activityLevel': '',
-            'medicalConditions': '',
-            'allergies': '',
-            'fitnessExperience': '',
-            'generalNotes': '',
-            'gymId': 1,
-          });
+        if (userId == null || userId <= 0) {
+          throw Exception(
+              "No se pudo obtener el identificador del usuario registrado.");
+        }
 
-          final studentRawId = clientData?['id'] ?? clientData?['studentId'];
-          final int? studentId = studentRawId != null
-              ? int.tryParse(studentRawId.toString())
-              : null;
+        final clientData = await StudentService.createStudent({
+          'userId': userId,
+          'weight': form.weight ?? 70.0,
+          'height': 0,
+          'bodyFatPercentage': 0,
+          'fitnessGoal': (form.fitnessGoal != null && form.fitnessGoal!.isNotEmpty)
+              ? form.fitnessGoal
+              : 'muscle',
+          'activityLevel': '',
+          'medicalConditions': '',
+          'allergies': '',
+          'fitnessExperience': '',
+          'generalNotes': '',
+          'gymId': 1,
+        });
 
-          final effectiveCoachId = widget.coachId ?? 9;
-          if (studentId != null && effectiveCoachId > 0 && effectiveCoachId != 9) {
-            await AuthService.associateCoach(CoachStudent(
-              coachId: effectiveCoachId,
-              studentId: studentId,
-              status: true,
-            ));
-          }
+        final studentRawId = clientData?['id'] ?? clientData?['studentId'] ?? clientData?['data'];
+        final int? studentId = studentRawId != null
+            ? int.tryParse(studentRawId.toString())
+            : null;
+
+        // Los usuarios independientes se linkean bajo coachId = 9. Si vienen con otro coachId de invitación, se linkean a ese entrenador.
+        final effectiveCoachId = (widget.coachId != null && widget.coachId! > 0)
+            ? widget.coachId!
+            : 9;
+
+        if (studentId != null) {
+          await AuthService.associateCoach(CoachStudent(
+            coachId: effectiveCoachId,
+            studentId: studentId,
+            status: true,
+          ));
         }
       },
     );

@@ -69,13 +69,10 @@ class _RegistrationFormWidgetState extends State<RegistrationFormWidget> {
   String? _selectedGoal;
 
   final Map<String, String> _goalLabels = {
-    "muscle": "Ganar Músculo",
-    "strength": "Aumentar Fuerza",
-    "weight_loss": "Perder Peso",
-    "endurance": "Mejorar Resistencia",
-    "health": "Salud General",
-    "flexibility": "Mejorar Flexibilidad",
-    "sports": "Rendimiento Deportivo"
+    "muscle": "Ganancia muscular",
+    "fat-loss": "Perder grasa",
+    "strength": "Ganar fuerza",
+    "endurance": "Ganar resistencia",
   };
 
   int get _totalSteps => widget.type == "student" ? 3 : 2;
@@ -274,7 +271,9 @@ class _RegistrationFormWidgetState extends State<RegistrationFormWidget> {
           ),
         );
       }
-      Notify.error(context, "Error", errorMessage);
+      if (mounted) {
+        Notify.error(context, "Error", errorMessage);
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }

@@ -59,13 +59,25 @@ class AuthService {
       }
       return null;
     } on DioException catch (e) {
+      String? errorMsg;
       if (e.response != null && e.response?.data != null) {
-         final respData = e.response!.data;
-         if (respData is Map && respData['success'] == false) {
-            throw Exception(respData['message'] ?? 'Error de servidor');
-         }
+        final respData = e.response!.data;
+        if (respData is Map) {
+          errorMsg = respData['message'] ?? respData['title'] ?? respData['error'];
+          if (errorMsg == null && respData['errors'] != null && respData['errors'] is Map) {
+            final errMap = respData['errors'] as Map;
+            final firstList = errMap.values.firstOrNull;
+            if (firstList is List && firstList.isNotEmpty) {
+              errorMsg = firstList.first.toString();
+            } else {
+              errorMsg = firstList?.toString();
+            }
+          }
+        } else if (respData is String && respData.isNotEmpty) {
+          errorMsg = respData;
+        }
       }
-      throw Exception('Ha ocurrido un error intenta nuevamente');
+      throw Exception(errorMsg ?? 'Ha ocurrido un error al registrar. Intenta nuevamente');
     } catch (e) {
       if (e.toString().contains('Exception:')) {
         rethrow;
@@ -75,8 +87,24 @@ class AuthService {
   }
 
   static Future<void> associateCoach(CoachStudent data) async {
-    if (data.coachId <= 0 || data.coachId == 9) return;
-    await _api.post('/CoachStudents', data: data.toJson());
+    if (data.coachId <= 0) return;
+    try {
+      await _api.post('/CoachStudents', data: data.toJson());
+    } on DioException catch (e) {
+      if (e.response != null && e.response?.data != null) {
+        final respData = e.response!.data;
+        if (respData is Map) {
+          final msg = respData['message'] ?? respData['title'] ?? respData['error'];
+          if (msg != null) {
+            logger.w("Aviso al asociar coach: $msg");
+            return;
+          }
+        }
+      }
+      logger.w("Aviso al asociar coach: $e");
+    } catch (e) {
+      logger.w("Error general al asociar coach: $e");
+    }
   }
 
   static Future<Map<String, dynamic>> confirmEmail({
