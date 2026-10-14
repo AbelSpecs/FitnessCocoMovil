@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/services/coach_service.dart';
 import 'package:flutter/material.dart';
 import 'package:pyrosfitmovil/features/auth/presentation/widgets/registration_form_widget.dart';
 import 'package:pyrosfitmovil/core/models/country_model.dart';
@@ -59,7 +60,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
       successMessage: (form) =>
           "Gracias ${form.firstName}, tu cuenta de entrenador ha sido creada correctamente. Ya puedes iniciar sesión.",
       onSubmit: (form) async {
-        await AuthService.register(form);
+        final data = await AuthService.register(form);
+        final rawId = data?['id'] ?? data?['userId'];
+        final int? userId =
+            rawId != null ? int.tryParse(rawId.toString()) : null;
+
+        if (userId == null || userId == 0) {
+          throw Exception(
+              "No se pudo obtener el identificador del usuario registrado.");
+        }
+
+        final coachCreated = await CoachService.createCoach({
+          'userId': userId,
+          'bio': '',
+          'certifications': '',
+        });
+
+        if (coachCreated == null) {
+          debugPrint("Aviso: CoachService.createCoach respondió vacío pero el usuario fue creado.");
+        }
       },
     );
   }
