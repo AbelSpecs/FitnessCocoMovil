@@ -23,6 +23,9 @@ class RoutineFormSheet extends StatefulWidget {
 }
 
 class _RoutineFormSheetState extends State<RoutineFormSheet> {
+  static Map<String, dynamic>? _createDraft;
+  bool _wasSavedSuccessfully = false;
+
   MuscleGroup? _selectedMuscleGroup;
   ExerciseModel? _selectedExercise;
   bool _didInitialSync = false;
@@ -102,8 +105,33 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
         });
       }
     } else {
-      _selectedDate = context.read<RoutinesProvider>().selectedDate;
-      _addEmptySet();
+      final routinesProv = context.read<RoutinesProvider>();
+      if (_createDraft != null) {
+        _selectedMuscleGroup = _createDraft!['muscleGroup'] as MuscleGroup?;
+        _selectedExercise = _createDraft!['exercise'] as ExerciseModel?;
+        _selectedDate = _createDraft!['selectedDate'] as DateTime? ?? routinesProv.selectedDate;
+        _coachNotesController.text = _createDraft!['coachNotes'] as String? ?? '';
+        _isSuperSet = _createDraft!['isSuperSet'] as bool? ?? false;
+        _selectedSuperSetTag = _createDraft!['selectedSuperSetTag'] as String? ?? 'A';
+        _combinedRestTime = _createDraft!['combinedRestTime'] as String? ?? '90';
+        final savedSets = _createDraft!['sets'] as List?;
+        if (savedSets != null && savedSets.isNotEmpty) {
+          _sets.addAll(List<Map<String, dynamic>>.from(
+              savedSets.map((s) => Map<String, dynamic>.from(s))));
+        } else {
+          _addEmptySet();
+        }
+
+        final targetGroupId = _selectedMuscleGroup?.id ?? 0;
+        if (targetGroupId > 0) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            routinesProv.loadExercisesForMuscleGroup(targetGroupId);
+          });
+        }
+      } else {
+        _selectedDate = routinesProv.selectedDate;
+        _addEmptySet();
+      }
     }
   }
 
@@ -164,6 +192,61 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
     setState(() {
       _sets.removeAt(idx);
     });
+  }
+
+  bool get _hasDraftContent {
+    if (widget.routineToEdit != null) return false;
+    return _selectedMuscleGroup != null ||
+        _selectedExercise != null ||
+        _coachNotesController.text.trim().isNotEmpty ||
+        _sets.length > 1 ||
+        _sets.any((s) =>
+            (s['targetReps']?.toString().trim().isNotEmpty == true) ||
+            (s['targetWeight']?.toString().trim().isNotEmpty == true) ||
+            (s['restTime']?.toString().trim().isNotEmpty == true));
+  }
+
+  void _resetForm() {
+    setState(() {
+      _createDraft = null;
+      _selectedMuscleGroup = null;
+      _selectedExercise = null;
+      _coachNotesController.clear();
+      _isSuperSet = false;
+      _selectedSuperSetTag = 'A';
+      _combinedRestTime = '90';
+      _sets.clear();
+      _addEmptySet();
+    });
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Borrador limpiado: Se han restablecido los campos del ejercicio'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _coachNotesController.dispose();
+    if (widget.routineToEdit == null && !_wasSavedSuccessfully) {
+      if (_hasDraftContent) {
+        _createDraft = {
+          'muscleGroup': _selectedMuscleGroup,
+          'exercise': _selectedExercise,
+          'selectedDate': _selectedDate,
+          'coachNotes': _coachNotesController.text,
+          'isSuperSet': _isSuperSet,
+          'selectedSuperSetTag': _selectedSuperSetTag,
+          'combinedRestTime': _combinedRestTime,
+          'sets': _sets.map((s) => Map<String, dynamic>.from(s)).toList(),
+        };
+      } else {
+        _createDraft = null;
+      }
+    }
+    super.dispose();
   }
 
   @override
@@ -827,7 +910,26 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
                 );
               }),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+              if (!isEditing && _hasDraftContent) ...[
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: _resetForm,
+                    icon: const Icon(Icons.delete_sweep_outlined, size: 16, color: Colors.white70),
+                    label: const Text(
+                      'Limpiar campos',
+                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
@@ -982,6 +1084,8 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
         }
       };
 
+      _wasSavedSuccessfully = true;
+      _createDraft = null;
       Navigator.pop(context, data);
     }
   }
