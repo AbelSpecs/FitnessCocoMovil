@@ -1012,9 +1012,14 @@ class _ExerciseRowState extends State<_ExerciseRow> {
                         widget.onStartTimer?.call(effectiveRest, timerLabel);
                       },
                       onToggle: (val, actualReps, actualWeight) async {
+                        // Las series marcadas como completadas no se deben poder volver a desmarcar
+                        if (!val) {
+                          return;
+                        }
+
                         setState(() {
                           if (idx < _setsCompleted.length) {
-                            _setsCompleted[idx] = val;
+                            _setsCompleted[idx] = true;
                           }
                         });
 
@@ -1492,9 +1497,7 @@ class _SetRowState extends State<_SetRow> {
                           filled: true,
                           fillColor: Colors.white10,
                         ),
-                        onChanged: (val) {
-                          if (checked) widget.onToggle(false, null, null);
-                        },
+                        onChanged: (val) {},
                       ),
                     ],
                   ),
@@ -1531,9 +1534,7 @@ class _SetRowState extends State<_SetRow> {
                           filled: true,
                           fillColor: Colors.white10,
                         ),
-                        onChanged: (val) {
-                          if (checked) widget.onToggle(false, null, null);
-                        },
+                        onChanged: (val) {},
                       ),
                     ],
                   ),
@@ -1547,9 +1548,10 @@ class _SetRowState extends State<_SetRow> {
                             color: Colors.white.withValues(alpha: 0.5))),
                     const SizedBox(height: 4),
                     GestureDetector(
-                      onTap: _isSaving
+                      onTap: (_isSaving || checked)
                           ? null
                           : () async {
+                              if (checked) return;
                               if (isLocked) {
                                 ScaffoldMessenger.of(context)
                                     .hideCurrentSnackBar();
@@ -1589,7 +1591,7 @@ class _SetRowState extends State<_SetRow> {
                               final weight = parsedInputW > 0 ? parsedInputW : (parsedTargetW > 0 ? parsedTargetW : null);
                               setState(() => _isSaving = true);
                               try {
-                                widget.onToggle(!checked, reps, weight);
+                                widget.onToggle(true, reps, weight);
                               } finally {
                                 if (mounted) setState(() => _isSaving = false);
                               }

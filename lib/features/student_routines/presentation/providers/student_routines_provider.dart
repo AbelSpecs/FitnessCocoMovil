@@ -78,6 +78,10 @@ class StudentRoutinesProvider extends ChangeNotifier {
 
   Future<bool> completeExerciseSet(
       GetDailyExerciseSetsDto set, bool isAchieved, int? actualReps, int? actualWeight) async {
+    // Las series completadas no se deben poder volver a desmarcar
+    if (set.isAchieved && !isAchieved) {
+      return true;
+    }
     try {
       final data = {
         'id': set.id,
