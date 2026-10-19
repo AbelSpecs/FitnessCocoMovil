@@ -1315,77 +1315,72 @@ class _SetRowState extends State<_SetRow> {
                         size: 14, color: Colors.white54),
                   ),
                 ],
+                const Spacer(),
                 if (widget.isSuperSet && !widget.isLastInSuperSet) ...[
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8.0),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.bolt, size: 11, color: Color(0xFFF59E0B)),
-                          SizedBox(width: 3),
-                          Text(
-                            'Directo',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFF59E0B),
-                            ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.bolt, size: 11, color: Color(0xFFF59E0B)),
+                        SizedBox(width: 3),
+                        Text(
+                          'Directo',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFF59E0B),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ] else if (widget.isSuperSet && widget.isLastInSuperSet) ...[
                   Builder(
                     builder: (context) {
                       final restSec = parseRestTimeToSeconds(widget.combinedRestTime);
-                      return Padding(
-                        padding: const EdgeInsets.only(left: 8.0),
-                        child: GestureDetector(
-                          onTap: (widget.isRestTimerRunning || isLocked)
-                              ? null
-                              : widget.onStartTimer,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                            decoration: BoxDecoration(
+                      return GestureDetector(
+                        onTap: (widget.isRestTimerRunning || isLocked)
+                            ? null
+                            : widget.onStartTimer,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                          decoration: BoxDecoration(
+                            color: (widget.isRestTimerRunning || isLocked)
+                                ? Colors.white10
+                                : Colors.teal.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
                               color: (widget.isRestTimerRunning || isLocked)
-                                  ? Colors.white10
-                                  : Colors.teal.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: (widget.isRestTimerRunning || isLocked)
-                                    ? Colors.white24
-                                    : Colors.teal.withValues(alpha: 0.4),
-                              ),
+                                  ? Colors.white24
+                                  : Colors.teal.withValues(alpha: 0.4),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.timer_outlined,
-                                    size: 11,
-                                    color: (widget.isRestTimerRunning || isLocked)
-                                        ? Colors.white54
-                                        : Colors.tealAccent),
-                                const SizedBox(width: 3),
-                                Text(
-                                  'Único: ${restSec}s',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: (widget.isRestTimerRunning || isLocked)
-                                        ? Colors.white54
-                                        : Colors.tealAccent,
-                                  ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.timer_outlined,
+                                  size: 11,
+                                  color: (widget.isRestTimerRunning || isLocked)
+                                      ? Colors.white54
+                                      : Colors.tealAccent),
+                              const SizedBox(width: 3),
+                              Text(
+                                'Único: ${restSec}s',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: (widget.isRestTimerRunning || isLocked)
+                                      ? Colors.white54
+                                      : Colors.tealAccent,
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
                       );
@@ -1397,77 +1392,93 @@ class _SetRowState extends State<_SetRow> {
                       final restSec =
                           parseRestTimeToSeconds(widget.set.restTime);
                       if (restSec <= 0) return const SizedBox.shrink();
-                      return Padding(
-                        padding: const EdgeInsets.only(left: 8.0),
-                        child: GestureDetector(
-                          onTap: (widget.isRestTimerRunning || isLocked)
-                              ? null
-                              : widget.onStartTimer,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 7, vertical: 2.5),
-                            decoration: BoxDecoration(
+                      return GestureDetector(
+                        onTap: (widget.isRestTimerRunning || isLocked)
+                            ? null
+                            : widget.onStartTimer,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 2.5),
+                          decoration: BoxDecoration(
+                            color: (widget.isRestTimerRunning || isLocked)
+                                ? Colors.white10
+                                : AppTheme.primary.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
                               color: (widget.isRestTimerRunning || isLocked)
-                                  ? Colors.white10
-                                  : AppTheme.primary.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: (widget.isRestTimerRunning || isLocked)
-                                    ? Colors.white24
-                                    : AppTheme.primary.withValues(alpha: 0.4),
-                              ),
+                                  ? Colors.white24
+                                  : AppTheme.primary.withValues(alpha: 0.4),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.timer_outlined,
-                                    size: 11,
-                                    color: (widget.isRestTimerRunning || isLocked)
-                                        ? Colors.white54
-                                        : AppTheme.primary),
-                                const SizedBox(width: 3),
-                                Text(
-                                  '${restSec}s',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: (widget.isRestTimerRunning || isLocked)
-                                        ? Colors.white54
-                                        : AppTheme.primary,
-                                  ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.timer_outlined,
+                                  size: 11,
+                                  color: (widget.isRestTimerRunning || isLocked)
+                                      ? Colors.white54
+                                      : AppTheme.primary),
+                              const SizedBox(width: 3),
+                              Text(
+                                '${restSec}s',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: (widget.isRestTimerRunning || isLocked)
+                                      ? Colors.white54
+                                      : AppTheme.primary,
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
                       );
                     },
                   ),
                 ],
-                const Spacer(),
-                Flexible(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('Objetivo: ',
-                          style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.white.withValues(alpha: 0.7))),
-                      Flexible(
-                        child: Text(
-                          '${widget.set.targetReps} reps • ${formatWeightWithEquivalent(widget.set.targetWeight)}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ],
+            ),
+            const SizedBox(height: 8),
+            // Línea dedicada para Repeticiones y Pesos Objetivo (perfecta lectura en modo vertical)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.04),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.flag_outlined,
+                    size: 14,
+                    color: AppTheme.primaryGlow.withValues(alpha: 0.9),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Objetivo:',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white.withValues(alpha: 0.7),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      '${widget.set.targetReps} reps • ${formatWeightWithEquivalent(widget.set.targetWeight)}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: 0.2,
+                      ),
+                      overflow: TextOverflow.visible,
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 12),
             Row(
