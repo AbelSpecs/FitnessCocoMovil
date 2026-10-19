@@ -454,9 +454,12 @@ class RoutineCard extends StatelessWidget {
               ),
             ],
 
-            // Lista de series
-            ...routine.dailyExerciseSets
-                .map((set) => _buildSetRow(context, set)),
+            // Lista de series (ordenadas de menor a mayor)
+            ...([...routine.dailyExerciseSets]..sort((a, b) {
+              final aNum = int.tryParse(a.setNumber.toString()) ?? 0;
+              final bNum = int.tryParse(b.setNumber.toString()) ?? 0;
+              return aNum.compareTo(bNum);
+            })).map((set) => _buildSetRow(context, set)),
           ],
         ),
       ),

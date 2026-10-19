@@ -86,8 +86,13 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
             : '90';
       }
 
-      // Load sets
-      for (var s in r.dailyExerciseSets) {
+      // Load sets (ordenadas descendente para que la última quede arriba y la primera abajo)
+      final sortedSets = [...r.dailyExerciseSets]..sort((a, b) {
+        final aNum = int.tryParse(a.setNumber.toString()) ?? 0;
+        final bNum = int.tryParse(b.setNumber.toString()) ?? 0;
+        return bNum.compareTo(aNum);
+      });
+      for (var s in sortedSets) {
         _sets.add({
           'id': s.id,
           'targetReps': s.targetReps.toString(),
@@ -734,7 +739,7 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Serie ${idx + 1}',
+                          Text('Serie ${_sets.length - idx}',
                               style:
                                   const TextStyle(fontWeight: FontWeight.bold)),
                           Row(
@@ -903,16 +908,17 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
       // 2. Mapear todos los sets (existentes con su ID y nuevos con id: 0)
       final allSetsPayload = _sets.mapIndexed((index, s) {
         final rawId = (s['id'] as int?) ?? 0;
+        final setNumber = _sets.length - index;
         return {
           'id': rawId > 0 ? rawId : 0,
           'dailyStudentExerciseId': dailyExerciseId,
-          'setNumber': index + 1,
+          'setNumber': setNumber,
           'targetReps': int.tryParse(s['targetReps'].toString()) ?? 0,
           'targetWeight': parseWeightNum(s['targetWeight']),
           'restTime': s['restTime'].toString(),
           'isAchieved': false,
         };
-      }).toList();
+      }).toList()..sort((a, b) => (a['setNumber'] as int).compareTo(b['setNumber'] as int));
 
       final effectiveExId = _selectedExercise!.id;
       final effectiveExName = _selectedExercise!.name;
@@ -951,16 +957,19 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
       final setsData = _sets
           .asMap()
           .entries
-          .map((entry) => {
-                'id': 0,
-                'dailyStudentExerciseId': 0,
-                'setNumber': entry.key + 1,
-                'targetReps': int.tryParse(entry.value['targetReps'].toString()) ?? 0,
-                'targetWeight': parseWeightNum(entry.value['targetWeight']),
-                'restTime': entry.value['restTime'].toString(),
-                'isAchieved': false,
-              })
-          .toList();
+          .map((entry) {
+            final setNumber = _sets.length - entry.key;
+            return {
+              'id': 0,
+              'dailyStudentExerciseId': 0,
+              'setNumber': setNumber,
+              'targetReps': int.tryParse(entry.value['targetReps'].toString()) ?? 0,
+              'targetWeight': parseWeightNum(entry.value['targetWeight']),
+              'restTime': entry.value['restTime'].toString(),
+              'isAchieved': false,
+            };
+          })
+          .toList()..sort((a, b) => (a['setNumber'] as int).compareTo(b['setNumber'] as int));
 
       final Map<String, dynamic> data = {
         'assign': <String, dynamic>{
