@@ -147,9 +147,11 @@ class _StudentDailyRoutineScreenState extends State<StudentDailyRoutineScreen> {
         ),
         body: provider.isLoading
             ? const Center(child: CircularProgressIndicator())
-            : SizedBox.expand(
-                child: Stack(
-                  children: [
+            : LayoutBuilder(
+                builder: (context, constraints) {
+                  return SizedBox.expand(
+                    child: Stack(
+                      children: [
                     Positioned.fill(
                       child: PyrosPullToRefresh(
                         onRefresh: () async {
@@ -382,13 +384,17 @@ class _StudentDailyRoutineScreenState extends State<StudentDailyRoutineScreen> {
                         key: ValueKey('rest_timer_$_timerKey'),
                         seconds: _timerSeconds,
                         label: _timerLabel,
+                        maxWidth: constraints.maxWidth,
+                        maxHeight: constraints.maxHeight,
                         onClose: _closeRestTimer,
                         onFinished: _handleTimerFinish,
                         onRestart: _handleTimerRestart,
                       ),
                   ],
                 ),
-              ),
+              );
+            },
+          ),
       ),
     );
   }
