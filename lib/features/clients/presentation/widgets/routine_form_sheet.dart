@@ -86,11 +86,11 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
             : '90';
       }
 
-      // Load sets (ordenadas descendente para que la última quede arriba y la primera abajo)
+      // Load sets (ordenadas ascendentemente por setNumber para preservar el orden original de Web/API)
       final sortedSets = [...r.dailyExerciseSets]..sort((a, b) {
         final aNum = int.tryParse(a.setNumber.toString()) ?? 0;
         final bNum = int.tryParse(b.setNumber.toString()) ?? 0;
-        return bNum.compareTo(aNum);
+        return aNum.compareTo(bNum);
       });
       for (var s in sortedSets) {
         _sets.add({
@@ -905,20 +905,19 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
         );
       }
 
-      // 2. Mapear todos los sets (existentes con su ID y nuevos con id: 0)
+      // 2. Mapear todos los sets (existentes con su ID y nuevos con id: 0, con setNumber = index + 1 igual que Web)
       final allSetsPayload = _sets.mapIndexed((index, s) {
         final rawId = (s['id'] as int?) ?? 0;
-        final setNumber = _sets.length - index;
         return {
           'id': rawId > 0 ? rawId : 0,
           'dailyStudentExerciseId': dailyExerciseId,
-          'setNumber': setNumber,
+          'setNumber': index + 1,
           'targetReps': int.tryParse(s['targetReps'].toString()) ?? 0,
           'targetWeight': parseWeightNum(s['targetWeight']),
           'restTime': s['restTime'].toString(),
           'isAchieved': false,
         };
-      }).toList()..sort((a, b) => (a['setNumber'] as int).compareTo(b['setNumber'] as int));
+      }).toList();
 
       final effectiveExId = _selectedExercise!.id;
       final effectiveExName = _selectedExercise!.name;
@@ -953,23 +952,22 @@ class _RoutineFormSheetState extends State<RoutineFormSheet> {
         );
       }
     } else {
-      // Create logic
+      // Create logic (setNumber = entry.key + 1 en orden de lista, idéntico a Web)
       final setsData = _sets
           .asMap()
           .entries
           .map((entry) {
-            final setNumber = _sets.length - entry.key;
             return {
               'id': 0,
               'dailyStudentExerciseId': 0,
-              'setNumber': setNumber,
+              'setNumber': entry.key + 1,
               'targetReps': int.tryParse(entry.value['targetReps'].toString()) ?? 0,
               'targetWeight': parseWeightNum(entry.value['targetWeight']),
               'restTime': entry.value['restTime'].toString(),
               'isAchieved': false,
             };
           })
-          .toList()..sort((a, b) => (a['setNumber'] as int).compareTo(b['setNumber'] as int));
+          .toList();
 
       final Map<String, dynamic> data = {
         'assign': <String, dynamic>{

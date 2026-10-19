@@ -252,17 +252,16 @@ class _AddStudentDailyExerciseSheetState
     final setsData = _sets.asMap().entries.map((entry) {
       final idx = entry.key;
       final s = entry.value;
-      final setNumber = _sets.length - idx;
       return {
         'id': 0,
         'dailyStudentExerciseId': 0,
-        'setNumber': setNumber,
+        'setNumber': idx + 1,
         'targetReps': int.tryParse(s['targetReps'] ?? '12') ?? 12,
         'targetWeight': parseWeightNum(s['targetWeight']),
         'restTime': (s['restTime']?.trim().isNotEmpty == true) ? s['restTime']! : '90',
         'isAchieved': false,
       };
-    }).toList()..sort((a, b) => (a['setNumber'] as int).compareTo(b['setNumber'] as int));
+    }).toList();
 
     final dateStr = widget.scheduledDate.contains('T')
         ? widget.scheduledDate

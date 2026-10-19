@@ -454,19 +454,27 @@ class RoutineCard extends StatelessWidget {
               ),
             ],
 
-            // Lista de series (ordenadas de menor a mayor)
-            ...([...routine.dailyExerciseSets]..sort((a, b) {
-              final aNum = int.tryParse(a.setNumber.toString()) ?? 0;
-              final bNum = int.tryParse(b.setNumber.toString()) ?? 0;
-              return aNum.compareTo(bNum);
-            })).map((set) => _buildSetRow(context, set)),
+            // Lista de series (idéntico a Web: orden del array y displaySetNumber = totalSets - index)
+            ...(() {
+              final sortedSets = [...routine.dailyExerciseSets]..sort((a, b) {
+                final aNum = int.tryParse(a.setNumber.toString()) ?? 0;
+                final bNum = int.tryParse(b.setNumber.toString()) ?? 0;
+                return aNum.compareTo(bNum);
+              });
+              return sortedSets.asMap().entries.map((entry) {
+                final index = entry.key;
+                final set = entry.value;
+                final displaySetNumber = sortedSets.length - index;
+                return _buildSetRow(context, set, displaySetNumber);
+              });
+            })(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSetRow(BuildContext context, DailyExerciseSet set) {
+  Widget _buildSetRow(BuildContext context, DailyExerciseSet set, int displaySetNumber) {
     final isAchieved = set.isAchieved;
 
     return Container(
@@ -508,7 +516,7 @@ class RoutineCard extends StatelessWidget {
                     ? const Icon(Icons.check_rounded,
                         size: 16, color: Colors.green)
                     : Text(
-                        '${set.setNumber}',
+                        '$displaySetNumber',
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,

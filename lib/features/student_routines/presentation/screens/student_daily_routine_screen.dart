@@ -455,7 +455,7 @@ class _ExerciseRowState extends State<_ExerciseRow> {
     final list = [...widget.exercise.dailyExerciseSets];
     list.sort((a, b) =>
         (int.tryParse(a.setNumber) ?? 0).compareTo(int.tryParse(b.setNumber) ?? 0));
-    return list;
+    return list.reversed.toList();
   }
 
   @override
@@ -943,9 +943,9 @@ class _ExerciseRowState extends State<_ExerciseRow> {
                       if (!isLocked) {
                         final priorExercises = _superSetGroup.sublist(0, _groupIndex);
                         for (final priorEx in priorExercises) {
-                          final priorSorted = [...priorEx.dailyExerciseSets]..sort(
+                          final priorSorted = ([...priorEx.dailyExerciseSets]..sort(
                             (a, b) => (int.tryParse(a.setNumber) ?? 0).compareTo(int.tryParse(b.setNumber) ?? 0),
-                          );
+                          )).reversed.toList();
                           if (idx < priorSorted.length) {
                             final targetPriorSet = priorSorted[idx];
                             if (!targetPriorSet.isAchieved) {
@@ -961,9 +961,9 @@ class _ExerciseRowState extends State<_ExerciseRow> {
                       if (!isLocked && idx > 0) {
                         final laterExercises = _superSetGroup.sublist(_groupIndex + 1);
                         for (final laterEx in laterExercises) {
-                          final laterSorted = [...laterEx.dailyExerciseSets]..sort(
+                          final laterSorted = ([...laterEx.dailyExerciseSets]..sort(
                             (a, b) => (int.tryParse(a.setNumber) ?? 0).compareTo(int.tryParse(b.setNumber) ?? 0),
-                          );
+                          )).reversed.toList();
                           if (idx - 1 < laterSorted.length) {
                             final targetPrevSet = laterSorted[idx - 1];
                             if (!targetPrevSet.isAchieved) {
@@ -998,8 +998,8 @@ class _ExerciseRowState extends State<_ExerciseRow> {
                       onStartTimer: () {
                         final effectiveRest = _isSuperSet ? _combinedRestTime : set.restTime;
                         final timerLabel = _isSuperSet
-                            ? 'Descanso Combinado • Ronda #${set.setNumber}'
-                            : '${widget.exercise.exerciseName} • Serie #${set.setNumber}';
+                            ? 'Descanso Combinado • Ronda #${idx + 1}'
+                            : '${widget.exercise.exerciseName} • Serie #${idx + 1}';
                         widget.onStartTimer?.call(effectiveRest, timerLabel);
                       },
                       onToggle: (val, actualReps, actualWeight) async {
@@ -1281,7 +1281,7 @@ class _SetRowState extends State<_SetRow> {
             Row(
               children: [
                 Text(
-                  'Serie #${widget.set.setNumber}',
+                  'Serie #${widget.index + 1}',
                   style: const TextStyle(
                       fontWeight: FontWeight.bold, fontSize: 14),
                 ),
