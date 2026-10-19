@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/widgets/pyros_pull_to_refresh.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -146,7 +147,10 @@ class _StudentWeeklyRoutineScreenState extends State<StudentWeeklyRoutineScreen>
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                return _buildWeekGrid(provider, theme);
+                return PyrosPullToRefresh(
+                  onRefresh: () async => _loadWeek(_currentWeekStart),
+                  child: _buildWeekGrid(provider, theme),
+                );
               },
             ),
           ),
@@ -185,6 +189,7 @@ class _StudentWeeklyRoutineScreenState extends State<StudentWeeklyRoutineScreen>
     });
 
     return GridView.count(
+      physics: const AlwaysScrollableScrollPhysics(),
       crossAxisCount: 2,
       padding: const EdgeInsets.all(16),
       mainAxisSpacing: 12,

@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/widgets/pyros_pull_to_refresh.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pyrosfitmovil/core/models/exercise_model.dart';
@@ -143,15 +144,14 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
         label: const Text('Nuevo ejercicio', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
         elevation: 4,
       ),
-      body: RefreshIndicator(
-        color: AppTheme.primary,
-        backgroundColor: const Color(0xFF18181B),
+      body: PyrosPullToRefresh(
         onRefresh: () async {
           final auth = context.read<AuthProvider>();
           final coachId = auth.user?.coachId ?? auth.user?.id ?? 1;
           await provider.loadData(coachId);
         },
         child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             // 1. Barra de KPIs Compactos (Total, Con video, Sin video)
             SliverToBoxAdapter(

@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/widgets/pyros_pull_to_refresh.dart';
 import 'package:pyrosfitmovil/core/widgets/expandable_text.dart';
 import 'package:pyrosfitmovil/core/utils/exercise_filter.dart';
 import 'package:pyrosfitmovil/features/auth/presentation/controllers/auth_provider.dart';
@@ -150,8 +151,15 @@ class _StudentDailyRoutineScreenState extends State<StudentDailyRoutineScreen> {
                 child: Stack(
                   children: [
                     Positioned.fill(
-                      child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
+                      child: PyrosPullToRefresh(
+                        onRefresh: () async {
+                          await context
+                              .read<StudentRoutinesProvider>()
+                              .fetchDailyExercises(widget.studentId, widget.dayId);
+                        },
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -367,6 +375,7 @@ class _StudentDailyRoutineScreenState extends State<StudentDailyRoutineScreen> {
                   ],
                 ),
               ),
+                      ),
                     ),
                     if (_isTimerActive && _timerSeconds > 0)
                       RestTimerWidget(
