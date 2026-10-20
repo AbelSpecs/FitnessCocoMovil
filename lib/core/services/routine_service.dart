@@ -163,18 +163,25 @@ class RoutineService {
     }
   }
 
-  static Future<Map<String, dynamic>?> updateCompleteDailyStudentExercises(
+  static Future<bool> updateCompleteDailyStudentExercises(
       int id, Map<String, dynamic> data) async {
     logDebug(data);
     try {
       final response =
           await _api.put('/DailyStudentExercises/complete/$id', data: data);
-      if (response.data != null && response.data['data'] != null) {
-        return response.data['data'] as Map<String, dynamic>;
+      if (response.data != null) {
+        // En backend C# retorna Response<bool> donde data es bool (true/false) e isSuccess es bool
+        if (response.data['data'] == true || response.data['isSuccess'] == true) {
+          return true;
+        }
+        if (response.data['data'] is Map) {
+          return true;
+        }
       }
-      return null;
+      return response.statusCode == 200 || response.statusCode == 204;
     } catch (e) {
-      return null;
+      logError('Error updating complete daily student exercise: $e');
+      return false;
     }
   }
 

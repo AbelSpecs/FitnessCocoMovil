@@ -13,6 +13,8 @@ class RestTimerWidget extends StatefulWidget {
   final VoidCallback onClose;
   final VoidCallback? onFinished;
   final VoidCallback? onRestart;
+  final double? maxWidth;
+  final double? maxHeight;
 
   const RestTimerWidget({
     super.key,
@@ -21,6 +23,8 @@ class RestTimerWidget extends StatefulWidget {
     required this.onClose,
     this.onFinished,
     this.onRestart,
+    this.maxWidth,
+    this.maxHeight,
   });
 
   @override
@@ -129,14 +133,31 @@ class _RestTimerWidgetState extends State<RestTimerWidget>
 
   @override
   Widget build(BuildContext context) {
-    final screenSize = MediaQuery.of(context).size;
-    const double widgetSize = 126.0;
+    final mediaQuery = MediaQuery.of(context);
+    final availableWidth = widget.maxWidth ?? mediaQuery.size.width;
+    final fallbackHeight = mediaQuery.size.height - mediaQuery.padding.top - kToolbarHeight - 80.0 - mediaQuery.padding.bottom;
+    final availableHeight = widget.maxHeight ?? fallbackHeight;
 
-    // Posición inicial: conservar la posición previa arrastrada o ubicar abajo a la derecha
-    _position ??= _lastPosition ?? Offset(
-      screenSize.width - widgetSize - 16,
-      screenSize.height - widgetSize - 120,
-    );
+    const double widgetSize = 126.0;
+    const double bottomMargin = 24.0;
+    const double rightMargin = 16.0;
+
+    final double maxX = math.max<double>(10.0, availableWidth - widgetSize - 10.0);
+    final double maxY = math.max<double>(10.0, availableHeight - widgetSize - bottomMargin);
+
+    final defaultX = (availableWidth - widgetSize - rightMargin).clamp(10.0, maxX);
+    final defaultY = (availableHeight - widgetSize - bottomMargin).clamp(10.0, maxY);
+
+    // Posición inicial: conservar posición previa dentro de límites o ubicar abajo a la derecha por encima del bottom bar
+    _position ??= _lastPosition ?? Offset(defaultX, defaultY);
+
+    // Ajustar clamp para que _position siempre se mantenga por encima de la barra inferior y dentro de la pantalla
+    final clampedX = _position!.dx.clamp(10.0, maxX);
+    final clampedY = _position!.dy.clamp(10.0, maxY);
+    if (_position!.dx != clampedX || _position!.dy != clampedY) {
+      _position = Offset(clampedX, clampedY);
+      _lastPosition = _position;
+    }
 
     final double progress =
         _initialSeconds > 0 ? (_remaining / _initialSeconds) : 0.0;
@@ -153,10 +174,8 @@ class _RestTimerWidgetState extends State<RestTimerWidget>
         },
         onPanUpdate: (details) {
           setState(() {
-            final newX = (_position!.dx + details.delta.dx)
-                .clamp(10.0, screenSize.width - widgetSize - 10.0);
-            final newY = (_position!.dy + details.delta.dy)
-                .clamp(10.0, screenSize.height - widgetSize - 40.0);
+            final newX = (_position!.dx + details.delta.dx).clamp(10.0, maxX);
+            final newY = (_position!.dy + details.delta.dy).clamp(10.0, maxY);
             _position = Offset(newX, newY);
             _lastPosition = _position;
           });

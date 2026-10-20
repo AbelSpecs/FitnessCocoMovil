@@ -53,6 +53,9 @@ class AddStudentDailyExerciseSheet extends StatefulWidget {
 
 class _AddStudentDailyExerciseSheetState
     extends State<AddStudentDailyExerciseSheet> {
+  static Map<String, dynamic>? _studentDraft;
+  bool _wasSavedSuccessfully = false;
+
   bool _isLoadingGroups = true;
   bool _isLoadingExercises = false;
   bool _isSaving = false;
@@ -78,12 +81,77 @@ class _AddStudentDailyExerciseSheetState
   @override
   void initState() {
     super.initState();
+    if (_studentDraft != null) {
+      _notesController.text = _studentDraft!['notes'] as String? ?? '';
+      _isSuperSet = _studentDraft!['isSuperSet'] as bool? ?? false;
+      _selectedSuperSetTag = _studentDraft!['selectedSuperSetTag'] as String? ?? 'A';
+      _combinedRestTime = _studentDraft!['combinedRestTime'] as String? ?? '90';
+      final savedSets = _studentDraft!['sets'] as List?;
+      if (savedSets != null && savedSets.isNotEmpty) {
+        _sets.clear();
+        _sets.addAll(List<Map<String, String>>.from(
+            savedSets.map((s) => Map<String, String>.from(s))));
+      }
+      _selectedGroup = _studentDraft!['group'] as MuscleGroup?;
+      _selectedExercise = _studentDraft!['exercise'] as ExerciseModel?;
+    }
     _loadMuscleGroups();
+  }
+
+  bool get _hasDraftContent {
+    return _selectedGroup != null ||
+        _selectedExercise != null ||
+        _notesController.text.trim().isNotEmpty ||
+        _sets.length > 1 ||
+        _sets.any((s) =>
+            (s['targetReps'] != null && s['targetReps'] != '12' && s['targetReps']!.isNotEmpty) ||
+            (s['targetWeight'] != null && s['targetWeight'] != '20' && s['targetWeight']!.isNotEmpty) ||
+            (s['restTime'] != null && s['restTime'] != '90' && s['restTime']!.isNotEmpty));
+  }
+
+  void _resetForm() {
+    setState(() {
+      _studentDraft = null;
+      _selectedExercise = null;
+      _notesController.clear();
+      _isSuperSet = false;
+      _selectedSuperSetTag = 'A';
+      _combinedRestTime = '90';
+      _sets.clear();
+      _sets.add({
+        'targetReps': '12',
+        'targetWeight': '20',
+        'restTime': '90',
+        '_key': 'init_${DateTime.now().microsecondsSinceEpoch}',
+      });
+    });
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Borrador limpiado: Se han restablecido los campos del ejercicio'),
+        duration: Duration(seconds: 2),
+      ),
+    );
   }
 
   @override
   void dispose() {
     _notesController.dispose();
+    if (!_wasSavedSuccessfully) {
+      if (_hasDraftContent) {
+        _studentDraft = {
+          'group': _selectedGroup,
+          'exercise': _selectedExercise,
+          'notes': _notesController.text,
+          'isSuperSet': _isSuperSet,
+          'selectedSuperSetTag': _selectedSuperSetTag,
+          'combinedRestTime': _combinedRestTime,
+          'sets': _sets.map((s) => Map<String, String>.from(s)).toList(),
+        };
+      } else {
+        _studentDraft = null;
+      }
+    }
     super.dispose();
   }
 
@@ -252,17 +320,16 @@ class _AddStudentDailyExerciseSheetState
     final setsData = _sets.asMap().entries.map((entry) {
       final idx = entry.key;
       final s = entry.value;
-      final setNumber = _sets.length - idx;
       return {
         'id': 0,
         'dailyStudentExerciseId': 0,
-        'setNumber': setNumber,
+        'setNumber': idx + 1,
         'targetReps': int.tryParse(s['targetReps'] ?? '12') ?? 12,
         'targetWeight': parseWeightNum(s['targetWeight']),
         'restTime': (s['restTime']?.trim().isNotEmpty == true) ? s['restTime']! : '90',
         'isAchieved': false,
       };
-    }).toList()..sort((a, b) => (a['setNumber'] as int).compareTo(b['setNumber'] as int));
+    }).toList();
 
     final dateStr = widget.scheduledDate.contains('T')
         ? widget.scheduledDate
@@ -286,6 +353,8 @@ class _AddStudentDailyExerciseSheetState
             .read<StudentRoutinesProvider>()
             .fetchDailyExercises(widget.studentId, widget.scheduledDate);
         if (mounted) {
+          _wasSavedSuccessfully = true;
+          _studentDraft = null;
           Navigator.pop(context, true);
         }
       } else {
@@ -893,6 +962,26 @@ class _AddStudentDailyExerciseSheetState
               maxLines: 2,
             ),
             const SizedBox(height: 20),
+
+            if (_hasDraftContent) ...[
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: _resetForm,
+                  icon: const Icon(Icons.delete_sweep_outlined, size: 16, color: Colors.white70),
+                  label: const Text(
+                    'Limpiar campos',
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
 
             // Botón Guardar
             SizedBox(

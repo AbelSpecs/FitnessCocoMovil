@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/widgets/pyros_pull_to_refresh.dart';
 import 'package:pyrosfitmovil/core/widgets/expandable_text.dart';
 import 'package:pyrosfitmovil/core/utils/exercise_filter.dart';
 import 'package:pyrosfitmovil/features/auth/presentation/controllers/auth_provider.dart';
@@ -146,12 +147,21 @@ class _StudentDailyRoutineScreenState extends State<StudentDailyRoutineScreen> {
         ),
         body: provider.isLoading
             ? const Center(child: CircularProgressIndicator())
-            : SizedBox.expand(
-                child: Stack(
-                  children: [
+            : LayoutBuilder(
+                builder: (context, constraints) {
+                  return SizedBox.expand(
+                    child: Stack(
+                      children: [
                     Positioned.fill(
-                      child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
+                      child: PyrosPullToRefresh(
+                        onRefresh: () async {
+                          await context
+                              .read<StudentRoutinesProvider>()
+                              .fetchDailyExercises(widget.studentId, widget.dayId);
+                        },
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -367,19 +377,24 @@ class _StudentDailyRoutineScreenState extends State<StudentDailyRoutineScreen> {
                   ],
                 ),
               ),
+                      ),
                     ),
                     if (_isTimerActive && _timerSeconds > 0)
                       RestTimerWidget(
                         key: ValueKey('rest_timer_$_timerKey'),
                         seconds: _timerSeconds,
                         label: _timerLabel,
+                        maxWidth: constraints.maxWidth,
+                        maxHeight: constraints.maxHeight,
                         onClose: _closeRestTimer,
                         onFinished: _handleTimerFinish,
                         onRestart: _handleTimerRestart,
                       ),
                   ],
                 ),
-              ),
+              );
+            },
+          ),
       ),
     );
   }
@@ -455,7 +470,7 @@ class _ExerciseRowState extends State<_ExerciseRow> {
     final list = [...widget.exercise.dailyExerciseSets];
     list.sort((a, b) =>
         (int.tryParse(a.setNumber) ?? 0).compareTo(int.tryParse(b.setNumber) ?? 0));
-    return list;
+    return list.reversed.toList();
   }
 
   @override
@@ -570,9 +585,31 @@ class _ExerciseRowState extends State<_ExerciseRow> {
           }
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error al terminar ejercicio')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.white, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Error al terminar ejercicio',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.red.shade800,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
       }
     }
   }
@@ -943,9 +980,9 @@ class _ExerciseRowState extends State<_ExerciseRow> {
                       if (!isLocked) {
                         final priorExercises = _superSetGroup.sublist(0, _groupIndex);
                         for (final priorEx in priorExercises) {
-                          final priorSorted = [...priorEx.dailyExerciseSets]..sort(
+                          final priorSorted = ([...priorEx.dailyExerciseSets]..sort(
                             (a, b) => (int.tryParse(a.setNumber) ?? 0).compareTo(int.tryParse(b.setNumber) ?? 0),
-                          );
+                          )).reversed.toList();
                           if (idx < priorSorted.length) {
                             final targetPriorSet = priorSorted[idx];
                             if (!targetPriorSet.isAchieved) {
@@ -961,9 +998,9 @@ class _ExerciseRowState extends State<_ExerciseRow> {
                       if (!isLocked && idx > 0) {
                         final laterExercises = _superSetGroup.sublist(_groupIndex + 1);
                         for (final laterEx in laterExercises) {
-                          final laterSorted = [...laterEx.dailyExerciseSets]..sort(
+                          final laterSorted = ([...laterEx.dailyExerciseSets]..sort(
                             (a, b) => (int.tryParse(a.setNumber) ?? 0).compareTo(int.tryParse(b.setNumber) ?? 0),
-                          );
+                          )).reversed.toList();
                           if (idx - 1 < laterSorted.length) {
                             final targetPrevSet = laterSorted[idx - 1];
                             if (!targetPrevSet.isAchieved) {
@@ -998,14 +1035,19 @@ class _ExerciseRowState extends State<_ExerciseRow> {
                       onStartTimer: () {
                         final effectiveRest = _isSuperSet ? _combinedRestTime : set.restTime;
                         final timerLabel = _isSuperSet
-                            ? 'Descanso Combinado • Ronda #${set.setNumber}'
-                            : '${widget.exercise.exerciseName} • Serie #${set.setNumber}';
+                            ? 'Descanso Combinado • Ronda #${idx + 1}'
+                            : '${widget.exercise.exerciseName} • Serie #${idx + 1}';
                         widget.onStartTimer?.call(effectiveRest, timerLabel);
                       },
                       onToggle: (val, actualReps, actualWeight) async {
+                        // Las series marcadas como completadas no se deben poder volver a desmarcar
+                        if (!val) {
+                          return;
+                        }
+
                         setState(() {
                           if (idx < _setsCompleted.length) {
-                            _setsCompleted[idx] = val;
+                            _setsCompleted[idx] = true;
                           }
                         });
 
@@ -1281,7 +1323,7 @@ class _SetRowState extends State<_SetRow> {
             Row(
               children: [
                 Text(
-                  'Serie #${widget.set.setNumber}',
+                  'Serie #${widget.index + 1}',
                   style: const TextStyle(
                       fontWeight: FontWeight.bold, fontSize: 14),
                 ),
@@ -1295,77 +1337,72 @@ class _SetRowState extends State<_SetRow> {
                         size: 14, color: Colors.white54),
                   ),
                 ],
+                const Spacer(),
                 if (widget.isSuperSet && !widget.isLastInSuperSet) ...[
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8.0),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.bolt, size: 11, color: Color(0xFFF59E0B)),
-                          SizedBox(width: 3),
-                          Text(
-                            'Directo',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFF59E0B),
-                            ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.bolt, size: 11, color: Color(0xFFF59E0B)),
+                        SizedBox(width: 3),
+                        Text(
+                          'Directo',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFF59E0B),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ] else if (widget.isSuperSet && widget.isLastInSuperSet) ...[
                   Builder(
                     builder: (context) {
                       final restSec = parseRestTimeToSeconds(widget.combinedRestTime);
-                      return Padding(
-                        padding: const EdgeInsets.only(left: 8.0),
-                        child: GestureDetector(
-                          onTap: (widget.isRestTimerRunning || isLocked)
-                              ? null
-                              : widget.onStartTimer,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                            decoration: BoxDecoration(
+                      return GestureDetector(
+                        onTap: (widget.isRestTimerRunning || isLocked)
+                            ? null
+                            : widget.onStartTimer,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                          decoration: BoxDecoration(
+                            color: (widget.isRestTimerRunning || isLocked)
+                                ? Colors.white10
+                                : Colors.teal.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
                               color: (widget.isRestTimerRunning || isLocked)
-                                  ? Colors.white10
-                                  : Colors.teal.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: (widget.isRestTimerRunning || isLocked)
-                                    ? Colors.white24
-                                    : Colors.teal.withValues(alpha: 0.4),
-                              ),
+                                  ? Colors.white24
+                                  : Colors.teal.withValues(alpha: 0.4),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.timer_outlined,
-                                    size: 11,
-                                    color: (widget.isRestTimerRunning || isLocked)
-                                        ? Colors.white54
-                                        : Colors.tealAccent),
-                                const SizedBox(width: 3),
-                                Text(
-                                  'Único: ${restSec}s',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: (widget.isRestTimerRunning || isLocked)
-                                        ? Colors.white54
-                                        : Colors.tealAccent,
-                                  ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.timer_outlined,
+                                  size: 11,
+                                  color: (widget.isRestTimerRunning || isLocked)
+                                      ? Colors.white54
+                                      : Colors.tealAccent),
+                              const SizedBox(width: 3),
+                              Text(
+                                'Único: ${restSec}s',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: (widget.isRestTimerRunning || isLocked)
+                                      ? Colors.white54
+                                      : Colors.tealAccent,
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
                       );
@@ -1377,77 +1414,93 @@ class _SetRowState extends State<_SetRow> {
                       final restSec =
                           parseRestTimeToSeconds(widget.set.restTime);
                       if (restSec <= 0) return const SizedBox.shrink();
-                      return Padding(
-                        padding: const EdgeInsets.only(left: 8.0),
-                        child: GestureDetector(
-                          onTap: (widget.isRestTimerRunning || isLocked)
-                              ? null
-                              : widget.onStartTimer,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 7, vertical: 2.5),
-                            decoration: BoxDecoration(
+                      return GestureDetector(
+                        onTap: (widget.isRestTimerRunning || isLocked)
+                            ? null
+                            : widget.onStartTimer,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 2.5),
+                          decoration: BoxDecoration(
+                            color: (widget.isRestTimerRunning || isLocked)
+                                ? Colors.white10
+                                : AppTheme.primary.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
                               color: (widget.isRestTimerRunning || isLocked)
-                                  ? Colors.white10
-                                  : AppTheme.primary.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: (widget.isRestTimerRunning || isLocked)
-                                    ? Colors.white24
-                                    : AppTheme.primary.withValues(alpha: 0.4),
-                              ),
+                                  ? Colors.white24
+                                  : AppTheme.primary.withValues(alpha: 0.4),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.timer_outlined,
-                                    size: 11,
-                                    color: (widget.isRestTimerRunning || isLocked)
-                                        ? Colors.white54
-                                        : AppTheme.primary),
-                                const SizedBox(width: 3),
-                                Text(
-                                  '${restSec}s',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: (widget.isRestTimerRunning || isLocked)
-                                        ? Colors.white54
-                                        : AppTheme.primary,
-                                  ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.timer_outlined,
+                                  size: 11,
+                                  color: (widget.isRestTimerRunning || isLocked)
+                                      ? Colors.white54
+                                      : AppTheme.primary),
+                              const SizedBox(width: 3),
+                              Text(
+                                '${restSec}s',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: (widget.isRestTimerRunning || isLocked)
+                                      ? Colors.white54
+                                      : AppTheme.primary,
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
                       );
                     },
                   ),
                 ],
-                const Spacer(),
-                Flexible(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('Objetivo: ',
-                          style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.white.withValues(alpha: 0.7))),
-                      Flexible(
-                        child: Text(
-                          '${widget.set.targetReps} reps • ${formatWeightWithEquivalent(widget.set.targetWeight)}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ],
+            ),
+            const SizedBox(height: 8),
+            // Línea dedicada para Repeticiones y Pesos Objetivo (perfecta lectura en modo vertical)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.04),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.flag_outlined,
+                    size: 14,
+                    color: AppTheme.primaryGlow.withValues(alpha: 0.9),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Objetivo:',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white.withValues(alpha: 0.7),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      '${widget.set.targetReps} reps • ${formatWeightWithEquivalent(widget.set.targetWeight)}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: 0.2,
+                      ),
+                      overflow: TextOverflow.visible,
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 12),
             Row(
@@ -1483,9 +1536,7 @@ class _SetRowState extends State<_SetRow> {
                           filled: true,
                           fillColor: Colors.white10,
                         ),
-                        onChanged: (val) {
-                          if (checked) widget.onToggle(false, null, null);
-                        },
+                        onChanged: (val) {},
                       ),
                     ],
                   ),
@@ -1522,9 +1573,7 @@ class _SetRowState extends State<_SetRow> {
                           filled: true,
                           fillColor: Colors.white10,
                         ),
-                        onChanged: (val) {
-                          if (checked) widget.onToggle(false, null, null);
-                        },
+                        onChanged: (val) {},
                       ),
                     ],
                   ),
@@ -1538,9 +1587,10 @@ class _SetRowState extends State<_SetRow> {
                             color: Colors.white.withValues(alpha: 0.5))),
                     const SizedBox(height: 4),
                     GestureDetector(
-                      onTap: _isSaving
+                      onTap: (_isSaving || checked)
                           ? null
                           : () async {
+                              if (checked) return;
                               if (isLocked) {
                                 ScaffoldMessenger.of(context)
                                     .hideCurrentSnackBar();
@@ -1580,7 +1630,7 @@ class _SetRowState extends State<_SetRow> {
                               final weight = parsedInputW > 0 ? parsedInputW : (parsedTargetW > 0 ? parsedTargetW : null);
                               setState(() => _isSaving = true);
                               try {
-                                widget.onToggle(!checked, reps, weight);
+                                widget.onToggle(true, reps, weight);
                               } finally {
                                 if (mounted) setState(() => _isSaving = false);
                               }

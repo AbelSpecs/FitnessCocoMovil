@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/widgets/pyros_pull_to_refresh.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -47,7 +48,7 @@ class _ClientsScreenContent extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
-          return RefreshIndicator(
+          return PyrosPullToRefresh(
             onRefresh: provider.refresh,
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),

@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/widgets/pyros_pull_to_refresh.dart';
 import 'package:pyrosfitmovil/features/clients/presentation/widgets/student_clinical_overview_card.dart';
 import 'package:pyrosfitmovil/core/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
@@ -56,8 +57,13 @@ class _ClientRoutinesScreenContent extends StatelessWidget {
         centerTitle: false,
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        child: PyrosPullToRefresh(
+          onRefresh: () async {
+            await provider.loadRoutinesForStudent(client.studentId, provider.selectedDate);
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -268,7 +274,7 @@ class _ClientRoutinesScreenContent extends StatelessWidget {
           ),
         ),
       ),
-    ));
+    )));
   }
 
   void _showAddRoutineSheet(

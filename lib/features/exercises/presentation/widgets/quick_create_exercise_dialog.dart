@@ -22,6 +22,9 @@ class QuickCreateExerciseDialog extends StatefulWidget {
 }
 
 class _QuickCreateExerciseDialogState extends State<QuickCreateExerciseDialog> {
+  static Map<String, dynamic>? _quickDraft;
+  bool _wasSavedSuccessfully = false;
+
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _descriptionController;
@@ -40,9 +43,11 @@ class _QuickCreateExerciseDialogState extends State<QuickCreateExerciseDialog> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController();
-    _descriptionController = TextEditingController();
-    _selectedMuscleGroupId = widget.initialMuscleGroupId;
+    _nameController = TextEditingController(text: _quickDraft?['name'] ?? '');
+    _descriptionController = TextEditingController(text: _quickDraft?['description'] ?? '');
+    _selectedMuscleGroupId = _quickDraft?['muscleGroupId'] ?? widget.initialMuscleGroupId;
+    _videoMode = _quickDraft?['videoMode'] ?? 0;
+    _videoUrl = _quickDraft?['videoUrl'] ?? '';
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final routinesProv = context.read<RoutinesProvider>();
@@ -56,6 +61,21 @@ class _QuickCreateExerciseDialogState extends State<QuickCreateExerciseDialog> {
 
   @override
   void dispose() {
+    if (!_wasSavedSuccessfully) {
+      if (_nameController.text.trim().isNotEmpty ||
+          _descriptionController.text.trim().isNotEmpty ||
+          _videoUrl.trim().isNotEmpty) {
+        _quickDraft = {
+          'name': _nameController.text,
+          'description': _descriptionController.text,
+          'muscleGroupId': _selectedMuscleGroupId,
+          'videoMode': _videoMode,
+          'videoUrl': _videoUrl,
+        };
+      } else {
+        _quickDraft = null;
+      }
+    }
     _nameController.dispose();
     _descriptionController.dispose();
     super.dispose();
@@ -150,6 +170,8 @@ class _QuickCreateExerciseDialogState extends State<QuickCreateExerciseDialog> {
 
       if (mounted) {
         if (created != null) {
+          _wasSavedSuccessfully = true;
+          _quickDraft = null;
           Navigator.of(context).pop(created);
         } else {
           setState(() {

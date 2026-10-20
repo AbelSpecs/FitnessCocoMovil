@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/widgets/pyros_pull_to_refresh.dart';
 import 'package:pyrosfitmovil/core/utils/exercise_filter.dart';
 import 'package:pyrosfitmovil/core/services/storage_service.dart';
 import 'package:pyrosfitmovil/core/services/student_service.dart';
@@ -191,8 +192,7 @@ class _RankingScreenState extends State<RankingScreen> {
         ),
         body: _isLoading
             ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
-            : RefreshIndicator(
-                color: AppTheme.primary,
+            : PyrosPullToRefresh(
                 onRefresh: _loadData,
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),

@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/widgets/pyros_pull_to_refresh.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pyrosfitmovil/core/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
@@ -114,8 +115,11 @@ class _CoachDashboardState extends State<CoachDashboard> {
     return _isLoading
         ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
         : context.pyrosStyles.buildMeshBackground(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            child: PyrosPullToRefresh(
+              onRefresh: _loadData,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -369,7 +373,8 @@ const SizedBox(height: 20),
                 ],
               ),
             ),
-          );
+          ),
+        );
   }
 
   Widget _buildFilterChip(String key, String label) {

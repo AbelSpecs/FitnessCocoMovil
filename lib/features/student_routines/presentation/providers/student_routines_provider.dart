@@ -78,6 +78,10 @@ class StudentRoutinesProvider extends ChangeNotifier {
 
   Future<bool> completeExerciseSet(
       GetDailyExerciseSetsDto set, bool isAchieved, int? actualReps, int? actualWeight) async {
+    // Las series completadas no se deben poder volver a desmarcar
+    if (set.isAchieved && !isAchieved) {
+      return true;
+    }
     try {
       final data = {
         'id': set.id,
@@ -128,8 +132,8 @@ class StudentRoutinesProvider extends ChangeNotifier {
         'isCompleted': true,
         'studentNotes': studentNotes,
       };
-      final response = await RoutineService.updateCompleteDailyStudentExercises(exerciseId, data);
-      if (response != null) {
+      final success = await RoutineService.updateCompleteDailyStudentExercises(exerciseId, data);
+      if (success) {
         final index = _dailyExercises.indexWhere((e) => e.id == exerciseId);
         if (index != -1) {
           _dailyExercises[index] = _dailyExercises[index].copyWith(
@@ -142,12 +146,6 @@ class StudentRoutinesProvider extends ChangeNotifier {
       }
       return false;
     } catch (e) {
-      scaffoldMessengerKey.currentState?.showSnackBar(
-        const SnackBar(
-          content: Text('Ocurrió un error, por favor intenta de nuevo.'),
-          backgroundColor: Colors.red,
-        ),
-      );
       logError('Error completing exercise: $e');
       return false;
     }

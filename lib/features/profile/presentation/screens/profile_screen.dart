@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/widgets/pyros_pull_to_refresh.dart';
 import 'package:pyrosfitmovil/core/services/user_service.dart';
 import 'package:pyrosfitmovil/core/services/storage_service.dart';
 import 'package:pyrosfitmovil/core/widgets/user_avatar.dart';
@@ -69,8 +70,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
               }
 
               return context.pyrosStyles.buildMeshBackground(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                child: PyrosPullToRefresh(
+                  onRefresh: () async {
+                    await provider.fetchProfile(
+                      authUser.id,
+                      isCoach,
+                      authProvider: context.read<AuthProvider>(),
+                    );
+                  },
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -83,7 +93,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
                 ),
-              );
+              ),
+            );
             },
           ),
         ),

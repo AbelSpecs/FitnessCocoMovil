@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/widgets/pyros_pull_to_refresh.dart';
 import 'package:pyrosfitmovil/core/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:pyrosfitmovil/core/models/streak_models.dart';
@@ -164,8 +165,11 @@ class _ClientEditPanelScreenState extends State<ClientEditPanelScreen> {
         ),
         body: _isLoading
             ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
-            : SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            : PyrosPullToRefresh(
+                onRefresh: _loadStudentStreak,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -560,6 +564,7 @@ class _ClientEditPanelScreenState extends State<ClientEditPanelScreen> {
                   ],
                 ),
               ),
+            ),
       ),
     );
   }
