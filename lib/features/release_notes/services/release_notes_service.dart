@@ -16,13 +16,16 @@ class ReleaseNotesService {
 
   String? _cachedCurrentVersion;
 
-  /// Obtiene la versión actual de la aplicación desde el sistema (ej. "1.0.0")
-  Future<String> getCurrentAppVersion() async {
+  /// Obtiene la versión actual de la aplicación desde el sistema (ej. "1.0.0+8")
+  Future<String> getCurrentAppVersion({bool includeBuildNumber = true}) async {
     if (_cachedCurrentVersion != null) return _cachedCurrentVersion!;
     try {
       final info = await PackageInfo.fromPlatform();
-      _cachedCurrentVersion = info.version;
-      return info.version;
+      final version = (includeBuildNumber && info.buildNumber.isNotEmpty)
+          ? '${info.version}+${info.buildNumber}'
+          : info.version;
+      _cachedCurrentVersion = version;
+      return version;
     } catch (e) {
       _logger.e('Error al obtener la versión de la app: $e');
       return '1.0.0';
@@ -87,6 +90,7 @@ class ReleaseNotesService {
   Future<void> resetSeenVersionForTesting() async {
     try {
       await _storage.delete(key: _storageKey);
+      _cachedCurrentVersion = null;
       _logger.i('Versión vista reiniciada para pruebas.');
     } catch (e) {
       _logger.e('Error al reiniciar last_seen_version: $e');

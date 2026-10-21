@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pyrosfitmovil/features/auth/data/models/user_auth_model.dart';
 
 /// Clasificación de cada añadido o cambio en la versión
 enum ReleaseItemType {
@@ -7,6 +8,58 @@ enum ReleaseItemType {
   fix,         // Corrección de bugs
   ui,          // Rediseño o cambio visual
   performance, // Rendimiento
+}
+
+/// Audiencia objetivo de una novedad
+enum TargetAudience {
+  all,     // Visible para todos los usuarios
+  student, // Específico para clientes / alumnos
+  coach,   // Específico para entrenadores
+}
+
+extension TargetAudienceExtension on TargetAudience {
+  String get label {
+    switch (this) {
+      case TargetAudience.all:
+        return 'TODOS';
+      case TargetAudience.student:
+        return 'CLIENTE';
+      case TargetAudience.coach:
+        return 'COACH';
+    }
+  }
+
+  /// Indica si el ítem es relevante y visible para el rol del usuario actual
+  bool isVisibleFor(Role? role) {
+    if (this == TargetAudience.all) return true;
+    if (role == Role.coach) {
+      return this == TargetAudience.coach;
+    } else {
+      return this == TargetAudience.student;
+    }
+  }
+
+  Color get badgeBgColor {
+    switch (this) {
+      case TargetAudience.all:
+        return Colors.white.withValues(alpha: 0.08);
+      case TargetAudience.student:
+        return const Color(0xFF0284C7).withValues(alpha: 0.15); // Azul / Celeste
+      case TargetAudience.coach:
+        return const Color(0xFFF95A0B).withValues(alpha: 0.15); // Naranja Pyros
+    }
+  }
+
+  Color get badgeTextColor {
+    switch (this) {
+      case TargetAudience.all:
+        return const Color(0xFFACACAF);
+      case TargetAudience.student:
+        return const Color(0xFF38BDF8);
+      case TargetAudience.coach:
+        return const Color(0xFFFF8243);
+    }
+  }
 }
 
 extension ReleaseItemTypeExtension on ReleaseItemType {
@@ -76,11 +129,13 @@ class ReleaseItem {
   final String title;
   final String description;
   final ReleaseItemType type;
+  final TargetAudience audience;
   final IconData? icon;
 
   const ReleaseItem({
     required this.title,
     required this.description,
+    this.audience = TargetAudience.all,
     this.type = ReleaseItemType.feature,
     this.icon,
   });
@@ -89,6 +144,7 @@ class ReleaseItem {
     return {
       'title': title,
       'description': description,
+      'audience': audience.name,
       'type': type.name,
     };
   }
@@ -97,6 +153,10 @@ class ReleaseItem {
     return ReleaseItem(
       title: map['title'] ?? '',
       description: map['description'] ?? '',
+      audience: TargetAudience.values.firstWhere(
+        (e) => e.name == map['audience'],
+        orElse: () => TargetAudience.all,
+      ),
       type: ReleaseItemType.values.firstWhere(
         (e) => e.name == map['type'],
         orElse: () => ReleaseItemType.feature,
@@ -110,7 +170,7 @@ class ReleaseNote {
   /// Versión semántica (ej. "1.0.0", "1.1.0")
   final String version;
 
-  /// Número de build opcional (ej. 7)
+  /// Número de build opcional (ej. 7, 8)
   final int? buildNumber;
 
   /// Fecha del lanzamiento
@@ -137,6 +197,15 @@ class ReleaseNote {
     this.isMajor = false,
     required this.items,
   });
+
+  /// Versión completa con build number si existe (ej: "1.0.0+8")
+  String get fullVersion =>
+      buildNumber != null ? '$version+$buildNumber' : version;
+
+  /// Retorna los ítems filtrados según el rol del usuario (Role.coach o Role.student)
+  List<ReleaseItem> filteredItemsFor(Role? role) {
+    return items.where((item) => item.audience.isVisibleFor(role)).toList();
+  }
 
   Map<String, dynamic> toMap() {
     return {

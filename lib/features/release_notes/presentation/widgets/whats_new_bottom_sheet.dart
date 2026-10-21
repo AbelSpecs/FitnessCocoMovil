@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:pyrosfitmovil/features/auth/presentation/controllers/auth_provider.dart';
 import 'package:pyrosfitmovil/features/release_notes/data/models/release_note_model.dart';
 import 'package:pyrosfitmovil/features/release_notes/data/release_notes_catalog.dart';
 import 'package:pyrosfitmovil/features/release_notes/services/release_notes_service.dart';
@@ -62,6 +64,12 @@ class WhatsNewBottomSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final formattedDate =
         DateFormat('d MMMM yyyy', 'es_US').format(releaseNote.releaseDate);
+
+    // Obtener el rol actual para filtrar novedades relevantes
+    final auth = context.watch<AuthProvider>();
+    final userRole = auth.user?.role;
+    final visibleItems = releaseNote.filteredItemsFor(userRole);
+    final itemsToDisplay = visibleItems.isNotEmpty ? visibleItems : releaseNote.items;
 
     return Container(
       constraints: BoxConstraints(
@@ -150,7 +158,7 @@ class WhatsNewBottomSheet extends StatelessWidget {
                                 ),
                               ),
                               child: Text(
-                                'v${releaseNote.version}',
+                                'v${releaseNote.version}${releaseNote.buildNumber != null ? '+${releaseNote.buildNumber}' : ''}',
                                 style: const TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
@@ -204,10 +212,10 @@ class WhatsNewBottomSheet extends StatelessWidget {
               child: ListView.separated(
                 shrinkWrap: true,
                 padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
-                itemCount: releaseNote.items.length,
+                itemCount: itemsToDisplay.length,
                 separatorBuilder: (context, index) => const SizedBox(height: 14),
                 itemBuilder: (context, index) {
-                  final item = releaseNote.items[index];
+                  final item = itemsToDisplay[index];
                   final iconData = item.icon ?? item.type.defaultIcon;
 
                   return Container(
@@ -238,7 +246,10 @@ class WhatsNewBottomSheet extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 4,
+                                crossAxisAlignment: WrapCrossAlignment.center,
                                 children: [
                                   Container(
                                     padding: const EdgeInsets.symmetric(
@@ -257,17 +268,30 @@ class WhatsNewBottomSheet extends StatelessWidget {
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      item.title,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppTheme.foreground,
+                                  if (item.audience != TargetAudience.all)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: item.audience.badgeBgColor,
+                                        borderRadius: BorderRadius.circular(4),
                                       ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
+                                      child: Text(
+                                        item.audience.label,
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 0.5,
+                                          color: item.audience.badgeTextColor,
+                                        ),
+                                      ),
+                                    ),
+                                  Text(
+                                    item.title,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppTheme.foreground,
                                     ),
                                   ),
                                 ],

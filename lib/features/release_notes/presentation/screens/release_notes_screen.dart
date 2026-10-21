@@ -86,7 +86,7 @@ class ReleaseNotesScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      'v${release.version}',
+                      'v${release.version}${release.buildNumber != null ? '+${release.buildNumber}' : ''}',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
@@ -179,7 +179,10 @@ class ReleaseNotesScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -197,15 +200,29 @@ class ReleaseNotesScreen extends StatelessWidget {
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                item.title,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.foreground,
+                            if (item.audience != TargetAudience.all)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: item.audience.badgeBgColor,
+                                  borderRadius: BorderRadius.circular(4),
                                 ),
+                                child: Text(
+                                  item.audience.label,
+                                  style: TextStyle(
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: item.audience.badgeTextColor,
+                                  ),
+                                ),
+                              ),
+                            Text(
+                              item.title,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.foreground,
                               ),
                             ),
                           ],
