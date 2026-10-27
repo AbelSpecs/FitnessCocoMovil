@@ -22,6 +22,7 @@ import 'package:pyrosfitmovil/features/student_routines/presentation/screens/stu
 
 import 'package:pyrosfitmovil/features/profile/presentation/screens/profile_screen.dart';
 import 'package:pyrosfitmovil/features/ranking/presentation/screens/ranking_screen.dart';
+import 'package:pyrosfitmovil/features/release_notes/presentation/screens/release_notes_screen.dart';
 
 // 1. Definimos las rutas de manera organizada
 class AppRouter {
@@ -139,6 +140,10 @@ class AppRouter {
             GoRoute(
               path: '/perfil',
               builder: (context, state) => const ProfileScreen(),
+            ),
+            GoRoute(
+              path: '/novedades',
+              builder: (context, state) => const ReleaseNotesScreen(),
             ),
           ],
         ),

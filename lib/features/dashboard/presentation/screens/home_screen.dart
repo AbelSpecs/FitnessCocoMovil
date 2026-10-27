@@ -9,10 +9,27 @@ import 'package:pyrosfitmovil/features/dashboard/presentation/widgets/student_da
 import 'package:pyrosfitmovil/theme/app_theme.dart';
 import 'package:logger/logger.dart';
 
+import 'package:pyrosfitmovil/features/release_notes/presentation/widgets/whats_new_bottom_sheet.dart';
+
 final logger = Logger();
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        WhatsNewBottomSheet.checkAndShow(context);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +56,17 @@ class HomeScreen extends StatelessWidget {
           ),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(
+              Icons.auto_awesome,
+              color: AppTheme.primaryGlow,
+              size: 22,
+            ),
+            tooltip: 'Novedades de la versión',
+            onPressed: () {
+              WhatsNewBottomSheet.show(context);
+            },
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 12.0),
             child: PopupMenuButton<String>(
@@ -55,6 +83,8 @@ class HomeScreen extends StatelessWidget {
               onSelected: (value) async {
                 if (value == 'profile') {
                   context.go('/perfil');
+                } else if (value == 'novedades') {
+                  context.go('/novedades');
                 } else if (value == 'logout') {
                   await context.read<AuthProvider>().logout();
                   if (context.mounted) {
@@ -70,6 +100,17 @@ class HomeScreen extends StatelessWidget {
                       Icon(Icons.person_outline, size: 20, color: AppTheme.primaryGlow),
                       SizedBox(width: 8),
                       Text('Mi Perfil',
+                          style: TextStyle(color: AppTheme.foreground)),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'novedades',
+                  child: Row(
+                    children: [
+                      Icon(Icons.auto_awesome, size: 20, color: AppTheme.primaryGlow),
+                      SizedBox(width: 8),
+                      Text('Historial de Novedades',
                           style: TextStyle(color: AppTheme.foreground)),
                     ],
                   ),

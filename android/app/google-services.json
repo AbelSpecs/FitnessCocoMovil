@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "373504130840",
+    "project_id": "pyrosfit-d8524",
+    "storage_bucket": "pyrosfit-d8524.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:373504130840:android:38aa295da3c927db1c286d",
+        "android_client_info": {
+          "package_name": "com.geeksolutions.pyrosfit"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyASqTpW7w8HybdW1X-jlNZKD_2Kpx8ra28"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
