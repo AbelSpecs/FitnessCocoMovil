@@ -13,9 +13,13 @@ import 'package:pyrosfitmovil/features/student_routines/presentation/providers/s
 
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter/foundation.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:pyrosfitmovil/core/services/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  await NotificationService.initialize();
 
   const envFile = kReleaseMode ? '.env.production' : '.env.development';
   await dotenv.load(fileName: envFile);

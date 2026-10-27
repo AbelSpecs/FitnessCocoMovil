@@ -1,3 +1,4 @@
+import 'package:pyrosfitmovil/core/services/notification_service.dart';
 import 'package:pyrosfitmovil/core/services/storage_service.dart';
 import 'package:pyrosfitmovil/core/services/user_service.dart';
 import 'dart:convert';
@@ -117,6 +118,7 @@ class AuthProvider extends ChangeNotifier {
         _user = UserAuth.fromJson(jsonDecode(userData));
         // Sincronizar en segundo plano fotos y detalles actualizados
         refreshUserProfile();
+        NotificationService.syncTokenWithBackend();
       }
     } catch (e) {
       debugPrint("Error inicializando autenticación: $e");
@@ -135,11 +137,17 @@ class AuthProvider extends ChangeNotifier {
     await _safeWrite("pyrosfit_token", token);
     await _safeWrite("pyrosfit_user", jsonEncode(user.toJson()));
 
+    // Sincronizar token de notificaciones push en el servidor
+    NotificationService.syncTokenWithBackend();
+
     notifyListeners(); // Equivalente al 'set({ user, token })' de Zustand
   }
 
   /// Cierra la sesión borrando los datos (Equivalente a logout)
   Future<void> logout() async {
+    // Desvincular token FCM del dispositivo antes de borrar sesión
+    await NotificationService.unregisterToken();
+
     _user = null;
     _token = null;
 
