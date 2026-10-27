@@ -18,12 +18,17 @@ import 'package:pyrosfitmovil/core/services/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  await NotificationService.initialize();
 
   const envFile = kReleaseMode ? '.env.production' : '.env.development';
   await dotenv.load(fileName: envFile);
   await initializeDateFormatting('es_US', null);
+
+  try {
+    await Firebase.initializeApp();
+    await NotificationService.initialize();
+  } catch (e) {
+    debugPrint('Aviso al inicializar Firebase/Notificaciones: $e');
+  }
 
   // Inicializar y esperar la sesión guardada ANTES de inicializar el router y los widgets
   final authProvider = AuthProvider();
