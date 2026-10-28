@@ -7,6 +7,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:logger/logger.dart';
 import 'package:pyrosfitmovil/core/network/api_client.dart';
 import 'package:pyrosfitmovil/core/router/route_tree.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 final _logger = Logger();
 
@@ -172,7 +173,7 @@ class NotificationService {
   }
 
   /// Sincroniza el FCM Token del teléfono con el Backend
-  static Future<void> syncTokenWithBackend({String? tokenOverride}) async {
+  static Future<void> syncTokenWithBackend({int? userId, String? tokenOverride}) async {
     try {
       final token = tokenOverride ?? await _fcm.getToken();
       if (token == null || token.isEmpty) {
@@ -180,12 +181,33 @@ class NotificationService {
         return;
       }
 
+      int? targetUserId = userId;
+      if (targetUserId == null) {
+        try {
+          const storage = FlutterSecureStorage(
+            aOptions: AndroidOptions(resetOnError: true),
+            iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
+          );
+          final userData = await storage.read(key: "pyrosfit_user");
+          if (userData != null && userData.isNotEmpty) {
+            final decoded = jsonDecode(userData);
+            targetUserId = decoded['id'];
+          }
+        } catch (_) {}
+      }
+
+      if (targetUserId == null) {
+        _logger.w('No hay userId disponible para asociar el token FCM');
+        return;
+      }
+
       final platform = Platform.isIOS ? 'ios' : 'android';
-      _logger.i('Enviando token al backend ($platform): $token');
+      _logger.i('Enviando token al backend (userId: $targetUserId, $platform): $token');
 
       await ApiClient.instance.post(
         '/Notifications/register-token',
         data: {
+          'userId': targetUserId,
           'fcmToken': token,
           'platform': platform,
           'deviceModel': Platform.isAndroid ? 'Android' : 'iOS',

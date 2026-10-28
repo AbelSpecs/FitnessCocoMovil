@@ -118,7 +118,7 @@ class AuthProvider extends ChangeNotifier {
         _user = UserAuth.fromJson(jsonDecode(userData));
         // Sincronizar en segundo plano fotos y detalles actualizados
         refreshUserProfile();
-        NotificationService.syncTokenWithBackend();
+        NotificationService.syncTokenWithBackend(userId: _user?.id);
       }
     } catch (e) {
       debugPrint("Error inicializando autenticación: $e");
@@ -138,7 +138,7 @@ class AuthProvider extends ChangeNotifier {
     await _safeWrite("pyrosfit_user", jsonEncode(user.toJson()));
 
     // Sincronizar token de notificaciones push en el servidor
-    NotificationService.syncTokenWithBackend();
+    NotificationService.syncTokenWithBackend(userId: user.id);
 
     notifyListeners(); // Equivalente al 'set({ user, token })' de Zustand
   }
