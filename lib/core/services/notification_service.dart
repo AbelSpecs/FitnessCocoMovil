@@ -175,6 +175,17 @@ class NotificationService {
   /// Sincroniza el FCM Token del teléfono con el Backend
   static Future<void> syncTokenWithBackend({int? userId, String? tokenOverride}) async {
     try {
+      if (Platform.isIOS) {
+        String? apnsToken = await _fcm.getAPNSToken();
+        int attempts = 0;
+        while (apnsToken == null && attempts < 10) {
+          await Future.delayed(const Duration(milliseconds: 500));
+          apnsToken = await _fcm.getAPNSToken();
+          attempts++;
+        }
+        _logger.i('Estado APNs Token iOS: ${apnsToken != null ? "obtenido ($attempts intentos)" : "no disponible aún"}');
+      }
+
       final token = tokenOverride ?? await _fcm.getToken();
       if (token == null || token.isEmpty) {
         _logger.w('No se pudo obtener el token de FCM');
