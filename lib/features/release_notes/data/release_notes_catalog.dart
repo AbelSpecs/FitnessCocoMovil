@@ -14,7 +14,7 @@ class ReleaseNotesCatalog {
   static final List<ReleaseNote> _releases = [
     ReleaseNote(
       version: '1.0.0',
-      buildNumber: 11,
+      buildNumber: 12,
       releaseDate: DateTime(2026, 10, 30),
       title: 'Solventado bug en dispositivos iOS',
       subtitle: 'Solventado bug que no permitia las notificaciones en dispositivos iOS',
@@ -23,7 +23,7 @@ class ReleaseNotesCatalog {
         const ReleaseItem(
           title: 'Disponible notificaciones en dispositivos iOS',
           description:
-              'Los entrenadores ahora reciben recordatorios automáticos para preparar las rutinas de sus clientes a tiempo.',
+              'Las notificaciones en iphone se encuentran funcionales.',
           type: ReleaseItemType.fix,
           audience: TargetAudience.all,
           icon: Icons.build_circle_outlined,
