@@ -297,6 +297,40 @@ class _StudentClinicalOverviewCardState extends State<StudentClinicalOverviewCar
                       ),
                     ],
                   ),
+                  const SizedBox(height: 8),
+                  // Composicion Corporal Calculada (Masa Magra y Masa Grasa)
+                  Row(
+                    children: [
+                      _buildMetricTile(
+                        icon: Icons.fitness_center_rounded,
+                        label: 'MASA MAGRA',
+                        value: data.formattedLeanMass,
+                      ),
+                      const SizedBox(width: 8),
+                      _buildMetricTile(
+                        icon: Icons.water_drop_outlined,
+                        label: 'MASA GRASA',
+                        value: data.formattedFatMass,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Metabolismo y Gasto Energético (TMB y TDEE)
+                  Row(
+                    children: [
+                      _buildMetricTile(
+                        icon: Icons.local_fire_department_rounded,
+                        label: 'METABOLISMO BASAL',
+                        value: data.formattedBMR,
+                      ),
+                      const SizedBox(width: 8),
+                      _buildMetricTile(
+                        icon: Icons.bolt_rounded,
+                        label: 'GASTO DIARIO (TDEE)',
+                        value: data.formattedTDEE,
+                      ),
+                    ],
+                  ),
 
                   const SizedBox(height: 16),
 

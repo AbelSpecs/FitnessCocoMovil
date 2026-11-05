@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pyrosfitmovil/core/utils/anthropometric_helper.dart';
 
 class StudentClinicalData {
   final int id;
@@ -6,6 +7,7 @@ class StudentClinicalData {
   final double? weight;
   final double? height;
   final double? bodyFatPercentage;
+  final DateTime? birthdate;
   final String? fitnessGoal;
   final String? activityLevel;
   final String? medicalConditions;
@@ -20,6 +22,7 @@ class StudentClinicalData {
     this.weight,
     this.height,
     this.bodyFatPercentage,
+    this.birthdate,
     this.fitnessGoal,
     this.activityLevel,
     this.medicalConditions,
@@ -50,12 +53,22 @@ class StudentClinicalData {
       return null;
     }
 
+    DateTime? parseDate(dynamic val) {
+      if (val == null) return null;
+      if (val is DateTime) return val;
+      if (val is String && val.trim().isNotEmpty) {
+        return DateTime.tryParse(val);
+      }
+      return null;
+    }
+
     return StudentClinicalData(
       id: parseInt(data['id'] ?? data['studentId']) ?? 0,
       userId: parseInt(data['userId'] ?? (data['user'] is Map ? data['user']['id'] : null)),
       weight: parseDouble(data['weight']),
       height: parseDouble(data['height']),
       bodyFatPercentage: parseDouble(data['bodyFatPercentage']),
+      birthdate: parseDate(data['birthdate'] ?? (data['user'] is Map ? data['user']['birthdate'] : null)),
       fitnessGoal: data['fitnessGoal'] as String?,
       activityLevel: data['activityLevel'] as String?,
       medicalConditions: data['medicalConditions'] as String?,
@@ -66,36 +79,59 @@ class StudentClinicalData {
     );
   }
 
-  /// Calcula el Índice de Masa Corporal (IMC = peso / (altura_en_metros)^2)
-  double? get bmi {
-    if (weight == null || height == null || weight! <= 0 || height! <= 0) {
-      return null;
-    }
-    final heightInMeters = height! / 100.0;
-    final val = weight! / (heightInMeters * heightInMeters);
-    if (!val.isFinite || val <= 0 || val > 100) return null;
-    return double.parse(val.toStringAsFixed(1));
-  }
+  // --- Métricas Calculadas mediante AnthropometricHelper ---
 
-  /// Clasificación de la Organización Mundial de la Salud (OMS)
-  String get bmiCategory {
-    final val = bmi;
-    if (val == null) return 'No registrado';
-    if (val < 18.5) return 'Bajo peso';
-    if (val < 25.0) return 'Normal';
-    if (val < 30.0) return 'Sobrepeso';
-    return 'Obesidad';
-  }
+  /// Índice de Masa Corporal (IMC)
+  double? get bmi => AnthropometricHelper.calculateBMI(weightKg: weight, heightCm: height);
 
-  /// Color semántico según la categoría de IMC
-  Color get bmiColor {
-    final val = bmi;
-    if (val == null) return Colors.grey;
-    if (val < 18.5) return const Color(0xFFFBBF24); // Ámbar
-    if (val < 25.0) return const Color(0xFF22C55E); // Verde
-    if (val < 30.0) return const Color(0xFFF97316); // Naranja
-    return const Color(0xFFEF4444); // Rojo
-  }
+  /// Categoría OMS del IMC
+  String get bmiCategory => AnthropometricHelper.getBMICategory(bmi);
+
+  /// Color semántico del IMC
+  Color get bmiColor => AnthropometricHelper.getBMIColor(bmi);
+
+  /// Masa Grasa en Kilogramos
+  double? get fatMassKg => AnthropometricHelper.calculateFatMassKg(
+        weightKg: weight,
+        bodyFatPercentage: bodyFatPercentage,
+      );
+
+  /// Masa Magra en Kilogramos
+  double? get leanMassKg => AnthropometricHelper.calculateLeanMassKg(
+        weightKg: weight,
+        bodyFatPercentage: bodyFatPercentage,
+      );
+
+  /// % de Masa Magra
+  double? get leanMassPercentage => AnthropometricHelper.calculateLeanMassPercentage(bodyFatPercentage);
+
+  /// Edad cronológica
+  int? get age => AnthropometricHelper.calculateAge(birthdate);
+
+  /// Tasa Metabólica Basal (TMB / BMR) en kcal/día
+  int? get bmr => AnthropometricHelper.calculateBMR(
+        weightKg: weight,
+        heightCm: height,
+        bodyFatPercentage: bodyFatPercentage,
+        age: age,
+      );
+
+  /// Gasto Energético Total Diario (TDEE) / Mantenimiento en kcal/día
+  int? get tdee => AnthropometricHelper.calculateTDEE(
+        bmr: bmr,
+        activityLevel: activityLevel,
+      );
+
+  /// Rango de peso saludable (min, max en kg)
+  (double min, double max)? get healthyWeightRange => AnthropometricHelper.calculateHealthyWeightRange(height);
+
+  // Formatos amigables para la UI
+  String get formattedFatMass => fatMassKg != null ? '${fatMassKg!.toStringAsFixed(1)} kg' : '--';
+  String get formattedLeanMass => leanMassKg != null ? '${leanMassKg!.toStringAsFixed(1)} kg' : '--';
+  String get formattedLeanPercentage => leanMassPercentage != null ? '${leanMassPercentage!.toStringAsFixed(1)}%' : '--';
+  String get formattedBMR => bmr != null ? '$bmr kcal' : '--';
+  String get formattedTDEE => tdee != null ? '$tdee kcal' : '--';
+  String get formattedAge => age != null ? '$age años' : 'No registrada';
 
   /// Evalúa si el texto clínico contiene información real (filtrando "ninguna", "n/a", etc.)
   static bool hasMeaningfulText(String? text) {
