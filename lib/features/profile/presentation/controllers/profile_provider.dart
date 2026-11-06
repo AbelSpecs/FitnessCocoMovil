@@ -240,13 +240,21 @@ class ProfileProvider extends ChangeNotifier {
   }
 
   void _initEditingValues() {
-    editingWeight = _studentData?['weight']?.toDouble();
-    editingHeight = _studentData?['height']?.toDouble();
-    editingBodyFatPercentage = _studentData?['bodyFatPercentage']?.toDouble();
-    editingActivityLevel = _studentData?['activityLevel'];
-    editingMedicalConditions = _studentData?['medicalConditions'];
-    editingAllergies = _studentData?['allergies'];
-    editingFitnessGoal = _studentData?['fitnessGoal'];
+    double? parseD(dynamic v) {
+      if (v == null) return null;
+      if (v is double) return v;
+      if (v is int) return v.toDouble();
+      if (v is String) return double.tryParse(v.replaceAll(',', '.'));
+      return null;
+    }
+
+    editingWeight = parseD(_studentData?['weight']);
+    editingHeight = parseD(_studentData?['height']);
+    editingBodyFatPercentage = parseD(_studentData?['bodyFatPercentage']);
+    editingActivityLevel = _studentData?['activityLevel']?.toString();
+    editingMedicalConditions = _studentData?['medicalConditions']?.toString();
+    editingAllergies = _studentData?['allergies']?.toString();
+    editingFitnessGoal = _studentData?['fitnessGoal']?.toString();
   }
 
   void _initCoachEditingValues() {
@@ -258,13 +266,10 @@ class ProfileProvider extends ChangeNotifier {
 
   void setEditing(bool val) {
     _isEditing = val;
-    if (!val) {
-      // Revertir a valores originales si cancela
-      if (_isCoach) {
-        _initCoachEditingValues();
-      } else {
-        _initEditingValues();
-      }
+    if (_isCoach) {
+      _initCoachEditingValues();
+    } else {
+      _initEditingValues();
     }
     notifyListeners();
   }
@@ -359,28 +364,28 @@ class ProfileProvider extends ChangeNotifier {
   void updateField(String field, dynamic value) {
     switch (field) {
       case 'weight':
-        editingWeight = double.tryParse(value.toString());
+        editingWeight = double.tryParse(value.toString().replaceAll(',', '.'));
         break;
       case 'height':
-        editingHeight = double.tryParse(value.toString());
+        editingHeight = double.tryParse(value.toString().replaceAll(',', '.'));
         break;
       case 'bodyFatPercentage':
-        editingBodyFatPercentage = double.tryParse(value.toString());
+        editingBodyFatPercentage = double.tryParse(value.toString().replaceAll(',', '.'));
         break;
       case 'activityLevel':
-        editingActivityLevel = value;
+        editingActivityLevel = value?.toString();
         break;
       case 'medicalConditions':
-        editingMedicalConditions = value;
+        editingMedicalConditions = value?.toString();
         break;
       case 'allergies':
-        editingAllergies = value;
+        editingAllergies = value?.toString();
         break;
       case 'fitnessGoal':
-        editingFitnessGoal = value;
-        break;
+        editingFitnessGoal = value?.toString();
+        notifyListeners();
+        return;
     }
-    notifyListeners();
   }
 
   void updateCoachField(String field, dynamic value) {
@@ -393,13 +398,13 @@ class ProfileProvider extends ChangeNotifier {
         break;
       case 'bannerUrl':
         editingBannerUrl = value?.toString();
-        break;
+        notifyListeners();
+        return;
       case 'yearsOfExperience':
       case 'experienceYears':
         editingYearsOfExperience = int.tryParse(value?.toString() ?? '') ?? 0;
         break;
     }
-    notifyListeners();
   }
 
   Future<bool> saveProfile() async {
@@ -417,28 +422,54 @@ class ProfileProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final studentId = _studentData!['id'];
-      final updateData = {
-        ..._studentData!,
+      final studentId = int.tryParse(_studentData!['id']?.toString() ?? '') ?? 0;
+      final userId = int.tryParse((_userData?['id'] ?? _studentData!['userId'])?.toString() ?? '') ?? 0;
+      final gymId = int.tryParse((_studentData!['gymId'] ?? 1)?.toString() ?? '') ?? 1;
+
+      double? finalHeight = editingHeight;
+      if (finalHeight != null && finalHeight > 0 && finalHeight < 3.0) {
+        finalHeight = finalHeight * 100.0;
+      }
+
+      final studentPayload = {
+        'userId': userId,
+        'gymId': gymId,
         'weight': editingWeight,
-        'height': editingHeight,
+        'height': finalHeight,
         'bodyFatPercentage': editingBodyFatPercentage,
         'activityLevel': editingActivityLevel,
         'medicalConditions': editingMedicalConditions,
         'allergies': editingAllergies,
         'fitnessGoal': editingFitnessGoal,
+        'fitnessExperience': _studentData!['fitnessExperience'],
+        'generalNotes': _studentData!['generalNotes'],
       };
 
-      final fullData = {..._userData!, 'student': updateData};
-      await StudentService.updateStudent(studentId, fullData);
+      final payload = {
+        'id': studentId,
+        'student': studentPayload,
+      };
 
-      _studentData = updateData;
+      final response = await StudentService.updateStudent(studentId, payload);
+      logger.i("Respuesta guardado estudiante: $response");
+
+      _studentData = {
+        ..._studentData!,
+        ...studentPayload,
+      };
+      if (_userData != null) {
+        _userData = {
+          ..._userData!,
+          'student': _studentData,
+        };
+      }
+      _initEditingValues();
       _isEditing = false;
       return true;
     } catch (e) {
       scaffoldMessengerKey.currentState?.showSnackBar(
-        const SnackBar(
-          content: Text('Ocurrió un error, por favor intenta de nuevo.'),
+        SnackBar(
+          content: Text('Error al guardar datos: ${e.toString().replaceAll("Exception:", "").trim()}'),
           backgroundColor: Colors.red,
         ),
       );

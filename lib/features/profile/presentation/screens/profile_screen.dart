@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:pyrosfitmovil/core/models/student_clinical_data_model.dart';
 import 'package:pyrosfitmovil/features/auth/presentation/controllers/auth_provider.dart';
 import 'package:pyrosfitmovil/features/profile/presentation/controllers/profile_provider.dart';
 import 'package:pyrosfitmovil/theme/app_theme.dart';
@@ -973,13 +974,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // STUDENT PROFILE VIEW
   // =========================================================================
 
+  StudentClinicalData _getStudentClinicalData(ProfileProvider provider) {
+    return StudentClinicalData.fromJson({
+      ...?provider.studentData,
+      'birthdate': provider.studentData?['birthdate'] ?? provider.userData?['birthdate'],
+      if (provider.isEditing) ...{
+        'weight': provider.editingWeight,
+        'height': provider.editingHeight,
+        'bodyFatPercentage': provider.editingBodyFatPercentage,
+        'activityLevel': provider.editingActivityLevel,
+        'medicalConditions': provider.editingMedicalConditions,
+        'allergies': provider.editingAllergies,
+        'fitnessGoal': provider.editingFitnessGoal,
+      },
+    });
+  }
+
   Widget _buildStudentProfile(BuildContext context, ProfileProvider provider, String? firstName) {
     final authUser = context.read<AuthProvider>().user;
+    final clinicalData = _getStudentClinicalData(provider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _buildHeroCard(context, provider, firstName),
+        _buildHeroCard(context, provider, firstName, clinicalData),
         const SizedBox(height: 16),
 
         if (!provider.isEditing) ...[
@@ -991,7 +1009,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 16),
 
           if (_studentSelectedTab == 0)
-            _buildBasicDataForm(context, provider)
+            _buildStudentBiometricsDashboard(context, provider, clinicalData)
           else if (_studentSelectedTab == 1)
             _buildGoalsSection(context, provider)
           else
@@ -1007,7 +1025,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildHeroCard(BuildContext context, ProfileProvider provider, String? firstName) {
+  Widget _buildHeroCard(
+    BuildContext context,
+    ProfileProvider provider,
+    String? firstName,
+    StudentClinicalData clinicalData,
+  ) {
     final initial = (firstName != null && firstName.isNotEmpty)
         ? firstName.substring(0, 1).toUpperCase()
         : 'U';
@@ -1069,13 +1092,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
+              _buildStat('Edad', clinicalData.age != null ? '${clinicalData.age}' : '--'),
+              _buildStatDivider(),
+              _buildStat('Peso', clinicalData.weight != null ? '${clinicalData.weight!.toStringAsFixed(1)} kg' : '--'),
+              _buildStatDivider(),
               _buildStat(
-                'Edad',
-                _calculateAge(provider.studentData?['birthdate']?.toString() ??
-                    provider.userData?['birthdate']?.toString()),
+                'Altura',
+                clinicalData.formattedHeightMeters,
+                subtitle: clinicalData.formattedHeightCm != '--' ? clinicalData.formattedHeightCm : null,
               ),
               _buildStatDivider(),
-              _buildStat('Peso', '${provider.studentData?['weight'] ?? '-'} kg'),
+              _buildStat(
+                'IMC',
+                clinicalData.bmi != null ? clinicalData.bmi!.toStringAsFixed(1) : '--',
+                valueColor: clinicalData.bmiColor,
+              ),
             ],
           ),
           if (!provider.isEditing)
@@ -1085,7 +1116,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.edit, size: 16, color: AppTheme.primaryGlow),
-                  label: const Text('Editar'),
+                  label: const Text('Editar Perfil'),
                   onPressed: () => provider.setEditing(true),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.white,
@@ -1100,37 +1131,606 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildStat(String label, String value) {
+  Widget _buildStat(String label, String value, {Color? valueColor, String? subtitle}) {
     return Column(
       children: [
         Text(
           value,
-          style: const TextStyle(
-            fontSize: 20,
+          style: TextStyle(
+            fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: valueColor ?? Colors.white,
           ),
         ),
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        if (subtitle != null) ...[
+          const SizedBox(height: 1),
+          Text(
+            subtitle,
+            style: const TextStyle(fontSize: 10, color: Colors.white70),
+          ),
+        ],
+        const SizedBox(height: 2),
+        Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
       ],
     );
   }
 
-  String _calculateAge(String? birthdateStr) {
-    if (birthdateStr == null || birthdateStr.isEmpty) return '-';
-    try {
-      final birthDate = DateTime.parse(birthdateStr);
-      final today = DateTime.now();
-      int age = today.year - birthDate.year;
-      final monthDifference = today.month - birthDate.month;
-      if (monthDifference < 0 ||
-          (monthDifference == 0 && today.day < birthDate.day)) {
-        age--;
-      }
-      return age.toString();
-    } catch (e) {
-      return '-';
-    }
+  /// Dashboard moderno con todas las métricas antropométricas y metabólicas para el cliente
+  Widget _buildStudentBiometricsDashboard(
+    BuildContext context,
+    ProfileProvider provider,
+    StudentClinicalData data,
+  ) {
+    final healthyRange = data.healthyWeightRange;
+    final hasAlert = data.hasHealthAlert;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // 1. TARJETA PRINCIPAL DE ANTROPOMETRÍA Y COMPOSICIÓN CORPORAL
+        Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF18181B).withValues(alpha: 0.85),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppTheme.border.withValues(alpha: 0.8)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.3),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.monitor_heart_rounded, color: AppTheme.primaryGlow, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'COMPOSICIÓN CORPORAL & BIOMETRÍA',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.0,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Métricas antropométricas y estimaciones metabólicas',
+                          style: TextStyle(fontSize: 11, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+
+              // Métricas Base
+              const Text(
+                'MÉTRICAS BASE',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.0,
+                  color: Colors.grey,
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              // Grid 1: Peso y Altura
+              Row(
+                children: [
+                  _buildBiometricTile(
+                    icon: Icons.scale_rounded,
+                    label: 'PESO',
+                    value: data.formattedWeight,
+                  ),
+                  const SizedBox(width: 10),
+                  _buildBiometricTile(
+                    icon: Icons.height_rounded,
+                    label: 'ALTURA',
+                    value: data.formattedHeightCm,
+                    subtitle: data.formattedHeightMeters != '--' ? 'Equivale a ${data.formattedHeightMeters}' : null,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // Grid 2: % Grasa e IMC (OMS)
+              Row(
+                children: [
+                  _buildBiometricTile(
+                    icon: Icons.pie_chart_outline_rounded,
+                    label: '% DE GRASA',
+                    value: data.formattedBodyFat,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F172A),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: data.bmiColor.withValues(alpha: 0.5)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.health_and_safety_rounded, color: data.bmiColor, size: 16),
+                              const SizedBox(width: 6),
+                              const Text(
+                                'IMC (OMS)',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.grey,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(
+                                data.bmi != null ? data.bmi!.toStringAsFixed(1) : '--',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: data.bmiColor,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  data.bmiCategory,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: data.bmiColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Subtítulo: Distribución de Masa Estimada
+              const Text(
+                'DISTRIBUCIÓN DE MASA ESTIMADA',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.0,
+                  color: Colors.grey,
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              Row(
+                children: [
+                  _buildBiometricTile(
+                    icon: Icons.fitness_center_rounded,
+                    iconColor: AppTheme.primaryGlow,
+                    label: 'MASA MAGRA',
+                    value: data.formattedLeanMass,
+                    subtitle: data.leanMassPercentage != null
+                        ? '${data.formattedLeanPercentage} libre de grasa'
+                        : null,
+                  ),
+                  const SizedBox(width: 10),
+                  _buildBiometricTile(
+                    icon: Icons.water_drop_outlined,
+                    iconColor: const Color(0xFFF59E0B),
+                    label: 'MASA GRASA',
+                    value: data.formattedFatMass,
+                    subtitle: data.bodyFatPercentage != null
+                        ? '${data.formattedBodyFat} grasa corporal'
+                        : null,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Subtítulo: Metabolismo & Gasto Energético
+              const Text(
+                'METABOLISMO & GASTO ENERGÉTICO',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.0,
+                  color: Colors.grey,
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              Row(
+                children: [
+                  _buildBiometricTile(
+                    icon: Icons.local_fire_department_rounded,
+                    iconColor: const Color(0xFFFB923C),
+                    label: 'METABOLISMO BASAL',
+                    value: data.formattedBMR,
+                    subtitle: 'Gasto calórico en reposo',
+                  ),
+                  const SizedBox(width: 10),
+                  _buildBiometricTile(
+                    icon: Icons.bolt_rounded,
+                    iconColor: const Color(0xFFFACC15),
+                    label: 'GASTO DIARIO (TDEE)',
+                    value: data.formattedTDEE,
+                    subtitle: 'Mantenimiento con actividad',
+                  ),
+                ],
+              ),
+
+              // Rango de Peso Saludable (si hay altura)
+              if (healthyRange != null) ...[
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F172A),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.35)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.health_and_safety_rounded, color: Color(0xFF34D399), size: 18),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'PESO SALUDABLE ESTIMADO (OMS)',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.8,
+                                color: Color(0xFF34D399),
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              '${healthyRange.$1.toStringAsFixed(1)} kg - ${healthyRange.$2.toStringAsFixed(1)} kg',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            const Text(
+                              'Rango recomendado según IMC normopeso (18.5 - 24.9) para tu estatura.',
+                              style: TextStyle(fontSize: 10, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // 2. TARJETA DE HÁBITOS, CONDICIONES & NOTAS
+        Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF18181B).withValues(alpha: 0.85),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: hasAlert
+                  ? const Color(0xFFF59E0B).withValues(alpha: 0.5)
+                  : AppTheme.border.withValues(alpha: 0.8),
+            ),
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: hasAlert
+                          ? const Color(0xFFF59E0B).withValues(alpha: 0.15)
+                          : AppTheme.primary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      hasAlert ? Icons.health_and_safety_rounded : Icons.fitness_center_rounded,
+                      color: hasAlert ? const Color(0xFFFBBF24) : AppTheme.primaryGlow,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'HÁBITOS & ANTECEDENTES DE SALUD',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.0,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Información clínica para entrenar con seguridad',
+                          style: TextStyle(fontSize: 11, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Nivel de Actividad
+              _buildBiometricProfileRow(
+                'Nivel de Actividad:',
+                data.formattedActivityLevel,
+                Icons.directions_run_rounded,
+              ),
+              const Divider(height: 16, color: Color(0xFF27272A)),
+
+              // Experiencia
+              _buildBiometricProfileRow(
+                'Experiencia Fitness:',
+                data.formattedExperience,
+                Icons.sports_gymnastics_rounded,
+              ),
+              const Divider(height: 16, color: Color(0xFF27272A)),
+
+              // Objetivo
+              _buildBiometricProfileRow(
+                'Objetivo Principal:',
+                data.formattedGoal,
+                Icons.flag_rounded,
+              ),
+
+              // Alertas Médicas si existen
+              if (data.hasMedicalConditions) ...[
+                const SizedBox(height: 14),
+                _buildBiometricAlertTile(
+                  title: 'Condición Médica Registrada:',
+                  content: data.medicalConditions!,
+                  icon: Icons.health_and_safety_rounded,
+                  accentColor: const Color(0xFFEF4444),
+                  bgColor: const Color(0xFF450A0A),
+                ),
+              ],
+
+              if (data.hasAllergies) ...[
+                const SizedBox(height: 10),
+                _buildBiometricAlertTile(
+                  title: 'Alergias Registradas:',
+                  content: data.allergies!,
+                  icon: Icons.warning_amber_rounded,
+                  accentColor: const Color(0xFFF59E0B),
+                  bgColor: const Color(0xFF451A03),
+                ),
+              ],
+
+              if (data.hasGeneralNotes) ...[
+                const SizedBox(height: 10),
+                _buildBiometricAlertTile(
+                  title: 'Notas Generales:',
+                  content: data.generalNotes!,
+                  icon: Icons.notes_rounded,
+                  accentColor: AppTheme.primary,
+                  bgColor: const Color(0xFF18181B),
+                ),
+              ],
+
+              if (!data.hasHealthAlert && !data.hasGeneralNotes) ...[
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.check_circle_outline_rounded, color: Color(0xFF34D399), size: 16),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Sin condiciones médicas ni alergias restrictivas registradas.',
+                          style: TextStyle(color: Color(0xFF34D399), fontSize: 11),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBiometricTile({
+    required IconData icon,
+    required String label,
+    required String value,
+    Color? iconColor,
+    String? subtitle,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F172A),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: iconColor ?? AppTheme.primary, size: 16),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: Colors.grey,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            if (subtitle != null) ...[
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: Colors.white54,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBiometricProfileRow(String label, String value, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, size: 15, color: AppTheme.primary),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBiometricAlertTile({
+    required String title,
+    required String content,
+    required IconData icon,
+    required Color accentColor,
+    required Color bgColor,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: bgColor.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accentColor.withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: accentColor, size: 15),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: accentColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            content,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.white,
+              height: 1.3,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildBasicDataForm(BuildContext context, ProfileProvider provider) {
@@ -1144,46 +1744,95 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Datos básicos',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.edit_note_rounded, color: AppTheme.primaryGlow, size: 20),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Actualizar Datos & Biometría',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'El IMC y métricas metabólicas se recalcularán al guardar.',
+                      style: TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          _buildTextField('Peso (kg)', provider.editingWeight?.toString() ?? '',
-              provider.isEditing, (v) => provider.updateField('weight', v),
-              keyboardType: TextInputType.number),
+          const SizedBox(height: 20),
           _buildTextField(
-              'Altura (cm)',
-              provider.editingHeight?.toString() ?? '',
-              provider.isEditing,
-              (v) => provider.updateField('height', v),
-              keyboardType: TextInputType.number),
+            'Peso (kg)',
+            provider.editingWeight?.toString() ?? '',
+            provider.isEditing,
+            (v) => provider.updateField('weight', v),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          ),
           _buildTextField(
-              '% de grasa',
-              provider.editingBodyFatPercentage?.toString() ?? '',
-              provider.isEditing,
-              (v) => provider.updateField('bodyFatPercentage', v),
-              keyboardType: TextInputType.number),
+            'Altura (cm o m - ej. 175 o 1.75)',
+            provider.editingHeight != null
+                ? (provider.editingHeight! >= 3.0
+                    ? provider.editingHeight!.toStringAsFixed(0)
+                    : provider.editingHeight!.toStringAsFixed(2))
+                : '',
+            provider.isEditing,
+            (v) => provider.updateField('height', v),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          ),
           _buildTextField(
-              'Nivel de actividad',
-              provider.editingActivityLevel ?? '',
-              provider.isEditing,
-              (v) => provider.updateField('activityLevel', v)),
+            '% de grasa',
+            provider.editingBodyFatPercentage?.toString() ?? '',
+            provider.isEditing,
+            (v) => provider.updateField('bodyFatPercentage', v),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          ),
           _buildTextField(
-              'Condiciones médicas',
-              provider.editingMedicalConditions ?? '',
-              provider.isEditing,
-              (v) => provider.updateField('medicalConditions', v)),
-          _buildTextField('Alergias', provider.editingAllergies ?? '',
-              provider.isEditing, (v) => provider.updateField('allergies', v)),
-          _buildTextField('Experiencia',
-              provider.studentData?['fitnessExperience'] ?? '', false, null),
-          _buildTextField('Notas', provider.studentData?['generalNotes'] ?? '',
-              false, null),
+            'Nivel de actividad (sedentary, light, moderate, active, very_active)',
+            provider.editingActivityLevel ?? '',
+            provider.isEditing,
+            (v) => provider.updateField('activityLevel', v),
+          ),
+          _buildTextField(
+            'Condiciones médicas',
+            provider.editingMedicalConditions ?? '',
+            provider.isEditing,
+            (v) => provider.updateField('medicalConditions', v),
+          ),
+          _buildTextField(
+            'Alergias',
+            provider.editingAllergies ?? '',
+            provider.isEditing,
+            (v) => provider.updateField('allergies', v),
+          ),
+          _buildTextField(
+            'Experiencia',
+            provider.studentData?['fitnessExperience'] ?? '',
+            false,
+            null,
+          ),
+          _buildTextField(
+            'Notas',
+            provider.studentData?['generalNotes'] ?? '',
+            false,
+            null,
+          ),
         ],
       ),
     );
@@ -1195,6 +1844,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: TextFormField(
+        key: ValueKey('field_${label}_$enabled'),
         initialValue: value,
         enabled: enabled,
         onChanged: onChanged,
@@ -1316,6 +1966,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 : () async {
                     final success = await provider.saveProfile();
                     if (success && context.mounted) {
+                      final authUser = context.read<AuthProvider>().user;
+                      final isCoach = authUser?.role?.name == 'coach';
+                      if (authUser != null) {
+                        provider.fetchProfile(authUser.id, isCoach, authProvider: context.read<AuthProvider>());
+                      }
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Cambios guardados con éxito'),

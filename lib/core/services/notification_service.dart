@@ -176,17 +176,29 @@ class NotificationService {
   static Future<void> syncTokenWithBackend({int? userId, String? tokenOverride}) async {
     try {
       if (Platform.isIOS) {
-        String? apnsToken = await _fcm.getAPNSToken();
-        int attempts = 0;
-        while (apnsToken == null && attempts < 10) {
-          await Future.delayed(const Duration(milliseconds: 500));
+        String? apnsToken;
+        try {
           apnsToken = await _fcm.getAPNSToken();
-          attempts++;
+          int attempts = 0;
+          while (apnsToken == null && attempts < 15) {
+            await Future.delayed(const Duration(milliseconds: 500));
+            apnsToken = await _fcm.getAPNSToken();
+            attempts++;
+          }
+          _logger.i('Estado APNs Token iOS: ${apnsToken != null ? "obtenido ($attempts intentos)" : "no disponible aún"}');
+        } catch (e) {
+          _logger.w('Error verificando APNs token: $e');
         }
-        _logger.i('Estado APNs Token iOS: ${apnsToken != null ? "obtenido ($attempts intentos)" : "no disponible aún"}');
       }
 
-      final token = tokenOverride ?? await _fcm.getToken();
+      String? token;
+      try {
+        token = tokenOverride ?? await _fcm.getToken();
+      } catch (e) {
+        _logger.e('Fallo al llamar FirebaseMessaging.getToken() en iOS: $e');
+        return;
+      }
+
       if (token == null || token.isEmpty) {
         _logger.w('No se pudo obtener el token de FCM');
         return;
