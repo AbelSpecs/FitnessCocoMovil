@@ -65,12 +65,32 @@ class StudentService {
   static Future<Map<String, dynamic>?> updateStudent(
       int id, Map<String, dynamic> studentData) async {
     try {
-      final response = await _api.put('/Students/$id', data: studentData);
-      logger.i('Estudiante actualizado exitosamente');
-      return response.data as Map<String, dynamic>;
+      final Map<String, dynamic> payload;
+      if (studentData.containsKey('student')) {
+        payload = {
+          'id': id,
+          'student': studentData['student'],
+        };
+      } else {
+        payload = {
+          'id': id,
+          'student': studentData,
+        };
+      }
+
+      final response = await _api.put('/Students/$id', data: payload);
+      logger.i('Estudiante actualizado exitosamente: ${response.data}');
+      if (response.data is Map<String, dynamic>) {
+        final resMap = response.data as Map<String, dynamic>;
+        if (resMap['isSuccess'] == false) {
+          throw Exception(resMap['message'] ?? 'Error al actualizar estudiante');
+        }
+        return resMap;
+      }
+      return {'isSuccess': true};
     } catch (e) {
       logger.e('Error al actualizar estudiante: $e');
-      return null;
+      rethrow;
     }
   }
 

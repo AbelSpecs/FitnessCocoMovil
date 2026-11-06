@@ -1096,7 +1096,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _buildStatDivider(),
               _buildStat('Peso', clinicalData.weight != null ? '${clinicalData.weight!.toStringAsFixed(1)} kg' : '--'),
               _buildStatDivider(),
-              _buildStat('Altura', clinicalData.height != null ? '${clinicalData.height!.toStringAsFixed(0)} cm' : '--'),
+              _buildStat(
+                'Altura',
+                clinicalData.formattedHeightMeters,
+                subtitle: clinicalData.formattedHeightCm != '--' ? clinicalData.formattedHeightCm : null,
+              ),
               _buildStatDivider(),
               _buildStat(
                 'IMC',
@@ -1127,7 +1131,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildStat(String label, String value, {Color? valueColor}) {
+  Widget _buildStat(String label, String value, {Color? valueColor, String? subtitle}) {
     return Column(
       children: [
         Text(
@@ -1138,6 +1142,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             color: valueColor ?? Colors.white,
           ),
         ),
+        if (subtitle != null) ...[
+          const SizedBox(height: 1),
+          Text(
+            subtitle,
+            style: const TextStyle(fontSize: 10, color: Colors.white70),
+          ),
+        ],
         const SizedBox(height: 2),
         Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
       ],
@@ -1235,7 +1246,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _buildBiometricTile(
                     icon: Icons.height_rounded,
                     label: 'ALTURA',
-                    value: data.formattedHeight,
+                    value: data.formattedHeightCm,
+                    subtitle: data.formattedHeightMeters != '--' ? 'Equivale a ${data.formattedHeightMeters}' : null,
                   ),
                 ],
               ),
@@ -1774,8 +1786,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
           ),
           _buildTextField(
-            'Altura (cm)',
-            provider.editingHeight?.toString() ?? '',
+            'Altura (cm o m - ej. 175 o 1.75)',
+            provider.editingHeight != null
+                ? (provider.editingHeight! >= 3.0
+                    ? provider.editingHeight!.toStringAsFixed(0)
+                    : provider.editingHeight!.toStringAsFixed(2))
+                : '',
             provider.isEditing,
             (v) => provider.updateField('height', v),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -1828,6 +1844,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: TextFormField(
+        key: ValueKey('field_${label}_$enabled'),
         initialValue: value,
         enabled: enabled,
         onChanged: onChanged,
@@ -1949,6 +1966,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 : () async {
                     final success = await provider.saveProfile();
                     if (success && context.mounted) {
+                      final authUser = context.read<AuthProvider>().user;
+                      final isCoach = authUser?.role?.name == 'coach';
+                      if (authUser != null) {
+                        provider.fetchProfile(authUser.id, isCoach, authProvider: context.read<AuthProvider>());
+                      }
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Cambios guardados con éxito'),

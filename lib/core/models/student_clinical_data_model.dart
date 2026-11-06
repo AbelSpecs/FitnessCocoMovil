@@ -158,7 +158,30 @@ class StudentClinicalData {
   bool get hasHealthAlert => hasMedicalConditions || hasAllergies;
 
   String get formattedWeight => weight != null && weight! > 0 ? '${weight!.toStringAsFixed(1)} kg' : 'No registrado';
-  String get formattedHeight => height != null && height! > 0 ? '${height!.toStringAsFixed(0)} cm' : 'No registrado';
+
+  /// Altura formateada con equivalencia en metros y centímetros, ej: "175 cm (1.75 m)"
+  String get formattedHeight {
+    if (height == null || height! <= 0) return 'No registrado';
+    final isAlreadyMeters = height! < 3.0;
+    final cm = isAlreadyMeters ? height! * 100.0 : height!;
+    final m = isAlreadyMeters ? height! : height! / 100.0;
+    return '${cm.toStringAsFixed(0)} cm (${m.toStringAsFixed(2)} m)';
+  }
+
+  /// Equivalencia en metros, ej: "1.75 m"
+  String get formattedHeightMeters {
+    if (height == null || height! <= 0) return '--';
+    final m = height! < 3.0 ? height! : height! / 100.0;
+    return '${m.toStringAsFixed(2)} m';
+  }
+
+  /// Equivalencia en centímetros, ej: "175 cm"
+  String get formattedHeightCm {
+    if (height == null || height! <= 0) return '--';
+    final cm = height! < 3.0 ? height! * 100.0 : height!;
+    return '${cm.toStringAsFixed(0)} cm';
+  }
+
   String get formattedBodyFat => bodyFatPercentage != null && bodyFatPercentage! > 0 ? '${bodyFatPercentage!.toStringAsFixed(1)}%' : 'No registrado';
 
   String get formattedGoal {
