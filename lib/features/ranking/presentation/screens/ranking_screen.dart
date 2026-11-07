@@ -5,11 +5,15 @@ import 'package:pyrosfitmovil/core/services/student_service.dart';
 import 'package:pyrosfitmovil/core/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:showcaseview/showcaseview.dart';
 import 'package:intl/intl.dart';
 import 'package:pyrosfitmovil/core/models/streak_models.dart';
 import 'package:pyrosfitmovil/core/services/streak_service.dart';
+import 'package:pyrosfitmovil/core/services/tutorial_service.dart';
 import 'package:pyrosfitmovil/core/utils/streak_helpers.dart';
+import 'package:pyrosfitmovil/core/widgets/pyros_showcase.dart';
 import 'package:pyrosfitmovil/features/auth/presentation/controllers/auth_provider.dart';
+import 'package:pyrosfitmovil/features/release_notes/services/release_notes_service.dart';
 import 'package:pyrosfitmovil/theme/app_theme.dart';
 
 enum RankingMetric { streak, points, longestStreak }
@@ -34,10 +38,91 @@ class _RankingScreenState extends State<RankingScreen> {
 
   final List<String> _periods = const ['Semana', 'Mes', 'Temporada'];
 
+  // Claves globales para los pasos del tour en Ranking
+  final GlobalKey _metricsTourKey = GlobalKey();
+  final GlobalKey _podiumTourKey = GlobalKey();
+  final GlobalKey _myCardTourKey = GlobalKey();
+
+  late final ShowcaseView _showcaseView;
+  bool _tourChecked = false;
+  VoidCallback? _whatsNewListener;
+
   @override
   void initState() {
     super.initState();
+    _showcaseView = ShowcaseView.register(
+      scope: 'ranking_tour',
+      enableAutoScroll: true,
+      skipIfTargetNotPresent: true,
+      blurValue: 1.5,
+      onFinish: () {
+        TutorialService.instance.markTutorialCompleted(TutorialService.rankingLeaderboardTour);
+      },
+      onDismiss: (_) {
+        TutorialService.instance.markTutorialCompleted(TutorialService.rankingLeaderboardTour);
+      },
+    );
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    if (_whatsNewListener != null) {
+      ReleaseNotesService.instance.isWhatsNewOpen.removeListener(_whatsNewListener!);
+      _whatsNewListener = null;
+    }
+    _showcaseView.unregister();
+    super.dispose();
+  }
+
+  void _startRankingTour() {
+    if (!mounted || _isLoading || ReleaseNotesService.instance.isWhatsNewShowing) return;
+    _showcaseView.startShowCase([
+      _metricsTourKey,
+      _podiumTourKey,
+      _myCardTourKey,
+    ]);
+  }
+
+  void _checkAndStartTour() async {
+    if (_tourChecked || _isLoading) return;
+
+    final releaseNotesService = ReleaseNotesService.instance;
+    final hasPendingWhatsNew = await releaseNotesService.shouldShowWhatsNew();
+
+    if (hasPendingWhatsNew || releaseNotesService.isWhatsNewShowing) {
+      _whatsNewListener = () {
+        if (!releaseNotesService.isWhatsNewShowing) {
+          if (_whatsNewListener != null) {
+            releaseNotesService.isWhatsNewOpen.removeListener(_whatsNewListener!);
+            _whatsNewListener = null;
+          }
+          Future.delayed(const Duration(milliseconds: 350), () {
+            if (mounted && !_isLoading) {
+              _startTourIfEligible();
+            }
+          });
+        }
+      };
+      releaseNotesService.isWhatsNewOpen.addListener(_whatsNewListener!);
+      return;
+    }
+
+    _startTourIfEligible();
+  }
+
+  void _startTourIfEligible() async {
+    if (_tourChecked || _isLoading || ReleaseNotesService.instance.isWhatsNewShowing) return;
+    _tourChecked = true;
+    final shouldShow = await TutorialService.instance.shouldShowTutorial(TutorialService.rankingLeaderboardTour);
+    if (shouldShow && mounted && !_isLoading) {
+      TutorialService.instance.markTutorialStarted(TutorialService.rankingLeaderboardTour);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_isLoading) {
+          _startRankingTour();
+        }
+      });
+    }
   }
 
   Future<void> _loadData() async {
@@ -75,6 +160,7 @@ class _RankingScreenState extends State<RankingScreen> {
           _studentToUserMap = studentMap;
           _isLoading = false;
         });
+        _checkAndStartTour();
       }
     } catch (e) {
       if (mounted) {
@@ -189,6 +275,16 @@ class _RankingScreenState extends State<RankingScreen> {
               ),
             ],
           ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.help_outline_rounded, color: AppTheme.primaryGlow, size: 20),
+              tooltip: 'Ver tour de ranking',
+              onPressed: () {
+                _startRankingTour();
+              },
+            ),
+            const SizedBox(width: 4),
+          ],
         ),
         body: _isLoading
             ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
@@ -245,9 +341,15 @@ class _RankingScreenState extends State<RankingScreen> {
                       const SizedBox(height: 14),
 
                       // Metric & Period Selectors
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
+                      PyrosShowcase(
+                        scope: 'ranking_tour',
+                        showcaseKey: _metricsTourKey,
+                        title: 'Métricas de Competición',
+                        description: 'Compara tu rendimiento por Racha de días activos, Puntos o Récord histórico, y ajusta el período de evaluación.',
+                        hasNext: true,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
                           Expanded(
                             child: SingleChildScrollView(
                               scrollDirection: Axis.horizontal,
@@ -314,21 +416,37 @@ class _RankingScreenState extends State<RankingScreen> {
                           ),
                         ],
                       ),
+                      ),
                       const SizedBox(height: 18),
 
                       // Podium (Top 3)
                       if (ranked.length >= 3) ...[
-                        _buildPodium(ranked.sublist(0, 3)),
+                        PyrosShowcase(
+                          scope: 'ranking_tour',
+                          showcaseKey: _podiumTourKey,
+                          title: 'Podio de Atletas',
+                          description: 'Los 3 atletas más constantes lideran el podio con insignias y coronas de honor.',
+                          hasNext: true,
+                          child: _buildPodium(ranked.sublist(0, 3)),
+                        ),
                         const SizedBox(height: 18),
                       ],
 
                       // My Position Card ("Tu Puesto")
                       if (me != null) ...[
-                        _buildMyPositionCard(
-                          me: me,
-                          myIndex: myIndex,
-                          aboveMe: aboveMe,
-                          gap: gap,
+                        PyrosShowcase(
+                          scope: 'ranking_tour',
+                          showcaseKey: _myCardTourKey,
+                          title: 'Tu Posición Actual',
+                          description: 'Aquí ves tu posición exacta en la tabla, tus puntos y la diferencia para escalar al siguiente puesto.',
+                          hasNext: false,
+                          finishButtonText: 'Entendido',
+                          child: _buildMyPositionCard(
+                            me: me,
+                            myIndex: myIndex,
+                            aboveMe: aboveMe,
+                            gap: gap,
+                          ),
                         ),
                         const SizedBox(height: 18),
                       ],

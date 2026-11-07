@@ -1,20 +1,31 @@
 import 'package:pyrosfitmovil/core/widgets/pyros_pull_to_refresh.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:showcaseview/showcaseview.dart';
 import 'package:pyrosfitmovil/core/models/streak_models.dart';
 import 'package:pyrosfitmovil/core/services/streak_service.dart';
+import 'package:pyrosfitmovil/core/services/tutorial_service.dart';
 import 'package:pyrosfitmovil/core/utils/streak_helpers.dart';
+import 'package:pyrosfitmovil/core/widgets/pyros_showcase.dart';
 import 'package:pyrosfitmovil/features/auth/presentation/controllers/auth_provider.dart';
 import 'package:pyrosfitmovil/features/dashboard/data/models/dashboard_models.dart';
 import 'package:pyrosfitmovil/features/dashboard/data/services/dashboard_service.dart';
 import 'package:pyrosfitmovil/features/dashboard/presentation/widgets/streak_card.dart';
 import 'package:pyrosfitmovil/theme/app_theme.dart';
+import 'package:pyrosfitmovil/features/release_notes/services/release_notes_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 class StudentDashboard extends StatefulWidget {
   const StudentDashboard({super.key});
+
+  static _StudentDashboardState? _currentInstance;
+
+  /// Método estático seguro para iniciar el tour desde el AppBar de HomeScreen
+  static void startTourIfMounted() {
+    _currentInstance?._startDashboardTour();
+  }
 
   @override
   State<StudentDashboard> createState() => _StudentDashboardState();
@@ -30,10 +41,97 @@ class _StudentDashboardState extends State<StudentDashboard> {
   List<HistoryItem> _history = [];
   bool _isLoading = true;
 
+  // Claves de instancia del State para evitar colisiones de GlobalKey
+  final GlobalKey _streakTourKey = GlobalKey();
+  final GlobalKey _routineTourKey = GlobalKey();
+  final GlobalKey _activityTourKey = GlobalKey();
+
+  late final ShowcaseView _showcaseView;
+  bool _tourChecked = false;
+  VoidCallback? _whatsNewListener;
+
   @override
   void initState() {
     super.initState();
+    StudentDashboard._currentInstance = this;
+    _showcaseView = ShowcaseView.register(
+      scope: 'student_dashboard_tour',
+      enableAutoScroll: true,
+      skipIfTargetNotPresent: true,
+      blurValue: 1.5,
+      onFinish: () {
+        TutorialService.instance.markTutorialCompleted(TutorialService.homeDashboardTour);
+      },
+      onDismiss: (_) {
+        TutorialService.instance.markTutorialCompleted(TutorialService.homeDashboardTour);
+      },
+    );
     initializeDateFormatting('es_US', null).then((_) => _loadData());
+  }
+
+  @override
+  void dispose() {
+    if (StudentDashboard._currentInstance == this) {
+      StudentDashboard._currentInstance = null;
+    }
+    if (_whatsNewListener != null) {
+      ReleaseNotesService.instance.isWhatsNewOpen.removeListener(_whatsNewListener!);
+      _whatsNewListener = null;
+    }
+    _showcaseView.unregister();
+    super.dispose();
+  }
+
+  void _startDashboardTour() {
+    if (!mounted || _isLoading || ReleaseNotesService.instance.isWhatsNewShowing) return;
+    _showcaseView.startShowCase([
+      _streakTourKey,
+      _routineTourKey,
+      _activityTourKey,
+    ]);
+  }
+
+  void _checkAndStartHomeTour() async {
+    if (_tourChecked || _isLoading) return;
+
+    // Si hay novedades pendientes o el modal está abierto en pantalla, esperamos a que se cierre primero
+    final releaseNotesService = ReleaseNotesService.instance;
+    final hasPendingWhatsNew = await releaseNotesService.shouldShowWhatsNew();
+
+    if (hasPendingWhatsNew || releaseNotesService.isWhatsNewShowing) {
+      _whatsNewListener = () {
+        if (!releaseNotesService.isWhatsNewShowing) {
+          if (_whatsNewListener != null) {
+            releaseNotesService.isWhatsNewOpen.removeListener(_whatsNewListener!);
+            _whatsNewListener = null;
+          }
+          // Esperamos a que la animación de cierre del bottom sheet termine por completo (350ms)
+          Future.delayed(const Duration(milliseconds: 350), () {
+            if (mounted && !_isLoading) {
+              _startTourIfEligible();
+            }
+          });
+        }
+      };
+      releaseNotesService.isWhatsNewOpen.addListener(_whatsNewListener!);
+      return;
+    }
+
+    _startTourIfEligible();
+  }
+
+  void _startTourIfEligible() async {
+    if (_tourChecked || _isLoading || ReleaseNotesService.instance.isWhatsNewShowing) return;
+    _tourChecked = true;
+    final shouldShow = await TutorialService.instance.shouldShowTutorial(TutorialService.homeDashboardTour);
+    if (shouldShow && mounted && !_isLoading) {
+      TutorialService.instance.markTutorialStarted(TutorialService.homeDashboardTour);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_isLoading) {
+          _startDashboardTour();
+        }
+      });
+    }
   }
 
   Future<void> _loadData() async {
@@ -84,6 +182,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
             _history = combinedHistoryMapper(streakLogs, historyEx);
             _isLoading = false;
           });
+
+          _checkAndStartHomeTour();
 
           if (shouldCelebrate) {
             _showCelebrationDialog(newStreak, auth.user?.firstName ?? '');
@@ -260,53 +360,67 @@ class _StudentDashboardState extends State<StudentDashboard> {
                   const SizedBox(height: 16),
 
                   // Tarjeta Principal de Racha (T-01, T-04)
-                  PyrosStreakCard(
-                    streak: _streak,
-                    shields: _shields,
-                    dailyFocus: _dailyFocus,
-                    dailyExercisesNum: _dailyExercises.length,
-                    prRecord: _maxWeightLifted > 0 ? _maxWeightLifted : 100,
-                    onUseShield: () => _showFreezeShieldDialog(auth.user?.studentId),
+                  PyrosShowcase(
+                    scope: 'student_dashboard_tour',
+                    showcaseKey: _streakTourKey,
+                    title: 'Tu Racha y Escudos',
+                    description: 'Lleva la cuenta de tus días consecutivos entrenando, tu récord de peso y usa tus Escudos de Hielo para proteger tu racha si descansas.',
+                    hasNext: true,
+                    child: PyrosStreakCard(
+                      streak: _streak,
+                      shields: _shields,
+                      dailyFocus: _dailyFocus,
+                      dailyExercisesNum: _dailyExercises.length,
+                      prRecord: _maxWeightLifted > 0 ? _maxWeightLifted : 100,
+                      onUseShield: () => _showFreezeShieldDialog(auth.user?.studentId),
+                    ),
                   ),
                   const SizedBox(height: 16),
 
                   // Botón CTA Principal: Completar Rutina de Hoy
-                  SizedBox(
-                    width: double.infinity,
-                    height: 54,
-                    child: ElevatedButton(
-                      onPressed: _completed
-                          ? null
-                          : () {
-                              context.go('/rutina/${auth.user?.studentId}/$todayStr');
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _completed
-                            ? const Color(0xFF27272A)
-                            : AppTheme.primary,
-                        foregroundColor: Colors.white,
-                        disabledBackgroundColor: const Color(0xFF27272A),
-                        disabledForegroundColor: Colors.grey,
-                        elevation: _completed ? 0 : 6,
-                        shadowColor: currentTier.ringColor.withValues(alpha: 0.6),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          side: BorderSide(
-                            color: _completed
-                                ? AppTheme.border
-                                : currentTier.ringColor,
-                            width: 1.5,
+                  PyrosShowcase(
+                    scope: 'student_dashboard_tour',
+                    showcaseKey: _routineTourKey,
+                    title: 'Rutina del Día',
+                    description: 'Pulsa aquí para ingresar directamente a tu sesión de hoy, marcar tus repeticiones y registrar tus récords personales.',
+                    hasNext: true,
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 54,
+                      child: ElevatedButton(
+                        onPressed: _completed
+                            ? null
+                            : () {
+                                context.go('/rutina/${auth.user?.studentId}/$todayStr');
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _completed
+                              ? const Color(0xFF27272A)
+                              : AppTheme.primary,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: const Color(0xFF27272A),
+                          disabledForegroundColor: Colors.grey,
+                          elevation: _completed ? 0 : 6,
+                          shadowColor: currentTier.ringColor.withValues(alpha: 0.6),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(
+                              color: _completed
+                                  ? AppTheme.border
+                                  : currentTier.ringColor,
+                              width: 1.5,
+                            ),
                           ),
                         ),
-                      ),
-                      child: Text(
-                        _completed
-                            ? 'Rutina completada ✅'
-                            : 'Completar Rutina de Hoy 💪',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
+                        child: Text(
+                          _completed
+                              ? 'Rutina completada ✅'
+                              : 'Completar Rutina de Hoy 💪',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
                         ),
                       ),
                     ),
@@ -314,34 +428,47 @@ class _StudentDashboardState extends State<StudentDashboard> {
                   const SizedBox(height: 24),
 
                   // Sección: Actividad Reciente (T-02)
-                  const Text(
-                    'ACTIVIDAD RECIENTE',
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 11,
-                      letterSpacing: 2.0,
-                      fontWeight: FontWeight.bold,
+                  PyrosShowcase(
+                    scope: 'student_dashboard_tour',
+                    showcaseKey: _activityTourKey,
+                    title: 'Historial de Entrenamientos',
+                    description: 'Revisa tus sesiones completadas previamente y comprueba tu constancia en el gimnasio semana a semana.',
+                    hasNext: false,
+                    finishButtonText: 'Entendido',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'ACTIVIDAD RECIENTE',
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontSize: 11,
+                            letterSpacing: 2.0,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        if (_history.isEmpty)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: AppTheme.card.withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
+                            ),
+                            child: const Center(
+                              child: Text(
+                                'No existen actividades recientes',
+                                style: TextStyle(color: Colors.grey, fontSize: 13),
+                              ),
+                            ),
+                          )
+                        else
+                          ..._history.take(4).map((item) => _buildRecentActivityItem(item)),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  if (_history.isEmpty)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: AppTheme.card.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
-                      ),
-                      child: const Center(
-                        child: Text(
-                          'No existen actividades recientes',
-                          style: TextStyle(color: Colors.grey, fontSize: 13),
-                        ),
-                      ),
-                    )
-                  else
-                    ..._history.take(4).map((item) => _buildRecentActivityItem(item)),
 
                   const SizedBox(height: 24),
 

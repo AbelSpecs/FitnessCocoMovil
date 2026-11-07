@@ -2,7 +2,11 @@ import 'package:pyrosfitmovil/core/widgets/pyros_pull_to_refresh.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:showcaseview/showcaseview.dart';
 import 'package:intl/intl.dart';
+import 'package:pyrosfitmovil/core/services/tutorial_service.dart';
+import 'package:pyrosfitmovil/core/widgets/pyros_showcase.dart';
+import 'package:pyrosfitmovil/features/release_notes/services/release_notes_service.dart';
 import 'package:pyrosfitmovil/theme/app_theme.dart';
 import 'package:pyrosfitmovil/features/student_routines/presentation/providers/student_routines_provider.dart';
 
@@ -18,9 +22,30 @@ class _StudentWeeklyRoutineScreenState extends State<StudentWeeklyRoutineScreen>
   late PageController _pageController;
   DateTime _currentWeekStart = DateTime.now();
 
+  // Claves globales para los pasos del tour en la rutina semanal
+  final GlobalKey _weekNavTourKey = GlobalKey();
+  final GlobalKey _programHeaderTourKey = GlobalKey();
+  final GlobalKey _dayGridTourKey = GlobalKey();
+
+  late final ShowcaseView _showcaseView;
+  bool _tourChecked = false;
+  VoidCallback? _whatsNewListener;
+
   @override
   void initState() {
     super.initState();
+    _showcaseView = ShowcaseView.register(
+      scope: 'weekly_routine_tour',
+      enableAutoScroll: true,
+      skipIfTargetNotPresent: true,
+      blurValue: 1.5,
+      onFinish: () {
+        TutorialService.instance.markTutorialCompleted(TutorialService.studentWeeklyRoutineTour);
+      },
+      onDismiss: (_) {
+        TutorialService.instance.markTutorialCompleted(TutorialService.studentWeeklyRoutineTour);
+      },
+    );
     // Empezamos en la página 500 (centro) para simular scroll infinito
     _pageController = PageController(initialPage: 500);
     _currentWeekStart = _getStartOfWeek(DateTime.now());
@@ -28,6 +53,67 @@ class _StudentWeeklyRoutineScreenState extends State<StudentWeeklyRoutineScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadWeek(_currentWeekStart);
     });
+  }
+
+  @override
+  void dispose() {
+    if (_whatsNewListener != null) {
+      ReleaseNotesService.instance.isWhatsNewOpen.removeListener(_whatsNewListener!);
+      _whatsNewListener = null;
+    }
+    _showcaseView.unregister();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _startWeeklyTour() {
+    if (!mounted || ReleaseNotesService.instance.isWhatsNewShowing) return;
+    _showcaseView.startShowCase([
+      _weekNavTourKey,
+      _programHeaderTourKey,
+      _dayGridTourKey,
+    ]);
+  }
+
+  void _checkAndStartTour(StudentRoutinesProvider provider) async {
+    if (_tourChecked || provider.isLoading) return;
+
+    final releaseNotesService = ReleaseNotesService.instance;
+    final hasPendingWhatsNew = await releaseNotesService.shouldShowWhatsNew();
+
+    if (hasPendingWhatsNew || releaseNotesService.isWhatsNewShowing) {
+      _whatsNewListener = () {
+        if (!releaseNotesService.isWhatsNewShowing) {
+          if (_whatsNewListener != null) {
+            releaseNotesService.isWhatsNewOpen.removeListener(_whatsNewListener!);
+            _whatsNewListener = null;
+          }
+          Future.delayed(const Duration(milliseconds: 350), () {
+            if (mounted && !provider.isLoading) {
+              _startTourIfEligible(provider);
+            }
+          });
+        }
+      };
+      releaseNotesService.isWhatsNewOpen.addListener(_whatsNewListener!);
+      return;
+    }
+
+    _startTourIfEligible(provider);
+  }
+
+  void _startTourIfEligible(StudentRoutinesProvider provider) async {
+    if (_tourChecked || provider.isLoading || ReleaseNotesService.instance.isWhatsNewShowing) return;
+    _tourChecked = true;
+    final shouldShow = await TutorialService.instance.shouldShowTutorial(TutorialService.studentWeeklyRoutineTour);
+    if (shouldShow && mounted && !provider.isLoading) {
+      TutorialService.instance.markTutorialStarted(TutorialService.studentWeeklyRoutineTour);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !provider.isLoading) {
+          _startWeeklyTour();
+        }
+      });
+    }
   }
 
   DateTime _getStartOfWeek(DateTime date) {
@@ -64,6 +150,10 @@ class _StudentWeeklyRoutineScreenState extends State<StudentWeeklyRoutineScreen>
     final theme = Theme.of(context);
     final isTodayWeek = _getStartOfWeek(DateTime.now()).isAtSameMomentAs(_currentWeekStart);
 
+    if (!provider.isLoading) {
+      _checkAndStartTour(provider);
+    }
+
     return context.pyrosStyles.buildMeshBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -71,87 +161,120 @@ class _StudentWeeklyRoutineScreenState extends State<StudentWeeklyRoutineScreen>
         backgroundColor: Colors.transparent,
         elevation: 0,
         automaticallyImplyLeading: false, // Es el root del tab
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.chevron_left),
-              onPressed: () {
-                _pageController.previousPage(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                );
-              },
-            ),
-            Text(
-              isTodayWeek
-                  ? 'Esta Semana'
-                  : 'Semana del ${DateFormat('d MMM', 'es_US').format(_currentWeekStart)}',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            IconButton(
-              icon: const Icon(Icons.chevron_right),
-              onPressed: () {
-                _pageController.nextPage(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                );
-              },
-            ),
-          ],
+        title: PyrosShowcase(
+          scope: 'weekly_routine_tour',
+          showcaseKey: _weekNavTourKey,
+          title: 'Navegación Semanal',
+          description: 'Usa las flechas para explorar tus rutinas de semanas anteriores o consultar la planificación de las próximas semanas.',
+          hasNext: true,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.chevron_left),
+                onPressed: () {
+                  _pageController.previousPage(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                  );
+                },
+              ),
+              Text(
+                isTodayWeek
+                    ? 'Esta Semana'
+                    : 'Semana del ${DateFormat('d MMM', 'es_US').format(_currentWeekStart)}',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              IconButton(
+                icon: const Icon(Icons.chevron_right),
+                onPressed: () {
+                  _pageController.nextPage(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                  );
+                },
+              ),
+            ],
+          ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline_rounded, color: AppTheme.primaryGlow, size: 20),
+            tooltip: 'Ver tour de rutina semanal',
+            onPressed: () {
+              if (ReleaseNotesService.instance.isWhatsNewShowing) return;
+              _startWeeklyTour();
+            },
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'TU PROGRAMA',
-                  style: TextStyle(
-                    fontSize: 10,
-                    letterSpacing: 3.0,
-                    color: AppTheme.primary,
-                    fontWeight: FontWeight.bold,
+            child: PyrosShowcase(
+              scope: 'weekly_routine_tour',
+              showcaseKey: _programHeaderTourKey,
+              title: 'Tu Plan de Entrenamiento',
+              description: 'Aquí se organiza tu rutina dividida por días. Puedes tocar cualquier día para registrar tus ejercicios.',
+              hasNext: true,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'TU PROGRAMA',
+                    style: TextStyle(
+                      fontSize: 10,
+                      letterSpacing: 3.0,
+                      color: AppTheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Rutina semanal',
-                  style: TextStyle(
-                    fontFamily: 'BebasNeue',
-                    fontSize: 32,
-                    letterSpacing: 1,
-                    wordSpacing: 1.5,
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Rutina semanal',
+                    style: TextStyle(
+                      fontFamily: 'BebasNeue',
+                      fontSize: 32,
+                      letterSpacing: 1,
+                      wordSpacing: 1.5,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Pulsa cualquier día para ver los ejercicios, registrar tu sesión y consultar el historial.',
-                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 14),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  Text(
+                    'Pulsa cualquier día para ver los ejercicios, registrar tu sesión y consultar el historial.',
+                    style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 14),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 16),
           // PageView Slider
           Expanded(
-            child: PageView.builder(
-              controller: _pageController,
-              onPageChanged: _onPageChanged,
-              itemBuilder: (context, index) {
-                if (provider.isLoading) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+            child: PyrosShowcase(
+              scope: 'weekly_routine_tour',
+              showcaseKey: _dayGridTourKey,
+              title: 'Días de Rutina y Músculos',
+              description: 'Cada tarjeta indica el grupo muscular trabajado (ej. Pecho, Pierna o Descanso) y el check verde cuando completas la sesión.',
+              hasNext: false,
+              finishButtonText: 'Entendido',
+              child: PageView.builder(
+                controller: _pageController,
+                onPageChanged: _onPageChanged,
+                itemBuilder: (context, index) {
+                  if (provider.isLoading) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-                return PyrosPullToRefresh(
-                  onRefresh: () async => _loadWeek(_currentWeekStart),
-                  child: _buildWeekGrid(provider, theme),
-                );
-              },
+                  return PyrosPullToRefresh(
+                    onRefresh: () async => _loadWeek(_currentWeekStart),
+                    child: _buildWeekGrid(provider, theme),
+                  );
+                },
+              ),
             ),
           ),
         ],

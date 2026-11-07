@@ -1,12 +1,16 @@
 import 'package:pyrosfitmovil/core/widgets/pyros_pull_to_refresh.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:showcaseview/showcaseview.dart';
 import 'package:pyrosfitmovil/core/models/exercise_model.dart';
+import 'package:pyrosfitmovil/core/services/tutorial_service.dart';
+import 'package:pyrosfitmovil/core/widgets/pyros_showcase.dart';
 import 'package:pyrosfitmovil/features/auth/presentation/controllers/auth_provider.dart';
 import 'package:pyrosfitmovil/features/exercises/presentation/controllers/exercises_provider.dart';
 import 'package:pyrosfitmovil/features/exercises/presentation/widgets/exercise_card.dart';
 import 'package:pyrosfitmovil/features/exercises/presentation/widgets/exercise_form_sheet.dart';
 import 'package:pyrosfitmovil/features/exercises/presentation/widgets/exercise_video_modal.dart';
+import 'package:pyrosfitmovil/features/release_notes/services/release_notes_service.dart';
 import 'package:pyrosfitmovil/theme/app_theme.dart';
 
 class ExercisesScreen extends StatefulWidget {
@@ -19,9 +23,31 @@ class ExercisesScreen extends StatefulWidget {
 class _ExercisesScreenState extends State<ExercisesScreen> {
   final TextEditingController _searchController = TextEditingController();
 
+  // Claves globales para los pasos del tour en la biblioteca de ejercicios
+  final GlobalKey _kpisTourKey = GlobalKey();
+  final GlobalKey _searchTourKey = GlobalKey();
+  final GlobalKey _filtersTourKey = GlobalKey();
+  final GlobalKey _newExerciseTourKey = GlobalKey();
+
+  late final ShowcaseView _showcaseView;
+  bool _tourChecked = false;
+  VoidCallback? _whatsNewListener;
+
   @override
   void initState() {
     super.initState();
+    _showcaseView = ShowcaseView.register(
+      scope: 'exercises_tour',
+      enableAutoScroll: true,
+      skipIfTargetNotPresent: true,
+      blurValue: 1.5,
+      onFinish: () {
+        TutorialService.instance.markTutorialCompleted(TutorialService.exercisesLibraryTour);
+      },
+      onDismiss: (_) {
+        TutorialService.instance.markTutorialCompleted(TutorialService.exercisesLibraryTour);
+      },
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final auth = context.read<AuthProvider>();
       final coachId = auth.user?.coachId ?? auth.user?.id ?? 1;
@@ -31,8 +57,64 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
 
   @override
   void dispose() {
+    if (_whatsNewListener != null) {
+      ReleaseNotesService.instance.isWhatsNewOpen.removeListener(_whatsNewListener!);
+      _whatsNewListener = null;
+    }
+    _showcaseView.unregister();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _startExercisesTour() {
+    if (!mounted || ReleaseNotesService.instance.isWhatsNewShowing) return;
+    _showcaseView.startShowCase([
+      _kpisTourKey,
+      _searchTourKey,
+      _filtersTourKey,
+      _newExerciseTourKey,
+    ]);
+  }
+
+  void _checkAndStartTour(ExercisesProvider provider) async {
+    if (_tourChecked || provider.isLoading) return;
+
+    final releaseNotesService = ReleaseNotesService.instance;
+    final hasPendingWhatsNew = await releaseNotesService.shouldShowWhatsNew();
+
+    if (hasPendingWhatsNew || releaseNotesService.isWhatsNewShowing) {
+      _whatsNewListener = () {
+        if (!releaseNotesService.isWhatsNewShowing) {
+          if (_whatsNewListener != null) {
+            releaseNotesService.isWhatsNewOpen.removeListener(_whatsNewListener!);
+            _whatsNewListener = null;
+          }
+          Future.delayed(const Duration(milliseconds: 350), () {
+            if (mounted && !provider.isLoading) {
+              _startTourIfEligible(provider);
+            }
+          });
+        }
+      };
+      releaseNotesService.isWhatsNewOpen.addListener(_whatsNewListener!);
+      return;
+    }
+
+    _startTourIfEligible(provider);
+  }
+
+  void _startTourIfEligible(ExercisesProvider provider) async {
+    if (_tourChecked || provider.isLoading || ReleaseNotesService.instance.isWhatsNewShowing) return;
+    _tourChecked = true;
+    final shouldShow = await TutorialService.instance.shouldShowTutorial(TutorialService.exercisesLibraryTour);
+    if (shouldShow && mounted && !provider.isLoading) {
+      TutorialService.instance.markTutorialStarted(TutorialService.exercisesLibraryTour);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !provider.isLoading) {
+          _startExercisesTour();
+        }
+      });
+    }
   }
 
   void _confirmDelete(BuildContext context, ExerciseModel exercise) {
@@ -101,6 +183,10 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
     final items = provider.filteredExercises;
     final muscleGroups = provider.muscleGroups;
 
+    if (!provider.isLoading) {
+      _checkAndStartTour(provider);
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFF09090B),
       appBar: AppBar(
@@ -122,6 +208,13 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.help_outline_rounded, color: AppTheme.primaryGlow, size: 20),
+            tooltip: 'Ver tour de ejercicios',
+            onPressed: () {
+              _startExercisesTour();
+            },
+          ),
+          IconButton(
             icon: Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
@@ -137,12 +230,20 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => ExerciseFormSheet.show(context),
-        backgroundColor: AppTheme.primary,
-        icon: const Icon(Icons.add_rounded, color: Colors.white),
-        label: const Text('Nuevo ejercicio', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-        elevation: 4,
+      floatingActionButton: PyrosShowcase(
+        scope: 'exercises_tour',
+        showcaseKey: _newExerciseTourKey,
+        title: 'Crear Ejercicio',
+        description: 'Toca aquí para registrar nuevos ejercicios personalizados con demostración técnica en video.',
+        hasNext: false,
+        finishButtonText: 'Entendido',
+        child: FloatingActionButton.extended(
+          onPressed: () => ExerciseFormSheet.show(context),
+          backgroundColor: AppTheme.primary,
+          icon: const Icon(Icons.add_rounded, color: Colors.white),
+          label: const Text('Nuevo ejercicio', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+          elevation: 4,
+        ),
       ),
       body: PyrosPullToRefresh(
         onRefresh: () async {
@@ -157,22 +258,29 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF18181B).withValues(alpha: 0.8),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.border.withValues(alpha: 0.6)),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildKpiItem(Icons.fitness_center_rounded, 'Total', '${provider.totalCount}', AppTheme.primaryGlow),
-                      _buildKpiDivider(),
-                      _buildKpiItem(Icons.videocam_rounded, 'Con Video', '${provider.withVideoCount}', const Color(0xFF10B981)),
-                      _buildKpiDivider(),
-                      _buildKpiItem(Icons.videocam_off_rounded, 'Sin Video', '${provider.withoutVideoCount}', Colors.white54),
-                    ],
+                child: PyrosShowcase(
+                  scope: 'exercises_tour',
+                  showcaseKey: _kpisTourKey,
+                  title: 'Catálogo de Ejercicios',
+                  description: 'Consulta cuántos ejercicios tienes registrados en total y cuántos cuentan con video demostrativo.',
+                  hasNext: true,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF18181B).withValues(alpha: 0.8),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppTheme.border.withValues(alpha: 0.6)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildKpiItem(Icons.fitness_center_rounded, 'Total', '${provider.totalCount}', AppTheme.primaryGlow),
+                        _buildKpiDivider(),
+                        _buildKpiItem(Icons.videocam_rounded, 'Con Video', '${provider.withVideoCount}', const Color(0xFF10B981)),
+                        _buildKpiDivider(),
+                        _buildKpiItem(Icons.videocam_off_rounded, 'Sin Video', '${provider.withoutVideoCount}', Colors.white54),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -182,37 +290,44 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-                child: TextField(
-                  controller: _searchController,
-                  style: const TextStyle(color: Colors.white, fontSize: 13),
-                  onChanged: (val) => provider.setSearchQuery(val),
-                  decoration: InputDecoration(
-                    hintText: 'Buscar ejercicio, técnica o músculo...',
-                    hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
-                    prefixIcon: const Icon(Icons.search_rounded, color: Colors.white54, size: 18),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear_rounded, size: 16, color: Colors.white54),
-                            onPressed: () {
-                              _searchController.clear();
-                              provider.setSearchQuery('');
-                            },
-                          )
-                        : null,
-                    filled: true,
-                    fillColor: const Color(0xFF18181B),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: AppTheme.border),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: AppTheme.border),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: AppTheme.primary),
+                child: PyrosShowcase(
+                  scope: 'exercises_tour',
+                  showcaseKey: _searchTourKey,
+                  title: 'Buscador Inteligente',
+                  description: 'Encuentra cualquier ejercicio al instante buscando por su nombre, técnica o músculo involucrado.',
+                  hasNext: true,
+                  child: TextField(
+                    controller: _searchController,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    onChanged: (val) => provider.setSearchQuery(val),
+                    decoration: InputDecoration(
+                      hintText: 'Buscar ejercicio, técnica o músculo...',
+                      hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
+                      prefixIcon: const Icon(Icons.search_rounded, color: Colors.white54, size: 18),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear_rounded, size: 16, color: Colors.white54),
+                              onPressed: () {
+                                _searchController.clear();
+                                provider.setSearchQuery('');
+                              },
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: const Color(0xFF18181B),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: AppTheme.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: AppTheme.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: AppTheme.primary),
+                      ),
                     ),
                   ),
                 ),
@@ -221,27 +336,33 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
 
             // 3. Carrusel Horizontal de Chips por Grupo Muscular + Filtro de Video
             SliverToBoxAdapter(
-              child: Container(
-                margin: const EdgeInsets.only(top: 10, bottom: 12),
-                height: 38,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  children: [
-                    // Chip Toggle "Solo con Video"
-                    GestureDetector(
-                      onTap: () => provider.toggleOnlyVideo(),
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 8),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: provider.onlyVideo ? AppTheme.primary.withValues(alpha: 0.25) : const Color(0xFF18181B),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: provider.onlyVideo ? AppTheme.primary : AppTheme.border,
+              child: PyrosShowcase(
+                scope: 'exercises_tour',
+                showcaseKey: _filtersTourKey,
+                title: 'Filtros por Músculo',
+                description: 'Aísla ejercicios por grupo muscular (Pecho, Espalda, Pierna...) o activa el toggle para ver solo los que tienen video.',
+                hasNext: true,
+                child: Container(
+                  margin: const EdgeInsets.only(top: 10, bottom: 12),
+                  height: 38,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    children: [
+                      // Chip Toggle "Solo con Video"
+                      GestureDetector(
+                        onTap: () => provider.toggleOnlyVideo(),
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: provider.onlyVideo ? AppTheme.primary.withValues(alpha: 0.25) : const Color(0xFF18181B),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: provider.onlyVideo ? AppTheme.primary : AppTheme.border,
+                            ),
                           ),
-                        ),
-                        child: Row(
+                          child: Row(
                           children: [
                             Icon(
                               Icons.play_circle_outline_rounded,
@@ -278,6 +399,7 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
                 ),
               ),
             ),
+          ),
 
             // 4. Lista de Ejercicios o Estados (Cargando / Vacío)
             if (provider.isLoading) ...[

@@ -12,9 +12,20 @@ import 'package:pyrosfitmovil/features/dashboard/data/services/dashboard_service
 import 'package:pyrosfitmovil/theme/app_theme.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:showcaseview/showcaseview.dart';
+import 'package:pyrosfitmovil/core/services/tutorial_service.dart';
+import 'package:pyrosfitmovil/core/widgets/pyros_showcase.dart';
+import 'package:pyrosfitmovil/features/release_notes/services/release_notes_service.dart';
 
 class CoachDashboard extends StatefulWidget {
   const CoachDashboard({super.key});
+
+  static _CoachDashboardState? _currentInstance;
+
+  /// Método estático seguro para iniciar el tour desde el AppBar de HomeScreen
+  static void startTourIfMounted() {
+    _currentInstance?._startDashboardTour();
+  }
 
   @override
   State<CoachDashboard> createState() => _CoachDashboardState();
@@ -27,10 +38,97 @@ class _CoachDashboardState extends State<CoachDashboard> {
   String _searchQuery = '';
   String _selectedFilter = 'all'; // 'all' | 'high' | 'medium' | 'low'
 
+  // Claves de instancia para el tour del Coach
+  final GlobalKey _libraryBannerKey = GlobalKey();
+  final GlobalKey _kpisKey = GlobalKey();
+  final GlobalKey _riskRadarKey = GlobalKey();
+
+  late final ShowcaseView _showcaseView;
+  bool _tourChecked = false;
+  VoidCallback? _whatsNewListener;
+
   @override
   void initState() {
     super.initState();
+    CoachDashboard._currentInstance = this;
+    _showcaseView = ShowcaseView.register(
+      scope: 'coach_dashboard_tour',
+      enableAutoScroll: true,
+      skipIfTargetNotPresent: true,
+      blurValue: 1.5,
+      onFinish: () {
+        TutorialService.instance.markTutorialCompleted(TutorialService.coachDashboardTour);
+      },
+      onDismiss: (_) {
+        TutorialService.instance.markTutorialCompleted(TutorialService.coachDashboardTour);
+      },
+    );
     initializeDateFormatting('es_US', null).then((_) => _loadData());
+  }
+
+  @override
+  void dispose() {
+    if (CoachDashboard._currentInstance == this) {
+      CoachDashboard._currentInstance = null;
+    }
+    if (_whatsNewListener != null) {
+      ReleaseNotesService.instance.isWhatsNewOpen.removeListener(_whatsNewListener!);
+      _whatsNewListener = null;
+    }
+    _showcaseView.unregister();
+    super.dispose();
+  }
+
+  void _startDashboardTour() {
+    if (!mounted || _isLoading || ReleaseNotesService.instance.isWhatsNewShowing) return;
+    _showcaseView.startShowCase([
+      _libraryBannerKey,
+      _kpisKey,
+      _riskRadarKey,
+    ]);
+  }
+
+  void _checkAndStartCoachTour() async {
+    if (_tourChecked || _isLoading) return;
+
+    // Si hay novedades pendientes o el modal está abierto en pantalla, esperamos a que se cierre primero
+    final releaseNotesService = ReleaseNotesService.instance;
+    final hasPendingWhatsNew = await releaseNotesService.shouldShowWhatsNew();
+
+    if (hasPendingWhatsNew || releaseNotesService.isWhatsNewShowing) {
+      _whatsNewListener = () {
+        if (!releaseNotesService.isWhatsNewShowing) {
+          if (_whatsNewListener != null) {
+            releaseNotesService.isWhatsNewOpen.removeListener(_whatsNewListener!);
+            _whatsNewListener = null;
+          }
+          // Esperamos a que la animación de cierre del bottom sheet termine por completo (350ms)
+          Future.delayed(const Duration(milliseconds: 350), () {
+            if (mounted && !_isLoading) {
+              _startTourIfEligible();
+            }
+          });
+        }
+      };
+      releaseNotesService.isWhatsNewOpen.addListener(_whatsNewListener!);
+      return;
+    }
+
+    _startTourIfEligible();
+  }
+
+  void _startTourIfEligible() async {
+    if (_tourChecked || _isLoading || ReleaseNotesService.instance.isWhatsNewShowing) return;
+    _tourChecked = true;
+    final shouldShow = await TutorialService.instance.shouldShowTutorial(TutorialService.coachDashboardTour);
+    if (shouldShow && mounted && !_isLoading) {
+      TutorialService.instance.markTutorialStarted(TutorialService.coachDashboardTour);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_isLoading) {
+          _startDashboardTour();
+        }
+      });
+    }
   }
 
   Future<void> _loadData() async {
@@ -52,6 +150,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
             _radarStudents = riskRadarStudentsMapper(riskRadarList);
             _isLoading = false;
           });
+          _checkAndStartCoachTour();
         }
       } catch (e) {
         if (mounted) {
@@ -59,6 +158,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
             _radarStudents = defaultStudentsMock;
             _isLoading = false;
           });
+          _checkAndStartCoachTour();
         }
       }
     } else {
@@ -67,6 +167,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
           _radarStudents = defaultStudentsMock;
           _isLoading = false;
         });
+        _checkAndStartCoachTour();
       }
     }
   }
@@ -173,131 +274,152 @@ class _CoachDashboardState extends State<CoachDashboard> {
                   
                   // Acceso Rápido a Biblioteca de Ejercicios y Videos (FT-T15)
                   const SizedBox(height: 16),
-                  InkWell(
-                    onTap: () => context.push('/exercises'),
-                    borderRadius: BorderRadius.circular(18),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppTheme.primary.withValues(alpha: 0.2),
-                            const Color(0xFF18181B),
-                          ],
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
+                  PyrosShowcase(
+                    scope: 'coach_dashboard_tour',
+                    showcaseKey: _libraryBannerKey,
+                    title: 'Biblioteca Técnica y Videos',
+                    description: 'Administra tu catálogo de ejercicios, técnicas, grupos musculares y videos demostrativos para tus alumnos.',
+                    hasNext: true,
+                    child: InkWell(
+                      onTap: () => context.push('/exercises'),
+                      borderRadius: BorderRadius.circular(18),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              AppTheme.primary.withValues(alpha: 0.2),
+                              const Color(0xFF18181B),
+                            ],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          ),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: AppTheme.primary.withValues(alpha: 0.4)),
                         ),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.4)),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primary,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppTheme.primary.withValues(alpha: 0.4),
-                                  blurRadius: 10,
-                                ),
-                              ],
-                            ),
-                            child: const Icon(Icons.fitness_center_rounded, color: Colors.white, size: 20),
-                          ),
-                          const SizedBox(width: 14),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'BIBLIOTECA TÉCNICA',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 2,
-                                    color: AppTheme.primaryGlow,
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primary,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppTheme.primary.withValues(alpha: 0.4),
+                                    blurRadius: 10,
                                   ),
-                                ),
-                                SizedBox(height: 2),
-                                Text(
-                                  'Ejercicios y Videos',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                SizedBox(height: 2),
-                                Text(
-                                  'Gestiona técnica, grupos musculares y videos R2/YouTube',
-                                  style: TextStyle(fontSize: 11, color: Colors.white60),
-                                ),
-                              ],
+                                ],
+                              ),
+                              child: const Icon(Icons.fitness_center_rounded, color: Colors.white, size: 20),
                             ),
-                          ),
-                          const Icon(Icons.arrow_forward_ios_rounded, color: AppTheme.primaryGlow, size: 16),
-                        ],
+                            const SizedBox(width: 14),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'BIBLIOTECA TÉCNICA',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 2,
+                                      color: AppTheme.primaryGlow,
+                                    ),
+                                  ),
+                                  SizedBox(height: 2),
+                                  Text(
+                                    'Ejercicios y Videos',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  SizedBox(height: 2),
+                                  Text(
+                                    'Gestiona técnica, grupos musculares y videos R2/YouTube',
+                                    style: TextStyle(fontSize: 11, color: Colors.white60),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.arrow_forward_ios_rounded, color: AppTheme.primaryGlow, size: 16),
+                          ],
+                        ),
                       ),
                     ),
                   ),
 
-const SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
                   // KPIs (T-06)
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _CoachKpiCard(
-                          icon: Icons.people_outline,
-                          label: 'ALUMNOS',
-                          value: _kpiTotalStudents,
-                          hint: 'en seguimiento',
+                  PyrosShowcase(
+                    scope: 'coach_dashboard_tour',
+                    showcaseKey: _kpisKey,
+                    title: 'Métricas Clave del Equipo',
+                    description: 'Monitorea en tiempo real tus alumnos activos en seguimiento, el promedio de racha de días entrenados y los atletas en riesgo alto.',
+                    hasNext: true,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _CoachKpiCard(
+                            icon: Icons.people_outline,
+                            label: 'ALUMNOS',
+                            value: _kpiTotalStudents,
+                            hint: 'en seguimiento',
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _CoachKpiCard(
-                          icon: Icons.trending_up,
-                          label: 'RACHA PROM.',
-                          value: _kpiAverageStreak,
-                          hint: 'días por alumno',
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _CoachKpiCard(
+                            icon: Icons.trending_up,
+                            label: 'RACHA PROM.',
+                            value: _kpiAverageStreak,
+                            hint: 'días por alumno',
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _CoachKpiCard(
-                          icon: Icons.warning_amber_rounded,
-                          label: 'RIESGO ALTO',
-                          value: _kpiHighRiskCount,
-                          hint: 'requieren contacto',
-                          isDanger: highRiskCountNum > 0,
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _CoachKpiCard(
+                            icon: Icons.warning_amber_rounded,
+                            label: 'RIESGO ALTO',
+                            value: _kpiHighRiskCount,
+                            hint: 'requieren contacto',
+                            isDanger: highRiskCountNum > 0,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 20),
 
                   // Main Radar Container (T-06)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF18181B).withValues(alpha: 0.7),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: AppTheme.border.withValues(alpha: 0.7)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.4),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
-                        )
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+                  PyrosShowcase(
+                    scope: 'coach_dashboard_tour',
+                    showcaseKey: _riskRadarKey,
+                    title: 'Radar de Retención y Riesgo',
+                    description: 'Detecta a tiempo los alumnos que están por perder su racha o llevan días inactivos para motivarlos y retenerlos antes de que abandonen.',
+                    hasNext: false,
+                    finishButtonText: 'Entendido',
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF18181B).withValues(alpha: 0.7),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: AppTheme.border.withValues(alpha: 0.7)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.4),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          )
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                         // Search Bar
                         TextField(
                           onChanged: (val) => setState(() => _searchQuery = val),
@@ -370,6 +492,7 @@ const SizedBox(height: 20),
                       ],
                     ),
                   ),
+                ),
                 ],
               ),
             ),

@@ -8,9 +8,13 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:showcaseview/showcaseview.dart';
 import 'package:pyrosfitmovil/core/models/student_clinical_data_model.dart';
+import 'package:pyrosfitmovil/core/services/tutorial_service.dart';
+import 'package:pyrosfitmovil/core/widgets/pyros_showcase.dart';
 import 'package:pyrosfitmovil/features/auth/presentation/controllers/auth_provider.dart';
 import 'package:pyrosfitmovil/features/profile/presentation/controllers/profile_provider.dart';
+import 'package:pyrosfitmovil/features/release_notes/services/release_notes_service.dart';
 import 'package:pyrosfitmovil/theme/app_theme.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -24,6 +28,158 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isCopied = false;
   int _coachSelectedTab = 0;
   int _studentSelectedTab = 0;
+
+  // Claves globales para los pasos del tutorial interactivo del alumno
+  final GlobalKey _heroKpiKey = GlobalKey();
+  final GlobalKey _biometricsGridKey = GlobalKey();
+  final GlobalKey _metabolismCardKey = GlobalKey();
+  final GlobalKey _editButtonKey = GlobalKey();
+  bool _studentTutorialChecked = false;
+
+  // Claves globales para el tutorial interactivo del Coach
+  final GlobalKey _coachHeroTourKey = GlobalKey();
+  final GlobalKey _coachKpisTourKey = GlobalKey();
+  final GlobalKey _coachTabsTourKey = GlobalKey();
+  bool _coachTutorialChecked = false;
+  VoidCallback? _whatsNewListener;
+
+  late final ShowcaseView _showcaseView;
+
+  @override
+  void initState() {
+    super.initState();
+    _showcaseView = ShowcaseView.register(
+      scope: 'profile_tour',
+      enableAutoScroll: true,
+      skipIfTargetNotPresent: true,
+      blurValue: 1.5,
+      onFinish: () {
+        final authUser = context.read<AuthProvider>().user;
+        final isCoach = authUser?.role?.name == 'coach';
+        TutorialService.instance.markTutorialCompleted(
+          isCoach ? TutorialService.coachProfileTour : TutorialService.studentProfileTour,
+        );
+      },
+      onDismiss: (_) {
+        final authUser = context.read<AuthProvider>().user;
+        final isCoach = authUser?.role?.name == 'coach';
+        TutorialService.instance.markTutorialCompleted(
+          isCoach ? TutorialService.coachProfileTour : TutorialService.studentProfileTour,
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    if (_whatsNewListener != null) {
+      ReleaseNotesService.instance.isWhatsNewOpen.removeListener(_whatsNewListener!);
+      _whatsNewListener = null;
+    }
+    _showcaseView.unregister();
+    super.dispose();
+  }
+
+  void _startProfileTour() {
+    if (!mounted || ReleaseNotesService.instance.isWhatsNewShowing) return;
+    _showcaseView.startShowCase([
+      _heroKpiKey,
+      _biometricsGridKey,
+      _metabolismCardKey,
+      _editButtonKey,
+    ]);
+  }
+
+  void _startCoachProfileTour() {
+    if (!mounted || ReleaseNotesService.instance.isWhatsNewShowing) return;
+    _showcaseView.startShowCase([
+      _coachHeroTourKey,
+      _coachKpisTourKey,
+      _coachTabsTourKey,
+    ]);
+  }
+
+  void _checkAndStartStudentTutorial(ProfileProvider provider) async {
+    if (_studentTutorialChecked || provider.isLoading || provider.isEditing) return;
+
+    final releaseNotesService = ReleaseNotesService.instance;
+    final hasPendingWhatsNew = await releaseNotesService.shouldShowWhatsNew();
+
+    if (hasPendingWhatsNew || releaseNotesService.isWhatsNewShowing) {
+      _whatsNewListener = () {
+        if (!releaseNotesService.isWhatsNewShowing) {
+          if (_whatsNewListener != null) {
+            releaseNotesService.isWhatsNewOpen.removeListener(_whatsNewListener!);
+            _whatsNewListener = null;
+          }
+          Future.delayed(const Duration(milliseconds: 350), () {
+            if (mounted && !provider.isLoading && !provider.isEditing) {
+              _startStudentTourIfEligible(provider);
+            }
+          });
+        }
+      };
+      releaseNotesService.isWhatsNewOpen.addListener(_whatsNewListener!);
+      return;
+    }
+
+    _startStudentTourIfEligible(provider);
+  }
+
+  void _startStudentTourIfEligible(ProfileProvider provider) async {
+    if (_studentTutorialChecked || provider.isLoading || provider.isEditing || ReleaseNotesService.instance.isWhatsNewShowing) return;
+    _studentTutorialChecked = true;
+    final shouldShow = await TutorialService.instance.shouldShowTutorial(TutorialService.studentProfileTour);
+    if (shouldShow && mounted && !provider.isLoading && !provider.isEditing) {
+      TutorialService.instance.markTutorialStarted(TutorialService.studentProfileTour);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !provider.isLoading && !provider.isEditing) {
+          _startProfileTour();
+        }
+      });
+    }
+  }
+
+  void _checkAndStartCoachTutorial(ProfileProvider provider) async {
+    if (_coachTutorialChecked || provider.isLoading || provider.isEditing) return;
+
+    final releaseNotesService = ReleaseNotesService.instance;
+    final hasPendingWhatsNew = await releaseNotesService.shouldShowWhatsNew();
+
+    if (hasPendingWhatsNew || releaseNotesService.isWhatsNewShowing) {
+      _whatsNewListener = () {
+        if (!releaseNotesService.isWhatsNewShowing) {
+          if (_whatsNewListener != null) {
+            releaseNotesService.isWhatsNewOpen.removeListener(_whatsNewListener!);
+            _whatsNewListener = null;
+          }
+          Future.delayed(const Duration(milliseconds: 350), () {
+            if (mounted && !provider.isLoading && !provider.isEditing) {
+              _startCoachTourIfEligible(provider);
+            }
+          });
+        }
+      };
+      releaseNotesService.isWhatsNewOpen.addListener(_whatsNewListener!);
+      return;
+    }
+
+    _startCoachTourIfEligible(provider);
+  }
+
+  void _startCoachTourIfEligible(ProfileProvider provider) async {
+    if (_coachTutorialChecked || provider.isLoading || provider.isEditing || ReleaseNotesService.instance.isWhatsNewShowing) return;
+    _coachTutorialChecked = true;
+    final shouldShow = await TutorialService.instance.shouldShowTutorial(TutorialService.coachProfileTour);
+    if (shouldShow && mounted && !provider.isLoading && !provider.isEditing) {
+      TutorialService.instance.markTutorialStarted(TutorialService.coachProfileTour);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !provider.isLoading && !provider.isEditing) {
+          _startCoachProfileTour();
+        }
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,6 +215,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 tooltip: 'Mis Alumnos',
                 onPressed: () => context.go('/clientes'),
               ),
+            IconButton(
+              icon: const Icon(Icons.help_outline_rounded, color: AppTheme.primaryGlow),
+              tooltip: 'Ver tour interactivo',
+              onPressed: () {
+                if (ReleaseNotesService.instance.isWhatsNewShowing) return;
+                if (isCoach) {
+                  if (_coachSelectedTab != 0) {
+                    setState(() => _coachSelectedTab = 0);
+                  }
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    _startCoachProfileTour();
+                  });
+                } else {
+                  if (_studentSelectedTab != 0) {
+                    setState(() => _studentSelectedTab = 0);
+                  }
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    _startProfileTour();
+                  });
+                }
+              },
+            ),
           ],
         ),
         body: SafeArea(
@@ -68,6 +246,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 return const Center(
                   child: CircularProgressIndicator(color: AppTheme.primary),
                 );
+              }
+
+              if (isCoach) {
+                _checkAndStartCoachTutorial(provider);
+              } else {
+                _checkAndStartStudentTutorial(provider);
               }
 
               return context.pyrosStyles.buildMeshBackground(
@@ -82,20 +266,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (isCoach) ...[
-                        _buildCoachProfile(context, provider, authUser.firstName),
-                      ] else ...[
-                        _buildStudentProfile(context, provider, authUser.firstName),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (isCoach) ...[
+                          _buildCoachProfile(context, provider, authUser.firstName),
+                        ] else ...[
+                          _buildStudentProfile(context, provider, authUser.firstName),
+                        ],
+                        const SizedBox(height: 24),
                       ],
-                      const SizedBox(height: 24),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            );
+              );
             },
           ),
         ),
@@ -132,27 +316,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // 1. HERO HEADER MÓVIL (Banner + Avatar Centrado + Identidad + Acciones Rápidas)
-        _buildCoachHeroHeader(
-          context,
-          provider,
-          bannerUrl: bannerUrl,
-          fullName: fullName,
-          initial: initial,
-          bio: bio,
-          isVerified: isVerified,
+        PyrosShowcase(
+          showcaseKey: _coachHeroTourKey,
+          scope: 'profile_tour',
+          title: 'Identidad y Portada',
+          description: 'Personaliza tu portada, foto de perfil y lema público visible para todos tus alumnos.',
+          child: _buildCoachHeroHeader(
+            context,
+            provider,
+            bannerUrl: bannerUrl,
+            fullName: fullName,
+            initial: initial,
+            bio: bio,
+            isVerified: isVerified,
+          ),
         ),
         const SizedBox(height: 16),
 
         // 2. FILA DE MÉTRICAS RÁPIDAS (KPIs)
-        _buildCoachKpisRow(provider),
+        PyrosShowcase(
+          showcaseKey: _coachKpisTourKey,
+          scope: 'profile_tour',
+          title: 'Métricas de Impacto',
+          description: 'Supervisa de un vistazo el total de alumnos asignados, alumnos activos y aquellos que necesitan seguimiento prioritario.',
+          child: _buildCoachKpisRow(provider),
+        ),
         const SizedBox(height: 20),
 
         // 3. SELECTOR DE PESTAÑAS NATIVO O MODO EDICIÓN
         if (!provider.isEditing) ...[
-          _buildMobileSegmentedTabs(
-            tabs: const ['Mi Marca', 'Enlace & QR', 'Cuenta'],
-            selectedIndex: _coachSelectedTab,
-            onTabSelected: (index) => setState(() => _coachSelectedTab = index),
+          PyrosShowcase(
+            showcaseKey: _coachTabsTourKey,
+            scope: 'profile_tour',
+            title: 'Herramientas de Coach',
+            description: 'Accede a tu enlace y código QR de invitación rápida, información de marca deportiva y detalles de tu cuenta.',
+            child: _buildMobileSegmentedTabs(
+              tabs: const ['Mi Marca', 'Enlace & QR', 'Cuenta'],
+              selectedIndex: _coachSelectedTab,
+              onTabSelected: (index) => setState(() => _coachSelectedTab = index),
+            ),
           ),
           const SizedBox(height: 16),
 
@@ -997,7 +1199,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _buildHeroCard(context, provider, firstName, clinicalData),
+        PyrosShowcase(
+          scope: 'profile_tour',
+          showcaseKey: _heroKpiKey,
+          title: 'Tus Indicadores Clave',
+          description: 'Consulta rápida de tu Edad, Peso, Estatura (en m y cm) e IMC clasificado con semáforo de salud.',
+          child: _buildHeroCard(context, provider, firstName, clinicalData),
+        ),
         const SizedBox(height: 16),
 
         if (!provider.isEditing) ...[
@@ -1114,14 +1322,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
               padding: const EdgeInsets.only(top: 20),
               child: SizedBox(
                 width: double.infinity,
-                child: OutlinedButton.icon(
-                  icon: const Icon(Icons.edit, size: 16, color: AppTheme.primaryGlow),
-                  label: const Text('Editar Perfil'),
-                  onPressed: () => provider.setEditing(true),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: const BorderSide(color: AppTheme.border),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                child: PyrosShowcase(
+                  scope: 'profile_tour',
+                  showcaseKey: _editButtonKey,
+                  title: 'Actualiza tus Medidas',
+                  description: 'Toca aquí para registrar nuevos pesajes, ajustar tu estatura o cambiar tu nivel de actividad física.',
+                  hasNext: false,
+                  finishButtonText: 'Entendido',
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.edit, size: 16, color: AppTheme.primaryGlow),
+                    label: const Text('Editar Perfil'),
+                    onPressed: () => provider.setEditing(true),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: AppTheme.border),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
                   ),
                 ),
               ),
@@ -1223,174 +1439,196 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 18),
 
               // Métricas Base
-              const Text(
-                'MÉTRICAS BASE',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.0,
-                  color: Colors.grey,
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              // Grid 1: Peso y Altura
-              Row(
-                children: [
-                  _buildBiometricTile(
-                    icon: Icons.scale_rounded,
-                    label: 'PESO',
-                    value: data.formattedWeight,
-                  ),
-                  const SizedBox(width: 10),
-                  _buildBiometricTile(
-                    icon: Icons.height_rounded,
-                    label: 'ALTURA',
-                    value: data.formattedHeightCm,
-                    subtitle: data.formattedHeightMeters != '--' ? 'Equivale a ${data.formattedHeightMeters}' : null,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-
-              // Grid 2: % Grasa e IMC (OMS)
-              Row(
-                children: [
-                  _buildBiometricTile(
-                    icon: Icons.pie_chart_outline_rounded,
-                    label: '% DE GRASA',
-                    value: data.formattedBodyFat,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0F172A),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: data.bmiColor.withValues(alpha: 0.5)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.health_and_safety_rounded, color: data.bmiColor, size: 16),
-                              const SizedBox(width: 6),
-                              const Text(
-                                'IMC (OMS)',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.grey,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            children: [
-                              Text(
-                                data.bmi != null ? data.bmi!.toStringAsFixed(1) : '--',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: data.bmiColor,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Flexible(
-                                child: Text(
-                                  data.bmiCategory,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: data.bmiColor,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+              PyrosShowcase(
+                scope: 'profile_tour',
+                showcaseKey: _biometricsGridKey,
+                title: 'Composición Corporal',
+                description: 'Revisa tu peso, altura con equivalencia métrica, % de grasa e IMC clasificado por los rangos de la OMS.',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'MÉTRICAS BASE',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.0,
+                        color: Colors.grey,
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 8),
+
+                    // Grid 1: Peso y Altura
+                    Row(
+                      children: [
+                        _buildBiometricTile(
+                          icon: Icons.scale_rounded,
+                          label: 'PESO',
+                          value: data.formattedWeight,
+                        ),
+                        const SizedBox(width: 10),
+                        _buildBiometricTile(
+                          icon: Icons.height_rounded,
+                          label: 'ALTURA',
+                          value: data.formattedHeightCm,
+                          subtitle: data.formattedHeightMeters != '--' ? 'Equivale a ${data.formattedHeightMeters}' : null,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Grid 2: % Grasa e IMC (OMS)
+                    Row(
+                      children: [
+                        _buildBiometricTile(
+                          icon: Icons.pie_chart_outline_rounded,
+                          label: '% DE GRASA',
+                          value: data.formattedBodyFat,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0F172A),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: data.bmiColor.withValues(alpha: 0.5)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.health_and_safety_rounded, color: data.bmiColor, size: 16),
+                                    const SizedBox(width: 6),
+                                    const Text(
+                                      'IMC (OMS)',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.grey,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                                  textBaseline: TextBaseline.alphabetic,
+                                  children: [
+                                    Text(
+                                      data.bmi != null ? data.bmi!.toStringAsFixed(1) : '--',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: data.bmiColor,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Flexible(
+                                      child: Text(
+                                        data.bmiCategory,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: data.bmiColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
 
-              // Subtítulo: Distribución de Masa Estimada
-              const Text(
-                'DISTRIBUCIÓN DE MASA ESTIMADA',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.0,
-                  color: Colors.grey,
+              // Subtítulo: Distribución de Masa Estimada y Metabolismo
+              PyrosShowcase(
+                scope: 'profile_tour',
+                showcaseKey: _metabolismCardKey,
+                title: 'Metabolismo & Gasto Diario',
+                description: 'Descubre cuántos kilos son de masa magra vs grasa, las calorías que quemas en reposo (TMB) y tu gasto diario total (TDEE).',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'DISTRIBUCIÓN DE MASA ESTIMADA',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.0,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    Row(
+                      children: [
+                        _buildBiometricTile(
+                          icon: Icons.fitness_center_rounded,
+                          iconColor: AppTheme.primaryGlow,
+                          label: 'MASA MAGRA',
+                          value: data.formattedLeanMass,
+                          subtitle: data.leanMassPercentage != null
+                              ? '${data.formattedLeanPercentage} libre de grasa'
+                              : null,
+                        ),
+                        const SizedBox(width: 10),
+                        _buildBiometricTile(
+                          icon: Icons.water_drop_outlined,
+                          iconColor: const Color(0xFFF59E0B),
+                          label: 'MASA GRASA',
+                          value: data.formattedFatMass,
+                          subtitle: data.bodyFatPercentage != null
+                              ? '${data.formattedBodyFat} grasa corporal'
+                              : null,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Subtítulo: Metabolismo & Gasto Energético
+                    const Text(
+                      'METABOLISMO & GASTO ENERGÉTICO',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.0,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    Row(
+                      children: [
+                        _buildBiometricTile(
+                          icon: Icons.local_fire_department_rounded,
+                          iconColor: const Color(0xFFFB923C),
+                          label: 'METABOLISMO BASAL',
+                          value: data.formattedBMR,
+                          subtitle: 'Gasto calórico en reposo',
+                        ),
+                        const SizedBox(width: 10),
+                        _buildBiometricTile(
+                          icon: Icons.bolt_rounded,
+                          iconColor: const Color(0xFFFACC15),
+                          label: 'GASTO DIARIO (TDEE)',
+                          value: data.formattedTDEE,
+                          subtitle: 'Mantenimiento con actividad',
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 8),
-
-              Row(
-                children: [
-                  _buildBiometricTile(
-                    icon: Icons.fitness_center_rounded,
-                    iconColor: AppTheme.primaryGlow,
-                    label: 'MASA MAGRA',
-                    value: data.formattedLeanMass,
-                    subtitle: data.leanMassPercentage != null
-                        ? '${data.formattedLeanPercentage} libre de grasa'
-                        : null,
-                  ),
-                  const SizedBox(width: 10),
-                  _buildBiometricTile(
-                    icon: Icons.water_drop_outlined,
-                    iconColor: const Color(0xFFF59E0B),
-                    label: 'MASA GRASA',
-                    value: data.formattedFatMass,
-                    subtitle: data.bodyFatPercentage != null
-                        ? '${data.formattedBodyFat} grasa corporal'
-                        : null,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Subtítulo: Metabolismo & Gasto Energético
-              const Text(
-                'METABOLISMO & GASTO ENERGÉTICO',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.0,
-                  color: Colors.grey,
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              Row(
-                children: [
-                  _buildBiometricTile(
-                    icon: Icons.local_fire_department_rounded,
-                    iconColor: const Color(0xFFFB923C),
-                    label: 'METABOLISMO BASAL',
-                    value: data.formattedBMR,
-                    subtitle: 'Gasto calórico en reposo',
-                  ),
-                  const SizedBox(width: 10),
-                  _buildBiometricTile(
-                    icon: Icons.bolt_rounded,
-                    iconColor: const Color(0xFFFACC15),
-                    label: 'GASTO DIARIO (TDEE)',
-                    value: data.formattedTDEE,
-                    subtitle: 'Mantenimiento con actividad',
-                  ),
-                ],
               ),
 
               // Rango de Peso Saludable (si hay altura)

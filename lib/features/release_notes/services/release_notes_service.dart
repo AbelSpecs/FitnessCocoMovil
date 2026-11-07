@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:logger/logger.dart';
@@ -13,6 +14,10 @@ class ReleaseNotesService {
   static const String _storageKey = 'pyros_last_seen_release_version';
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   final Logger _logger = Logger();
+
+  /// Notificador observable que indica si el bottom sheet de novedades está visible en pantalla.
+  final ValueNotifier<bool> isWhatsNewOpen = ValueNotifier<bool>(false);
+  bool get isWhatsNewShowing => isWhatsNewOpen.value;
 
   String? _cachedCurrentVersion;
 
