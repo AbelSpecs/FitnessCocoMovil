@@ -38,6 +38,7 @@ class WhatsNewBottomSheet extends StatelessWidget {
       },
     );
 
+    await service.markCurrentVersionAsSeen();
     return true;
   }
 
@@ -46,18 +47,24 @@ class WhatsNewBottomSheet extends StatelessWidget {
     BuildContext context, {
     ReleaseNote? releaseNote,
     VoidCallback? onDismiss,
-  }) {
+  }) async {
     final note = releaseNote ?? ReleaseNotesCatalog.latestRelease;
+    final service = ReleaseNotesService.instance;
+    service.isWhatsNewOpen.value = true;
 
-    return showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => WhatsNewBottomSheet(
-        releaseNote: note,
-        onDismiss: onDismiss,
-      ),
-    );
+    try {
+      await showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => WhatsNewBottomSheet(
+          releaseNote: note,
+          onDismiss: onDismiss,
+        ),
+      );
+    } finally {
+      service.isWhatsNewOpen.value = false;
+    }
   }
 
   @override

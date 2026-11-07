@@ -10,6 +10,7 @@ import 'package:pyrosfitmovil/theme/app_theme.dart';
 import 'package:logger/logger.dart';
 
 import 'package:pyrosfitmovil/features/release_notes/presentation/widgets/whats_new_bottom_sheet.dart';
+import 'package:pyrosfitmovil/features/release_notes/services/release_notes_service.dart';
 
 final logger = Logger();
 
@@ -65,6 +66,22 @@ class _HomeScreenState extends State<HomeScreen> {
             tooltip: 'Novedades de la versión',
             onPressed: () {
               WhatsNewBottomSheet.show(context);
+            },
+          ),
+          IconButton(
+            icon: const Icon(
+              Icons.help_outline_rounded,
+              color: AppTheme.primaryGlow,
+              size: 22,
+            ),
+            tooltip: 'Ver tour interactivo',
+            onPressed: () {
+              if (ReleaseNotesService.instance.isWhatsNewShowing) return;
+              if (isCoach) {
+                CoachDashboard.startTourIfMounted();
+              } else {
+                StudentDashboard.startTourIfMounted();
+              }
             },
           ),
           Padding(
