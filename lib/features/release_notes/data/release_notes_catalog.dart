@@ -14,6 +14,32 @@ class ReleaseNotesCatalog {
   static final List<ReleaseNote> _releases = [
     ReleaseNote(
       version: '1.0.0',
+      buildNumber: 13,
+      releaseDate: DateTime(2026, 11, 10),
+      title: 'Datos Antropomórficos y Onboarding',
+      subtitle: '',
+      isMajor: false,
+      items: [
+        const ReleaseItem(
+          title: 'Agregados datos Antropomórficos extras en el perfil de usuario',
+          description:
+              'Agregados datos extras en el perfil',
+          type: ReleaseItemType.improvement,
+          audience: TargetAudience.all,
+          icon: Icons.trending_up,
+        ),
+        const ReleaseItem(
+          title: 'Agregado Tutorial u onboarding al sistema',
+          description:
+              '',
+          type: ReleaseItemType.feature,
+          audience: TargetAudience.all,
+          icon: Icons.auto_awesome,
+        ),
+      ],
+    ),
+    ReleaseNote(
+      version: '1.0.0',
       buildNumber: 12,
       releaseDate: DateTime(2026, 10, 30),
       title: 'Solventado bug en dispositivos iOS',
