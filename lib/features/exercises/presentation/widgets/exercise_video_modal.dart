@@ -94,9 +94,6 @@ class _ExerciseVideoModalState extends State<ExerciseVideoModal> {
       final controller = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
         ..setBackgroundColor(Colors.black)
-        ..setUserAgent(
-          'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36',
-        )
         ..setNavigationDelegate(
           NavigationDelegate(
             onNavigationRequest: (request) => NavigationDecision.navigate,
@@ -111,17 +108,49 @@ class _ExerciseVideoModalState extends State<ExerciseVideoModal> {
             .setMediaPlaybackRequiresUserGesture(false);
       }
 
-      // Cargar directamente la URL de embed oficial de YouTube en lugar de anidar iframes locales
-      // Esto evita el Error 152-4 (origen no permitido / bloqueo de sandbox)
-      final directEmbedUri = Uri.parse(
-        'https://www.youtube.com/embed/$ytId?autoplay=1&playsinline=1&rel=0&modestbranding=1&fs=1',
-      );
+      // Cargar el embed dentro de un HTML con baseUrl y Referrer-Policy explícitos
+      // para cumplir con la política de origen/referer de YouTube (evita Error 153 / 152-4).
+      final htmlContent = '''
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <meta name="referrer" content="strict-origin-when-cross-origin" />
+            <style>
+              html, body {
+                margin: 0;
+                padding: 0;
+                width: 100%;
+                height: 100%;
+                background-color: #000000;
+                overflow: hidden;
+              }
+              iframe {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                border: 0;
+              }
+            </style>
+          </head>
+          <body>
+            <iframe
+              src="https://www.youtube-nocookie.com/embed/$ytId?enablejsapi=1&autoplay=1&playsinline=1&rel=0&modestbranding=1&fs=1&origin=https://pyrosfit.com"
+              title="YouTube video player"
+              referrerpolicy="strict-origin-when-cross-origin"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowfullscreen>
+            </iframe>
+          </body>
+        </html>
+      ''';
 
-      controller.loadRequest(
-        directEmbedUri,
-        headers: {
-          'Referer': 'https://www.youtube.com/',
-        },
+      controller.loadHtmlString(
+        htmlContent,
+        baseUrl: 'https://pyrosfit.com',
       );
 
       if (mounted) {
