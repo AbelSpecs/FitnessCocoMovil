@@ -8,6 +8,7 @@ import 'package:pyrosfitmovil/core/models/city_model.dart';
 import 'package:pyrosfitmovil/core/models/phone_code_model.dart';
 import 'package:pyrosfitmovil/core/services/general_service.dart';
 import 'package:pyrosfitmovil/core/utils/notify.dart';
+import 'package:pyrosfitmovil/core/utils/phone_utils.dart';
 import 'package:pyrosfitmovil/theme/app_theme.dart';
 import 'package:pyrosfitmovil/core/widgets/spinner.dart';
 import 'package:logger/logger.dart';
@@ -101,6 +102,11 @@ class _RegistrationFormWidgetState extends State<RegistrationFormWidget> {
     return age;
   }
 
+  CountryPhoneConfig get _currentPhoneConfig => getPhoneConfig(
+        countryName: _selectedCountry?.name,
+        phoneCode: _selectedPhoneCode?.code ?? _selectedCountry?.phoneCode,
+      );
+
   Future<void> _handleCountryChange(Country? country) async {
     setState(() {
       _selectedCountry = country;
@@ -115,6 +121,11 @@ class _RegistrationFormWidgetState extends State<RegistrationFormWidget> {
       } else {
         _selectedPhoneCode = null;
       }
+      final formatted = formatPhoneNumber(_phoneCtrl.text, _currentPhoneConfig);
+      _phoneCtrl.value = TextEditingValue(
+        text: formatted,
+        selection: TextSelection.collapsed(offset: formatted.length),
+      );
     });
     try {
       if (country != null) {
@@ -217,8 +228,9 @@ class _RegistrationFormWidgetState extends State<RegistrationFormWidget> {
       Notify.error(context, "Error", "El código de teléfono es obligatorio");
       return;
     }
-    if (_phoneCtrl.text.trim().isEmpty) {
-      Notify.error(context, "Error", "El teléfono es obligatorio");
+    final phoneValidation = validatePhoneNumber(_phoneCtrl.text, _currentPhoneConfig);
+    if (!phoneValidation.isValid) {
+      Notify.error(context, "Error", phoneValidation.message ?? "El teléfono es obligatorio");
       return;
     }
     if (_addressCtrl.text.trim().isEmpty) {
@@ -249,7 +261,7 @@ class _RegistrationFormWidgetState extends State<RegistrationFormWidget> {
         userName: _userNameCtrl.text.trim(),
         password: _passwordCtrl.text,
         confirmPassword: _confirmPasswordCtrl.text,
-        phoneNumber: "${_selectedPhoneCode!.code}${_phoneCtrl.text.trim()}",
+        phoneNumber: "${_selectedPhoneCode!.code}${cleanPhoneNumber(_phoneCtrl.text)}",
         countryId: _selectedCountry!.id,
         cityId: _selectedCity!.id,
         address: _addressCtrl.text.trim(),
@@ -578,9 +590,12 @@ class _RegistrationFormWidgetState extends State<RegistrationFormWidget> {
                   child: TextFormField(
                     controller: _phoneCtrl,
                     keyboardType: TextInputType.phone,
+                    inputFormatters: [
+                      CountryPhoneInputFormatter(_currentPhoneConfig),
+                    ],
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
-                      hintText: '424-258-6514',
+                      hintText: _currentPhoneConfig.placeholder,
                       hintStyle: const TextStyle(
                           color: Color(0xFF52525B), fontSize: 14),
                       filled: true,

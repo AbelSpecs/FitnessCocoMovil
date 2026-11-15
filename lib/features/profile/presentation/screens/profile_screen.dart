@@ -2400,76 +2400,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 16),
           _buildAccountInfoRow('Rol de usuario', roleDisplay),
           const SizedBox(height: 16),
-          InkWell(
-            onTap: () => context.push('/support'),
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF27272A).withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.border.withValues(alpha: 0.6)),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.bug_report_outlined, color: AppTheme.primaryGlow, size: 18),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Soporte y Reportar Bug',
-                          style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Enviar un reporte de error o sugerencia',
-                          style: TextStyle(color: Colors.white54, fontSize: 11),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(Icons.arrow_forward_ios_rounded, color: Colors.grey, size: 14),
-                ],
-              ),
-            ),
+          _buildAccountActionTile(
+            icon: Icons.payments_outlined,
+            title: 'Pagos',
+            subtitle: 'Consultar historial o registrar un pago en la web',
+            onTap: () => context.push('/payments'),
           ),
           const SizedBox(height: 12),
-          InkWell(
+          _buildAccountActionTile(
+            icon: Icons.bug_report_outlined,
+            title: 'Soporte y Reportar Bug',
+            subtitle: 'Enviar un reporte de error o sugerencia',
+            onTap: () => context.push('/support?mode=ticket'),
+          ),
+          const SizedBox(height: 12),
+          _buildAccountActionTile(
+            icon: Icons.description_outlined,
+            title: 'Términos & Privacidad',
+            subtitle: 'Condiciones de servicio y política de datos',
             onTap: () => context.push('/terms'),
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF27272A).withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.border.withValues(alpha: 0.6)),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.description_outlined, color: AppTheme.primaryGlow, size: 18),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Términos & Privacidad',
-                          style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Condiciones de servicio y política de datos',
-                          style: TextStyle(color: Colors.white54, fontSize: 11),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(Icons.arrow_forward_ios_rounded, color: Colors.grey, size: 14),
-                ],
-              ),
-            ),
+          ),
+          const SizedBox(height: 12),
+          _buildAccountActionTile(
+            icon: Icons.delete_outline_rounded,
+            iconColor: Colors.redAccent,
+            title: 'Dar de baja mi cuenta',
+            subtitle: 'Eliminar permanentemente tu cuenta y datos',
+            onTap: () => context.push('/support?mode=delete'),
           ),
           const SizedBox(height: 24),
           SizedBox(
@@ -2494,6 +2451,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAccountActionTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+    Color iconColor = AppTheme.primaryGlow,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF27272A).withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppTheme.border.withValues(alpha: 0.6)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: iconColor, size: 18),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(color: Colors.white54, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded, color: Colors.grey, size: 14),
+          ],
+        ),
       ),
     );
   }

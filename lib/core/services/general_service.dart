@@ -21,13 +21,20 @@ class GeneralService {
     }
   }
 
-  // este metodo hay que refactorizarlo cuando @Keiver haga que devuelva un arreglo
   static Future<List<City>> getCities(int countryId) async {
     try {
-      final response = await _api.get('/Cities/$countryId');
-      final data = response.data['data'] as Map<String, dynamic>;
-      final cities = City.fromJson(data);
-      return [cities];
+      final response = await _api.get('/Cities/country/$countryId');
+      final data = response.data['data'];
+      if (data is List) {
+        return data
+            .whereType<Map<String, dynamic>>()
+            .map(City.fromJson)
+            .toList();
+      }
+      if (data is Map<String, dynamic>) {
+        return [City.fromJson(data)];
+      }
+      return [];
     } catch (e) {
       logger.e('Error al obtener ciudades: $e');
       return [];
