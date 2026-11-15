@@ -14,6 +14,40 @@ class ReleaseNotesCatalog {
   static final List<ReleaseNote> _releases = [
     ReleaseNote(
       version: '1.0.0',
+      buildNumber: 15,
+      releaseDate: DateTime(2026, 11, 15),
+      title: 'Baja de Datos, Tickets y Sugerencias, Pagos',
+      subtitle: '',
+      isMajor: false,
+      items: [
+        const ReleaseItem(
+          title: 'Agregado opción de baja de datos en el sistema',
+          description:
+              'Botón de baja en perfil',
+          type: ReleaseItemType.improvement,
+          audience: TargetAudience.all,
+          icon: Icons.trending_up,
+        ),
+        const ReleaseItem(
+          title: 'Agregado sección para reportar bugs o sugerencias',
+          description:
+              'Botón de sugerencias en perfil',
+          type: ReleaseItemType.feature,
+          audience: TargetAudience.all,
+          icon: Icons.auto_awesome,
+        ),
+        const ReleaseItem(
+          title: 'Consultas o historial de pagos',
+          description:
+              '',
+          type: ReleaseItemType.feature,
+          audience: TargetAudience.all,
+          icon: Icons.auto_awesome,
+        ),
+      ],
+    ),
+    ReleaseNote(
+      version: '1.0.0',
       buildNumber: 13,
       releaseDate: DateTime(2026, 11, 10),
       title: 'Datos Antropomórficos y Onboarding',
