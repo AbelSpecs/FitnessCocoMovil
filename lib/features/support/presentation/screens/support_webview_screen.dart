@@ -7,14 +7,39 @@ import 'package:pyrosfitmovil/theme/app_theme.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 class SupportWebViewScreen extends StatefulWidget {
-  const SupportWebViewScreen({super.key});
+  final String mode;
+
+  const SupportWebViewScreen({
+    super.key,
+    this.mode = 'ticket',
+  });
 
   @override
   State<SupportWebViewScreen> createState() => _SupportWebViewScreenState();
 }
 
 class _SupportWebViewScreenState extends State<SupportWebViewScreen> {
-  static const String _supportUrl = 'https://pyrosfit.com/support?mode=ticket';
+  String get _targetUrl {
+    switch (widget.mode) {
+      case 'payments':
+        return 'https://pyrosfit.com/payments';
+      case 'delete':
+        return 'https://pyrosfit.com/support?mode=delete';
+      default:
+        return 'https://pyrosfit.com/support?mode=ticket';
+    }
+  }
+
+  String get _screenTitle {
+    switch (widget.mode) {
+      case 'payments':
+        return 'Pagos';
+      case 'delete':
+        return 'Dar de baja mi cuenta';
+      default:
+        return 'Soporte y Reporte de Bugs';
+    }
+  }
 
   late final WebViewController _controller;
   bool _isLoading = true;
@@ -54,12 +79,17 @@ class _SupportWebViewScreenState extends State<SupportWebViewScreen> {
               _sessionInjected = true;
               final encodedToken = jsonEncode(jsonEncode(token));
               final encodedUser = jsonEncode(jsonEncode(user.toJson()));
+              final encodedTargetUrl = jsonEncode(_targetUrl);
 
               try {
                 await _controller.runJavaScript('''
                   localStorage.setItem('pyrosfit_token', $encodedToken);
                   localStorage.setItem('pyrosfit_user', $encodedUser);
-                  window.location.reload();
+                  if (window.location.href !== $encodedTargetUrl) {
+                    window.location.replace($encodedTargetUrl);
+                  } else {
+                    window.location.reload();
+                  }
                 ''');
                 return;
               } catch (_) {
@@ -84,7 +114,7 @@ class _SupportWebViewScreenState extends State<SupportWebViewScreen> {
           },
         ),
       )
-      ..loadRequest(Uri.parse(_supportUrl));
+      ..loadRequest(Uri.parse(_targetUrl));
   }
 
   void _reload() {
@@ -92,7 +122,7 @@ class _SupportWebViewScreenState extends State<SupportWebViewScreen> {
       _isLoading = true;
       _hasError = false;
     });
-    _controller.loadRequest(Uri.parse(_supportUrl));
+    _controller.loadRequest(Uri.parse(_targetUrl));
   }
 
   @override
@@ -103,9 +133,9 @@ class _SupportWebViewScreenState extends State<SupportWebViewScreen> {
         backgroundColor: const Color(0xFF18181B),
         foregroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
-          'Soporte y Reporte de Bugs',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        title: Text(
+          _screenTitle,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(

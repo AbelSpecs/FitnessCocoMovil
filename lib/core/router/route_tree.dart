@@ -154,7 +154,14 @@ class AppRouter {
         ),
         GoRoute(
           path: '/support',
-          builder: (context, state) => const SupportWebViewScreen(),
+          builder: (context, state) {
+            final mode = state.uri.queryParameters['mode'] ?? 'ticket';
+            return SupportWebViewScreen(mode: mode);
+          },
+        ),
+        GoRoute(
+          path: '/payments',
+          builder: (context, state) => const SupportWebViewScreen(mode: 'payments'),
         ),
         GoRoute(
           path: '/login',
