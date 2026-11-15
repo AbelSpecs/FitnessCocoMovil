@@ -23,6 +23,7 @@ import 'package:pyrosfitmovil/features/student_routines/presentation/screens/stu
 import 'package:pyrosfitmovil/features/profile/presentation/screens/profile_screen.dart';
 import 'package:pyrosfitmovil/features/ranking/presentation/screens/ranking_screen.dart';
 import 'package:pyrosfitmovil/features/release_notes/presentation/screens/release_notes_screen.dart';
+import 'package:pyrosfitmovil/features/support/presentation/screens/support_webview_screen.dart';
 
 // 1. Definimos las rutas de manera organizada
 class AppRouter {
@@ -150,6 +151,10 @@ class AppRouter {
         GoRoute(
           path: '/terms',
           builder: (context, state) => const TermsScreen(),
+        ),
+        GoRoute(
+          path: '/support',
+          builder: (context, state) => const SupportWebViewScreen(),
         ),
         GoRoute(
           path: '/login',
