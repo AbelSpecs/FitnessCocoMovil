@@ -51,12 +51,14 @@ class _ExerciseFormSheetState extends State<ExerciseFormSheet> {
     _nameController = TextEditingController(text: ex?.name ?? '');
     _descController = TextEditingController(text: ex?.description ?? '');
 
-    final existingUrl = ex?.videoUrl ?? '';
-    final isYt = existingUrl.contains('youtu');
-    _youtubeController = TextEditingController(text: isYt ? existingUrl : '');
+    final rawVideo = ex?.videoUrl?.trim().isNotEmpty == true
+        ? ex!.videoUrl!.trim()
+        : (ex?.videoKey?.trim() ?? '');
+    final isYt = rawVideo.contains('youtu') || rawVideo.startsWith('http');
+    _youtubeController = TextEditingController(text: isYt ? rawVideo : '');
     _selectedMuscleGroupId = ex?.muscleGroupId ?? 1;
     _isCustom = ex?.isCustom ?? true;
-    _videoMode = isYt ? 0 : 1;
+    _videoMode = isYt ? 1 : 0;
   }
 
   @override
@@ -104,8 +106,8 @@ class _ExerciseFormSheetState extends State<ExerciseFormSheet> {
     String? finalVideoUrl = widget.exercise?.videoUrl;
 
     try {
-      // 1. Si eligió subir un archivo de video a R2 (_videoMode == 1 en ExerciseVideoSelector)
-      if (_videoMode == 1 && _selectedVideo != null && _videoBytes != null) {
+      // 1. Si eligió subir un archivo de video a R2 (_videoMode == 0)
+      if (_videoMode == 0 && _selectedVideo != null && _videoBytes != null) {
         final ext = _selectedVideo!.name.split('.').last.toLowerCase();
         final contentType = ext == 'mp4' ? 'video/mp4' : (ext == 'mov' ? 'video/quicktime' : 'video/webm');
 
@@ -121,8 +123,8 @@ class _ExerciseFormSheetState extends State<ExerciseFormSheet> {
           finalVideoKey = uploadedKey;
           finalVideoUrl = uploadedKey;
         }
-      } else if (_videoMode == 0) {
-        // Enlace Web (_videoMode == 0 en ExerciseVideoSelector)
+      } else if (_videoMode == 1) {
+        // Enlace Web / YouTube (_videoMode == 1)
         final ytUrl = _youtubeController.text.trim();
         if (ytUrl.isNotEmpty) {
           finalVideoKey = ytUrl;
