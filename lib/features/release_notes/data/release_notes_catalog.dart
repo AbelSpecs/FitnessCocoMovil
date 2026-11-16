@@ -14,6 +14,24 @@ class ReleaseNotesCatalog {
   static final List<ReleaseNote> _releases = [
     ReleaseNote(
       version: '1.0.0',
+      buildNumber: 16,
+      releaseDate: DateTime(2026, 11, 16),
+      title: 'Arreglado bug que no permitia subir videos de youtube',
+      subtitle: '',
+      isMajor: false,
+      items: [
+        const ReleaseItem(
+          title: 'Arreglado bug de videos',
+          description:
+              'Arreglado bug que no permitia al momento de crear un ejercicio, agregar un video o enlace a youtube',
+          type: ReleaseItemType.fix,
+          audience: TargetAudience.all,
+          icon: Icons.build_circle_outlined,
+        ),
+      ],
+    ),
+    ReleaseNote(
+      version: '1.0.0',
       buildNumber: 15,
       releaseDate: DateTime(2026, 11, 15),
       title: 'Baja de Datos, Tickets y Sugerencias, Pagos',
