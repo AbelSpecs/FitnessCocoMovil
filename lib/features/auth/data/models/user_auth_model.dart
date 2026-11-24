@@ -23,6 +23,7 @@ class UserAuth {
   final int? studentId;
   final int? coachId;
   final int? myCoachId;
+  final bool isAdmin;
   final String? email;
   final String? firstName;
   final Role? role;
@@ -36,6 +37,7 @@ class UserAuth {
     this.studentId,
     this.coachId,
     this.myCoachId,
+    this.isAdmin = false,
     this.email,
     this.firstName,
     this.role,
@@ -51,6 +53,7 @@ class UserAuth {
       studentId: json['studentId'] as int?,
       coachId: json['coachId'] as int?,
       myCoachId: json['myCoachId'] as int?,
+      isAdmin: json['isAdmin'] == true,
       email: json['email'] as String?,
       firstName: json['firstName'] as String?,
       role:
@@ -68,6 +71,7 @@ class UserAuth {
       'studentId': studentId,
       'coachId': coachId,
       'myCoachId': myCoachId,
+      'isAdmin': isAdmin,
       'email': email,
       'firstName': firstName,
       'role': role?.name,
@@ -83,6 +87,7 @@ class UserAuth {
     int? studentId,
     int? coachId,
     int? myCoachId,
+    bool? isAdmin,
     String? email,
     String? firstName,
     Role? role,
@@ -96,6 +101,7 @@ class UserAuth {
       studentId: studentId ?? this.studentId,
       coachId: coachId ?? this.coachId,
       myCoachId: myCoachId ?? this.myCoachId,
+      isAdmin: isAdmin ?? this.isAdmin,
       email: email ?? this.email,
       firstName: firstName ?? this.firstName,
       role: role ?? this.role,

@@ -132,6 +132,7 @@ class _LoginPageState extends State<LoginPage> {
         studentId: studentId != 0 ? studentId : null,
         coachId: coachId != 0 ? coachId : null,
         myCoachId: myCoachId != 0 ? myCoachId : null,
+        isAdmin: data['isAdmin'] == true || userMap?['isAdmin'] == true,
         email: userMap?['email'] as String?,
         firstName: userMap?['firstName'] as String?,
         role: role,

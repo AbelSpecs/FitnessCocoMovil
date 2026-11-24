@@ -208,7 +208,10 @@ class RoutinesProvider extends ChangeNotifier {
         }
       };
 
-      final response = await RoutineService.postExercise(data);
+      final response = await RoutineService.postExercise(
+        data,
+        userId: authProvider.user?.id,
+      );
       if (response != null) {
         await loadExercisesForMuscleGroup(muscleGroupId);
         final created = _exercises.firstWhere(

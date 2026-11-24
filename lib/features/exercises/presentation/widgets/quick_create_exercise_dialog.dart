@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:pyrosfitmovil/core/services/routine_service.dart';
 import 'package:pyrosfitmovil/core/services/storage_service.dart';
 import 'package:pyrosfitmovil/features/auth/presentation/controllers/auth_provider.dart';
 import 'package:pyrosfitmovil/features/clients/presentation/providers/routines_provider.dart';
@@ -99,16 +100,44 @@ class _QuickCreateExerciseDialogState extends State<QuickCreateExerciseDialog> {
 
     try {
       final auth = context.read<AuthProvider>();
-      final coachId = auth.user?.coachId ?? auth.user?.id ?? 1;
+      final currentUser = auth.user;
+      final coachId = currentUser?.coachId ?? currentUser?.id ?? 1;
+      final isIndependent = isUserIndependent(currentUser);
 
-      // 1. Si eligió subir un video local a Cloudflare R2
-      if (_videoMode == 1 && _selectedFile != null && _videoBytes != null) {
-        setState(() {
-          _isUploadingVideo = true;
-          _uploadProgress = 0.0;
-        });
+      if (_videoMode == 0) {
+        // Enlace Web (YouTube o URL directa)
+        final url = _videoUrl.trim();
+        if (url.isNotEmpty) {
+          finalVideoKey = url;
+          finalVideoUrl = url;
+        }
+      }
 
-        final tempExerciseId = DateTime.now().millisecondsSinceEpoch % 100000000;
+      // 1. Persistir primero el ejercicio en el backend para obtener su ID real
+      final userDesc = _descriptionController.text.trim();
+      final effectiveStudentId = currentUser?.studentId ?? 0;
+      final finalDesc = isIndependent && effectiveStudentId > 0
+          ? formatExerciseDescriptionWithStudentId(userDesc, effectiveStudentId)
+          : userDesc;
+
+      final provider = context.read<RoutinesProvider>();
+      var created = await provider.createCustomExercise(
+        _nameController.text.trim(),
+        _selectedMuscleGroupId!,
+        videoKey: finalVideoKey,
+        videoUrl: finalVideoUrl,
+        description: finalDesc,
+      );
+
+      // 2. Si eligió subir un video local a Cloudflare R2, ahora que existe en BD lo subimos con su ID real
+      if (created != null && _videoMode == 1 && _selectedFile != null && _videoBytes != null) {
+        if (mounted) {
+          setState(() {
+            _isUploadingVideo = true;
+            _uploadProgress = 0.0;
+          });
+        }
+
         final ext = _selectedFile!.name.split('.').last.toLowerCase();
         final contentType = ext == 'mp4'
             ? 'video/mp4'
@@ -116,13 +145,14 @@ class _QuickCreateExerciseDialogState extends State<QuickCreateExerciseDialog> {
 
         final presign = await StorageService.getPresignedVideoUrl(
           trainerId: coachId,
-          exerciseId: tempExerciseId,
+          exerciseId: created.id,
           fileName: _selectedFile!.name,
           contentType: contentType,
+          userId: currentUser?.id,
         );
 
         final uploadUrl = presign['uploadUrl'] ?? presign['url'] ?? '';
-        final videoKey = presign['key'] ?? presign['videoKey'] ?? '';
+        final videoKey = (presign['key'] ?? presign['videoKey'] ?? '') as String;
 
         await StorageService.uploadVideoBytes(
           uploadUrl: uploadUrl,
@@ -137,36 +167,25 @@ class _QuickCreateExerciseDialogState extends State<QuickCreateExerciseDialog> {
           },
         );
 
-        finalVideoKey = videoKey;
-        finalVideoUrl = videoKey;
-      } else if (_videoMode == 0) {
-        // Enlace Web (YouTube o URL directa)
-        final url = _videoUrl.trim();
-        if (url.isNotEmpty) {
-          finalVideoKey = url;
-          finalVideoUrl = url;
-        }
+        StorageService.invalidateDownloadUrlCache(videoKey);
+
+        await RoutineService.updateExercise(
+          created.id,
+          {
+            'coachId': created.coachId ?? coachId,
+            'name': _nameController.text.trim(),
+            'description': finalDesc,
+            'muscleGroupId': _selectedMuscleGroupId!,
+            'videoKey': videoKey,
+            'videoUrl': videoKey,
+            'isCustom': true,
+          },
+          userId: currentUser?.id,
+        );
+
+        created = created.copyWith(videoKey: videoKey, videoUrl: videoKey);
+        await provider.loadExercisesForMuscleGroup(_selectedMuscleGroupId!);
       }
-
-      // 2. Persistir ejercicio en el backend (con soporte de usuario independiente)
-      if (!mounted) return;
-      final currentUser = auth.user;
-      final isIndependent = isUserIndependent(currentUser);
-
-      final userDesc = _descriptionController.text.trim();
-      final effectiveStudentId = currentUser?.studentId ?? 0;
-      final finalDesc = isIndependent && effectiveStudentId > 0
-          ? formatExerciseDescriptionWithStudentId(userDesc, effectiveStudentId)
-          : userDesc;
-
-      final provider = context.read<RoutinesProvider>();
-      final created = await provider.createCustomExercise(
-        _nameController.text.trim(),
-        _selectedMuscleGroupId!,
-        videoKey: finalVideoKey,
-        videoUrl: finalVideoUrl,
-        description: finalDesc,
-      );
 
       if (mounted) {
         if (created != null) {

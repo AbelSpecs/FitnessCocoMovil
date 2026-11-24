@@ -22,6 +22,8 @@ class ExerciseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isCustomByCoach = exercise.coachId != null && exercise.coachId! > 0;
+
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF18181B).withValues(alpha: 0.85),
@@ -74,7 +76,7 @@ class ExerciseCard extends StatelessWidget {
                       ),
                     ),
                     const Spacer(),
-                    if (isOwner)
+                    if (isCustomByCoach)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                         decoration: BoxDecoration(
@@ -99,12 +101,16 @@ class ExerciseCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(color: Colors.white12),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.lock_outline_rounded, size: 10, color: Colors.white54),
-                            SizedBox(width: 4),
-                            Text(
+                            Icon(
+                              isOwner ? Icons.public_rounded : Icons.lock_outline_rounded,
+                              size: 10,
+                              color: Colors.white54,
+                            ),
+                            const SizedBox(width: 4),
+                            const Text(
                               'Biblioteca base',
                               style: TextStyle(
                                 fontSize: 10,
