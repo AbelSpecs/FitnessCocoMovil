@@ -11,7 +11,6 @@ import 'package:provider/provider.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:pyrosfitmovil/core/models/student_clinical_data_model.dart';
 import 'package:pyrosfitmovil/core/services/tutorial_service.dart';
-import 'package:pyrosfitmovil/core/utils/admin_utils.dart';
 import 'package:pyrosfitmovil/core/widgets/pyros_showcase.dart';
 import 'package:pyrosfitmovil/features/auth/presentation/controllers/auth_provider.dart';
 import 'package:pyrosfitmovil/features/profile/presentation/controllers/profile_provider.dart';
@@ -2401,20 +2400,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 16),
           _buildAccountInfoRow('Rol de usuario', roleDisplay),
           const SizedBox(height: 16),
-          if (isAdminUser(authUser)) ...[
-            _buildAccountActionTile(
-              icon: Icons.fitness_center_rounded,
-              title: 'Biblioteca de Ejercicios',
-              subtitle: 'Gestionar ejercicios generales y videos demostrativos',
-              onTap: () => context.push('/exercises'),
-            ),
-            const SizedBox(height: 12),
-          ],
           _buildAccountActionTile(
-            icon: Icons.payments_outlined,
-            title: 'Pagos',
-            subtitle: 'Consultar historial o registrar un pago en la web',
-            onTap: () => context.push('/payments'),
+            icon: Icons.workspace_premium_outlined,
+            title: 'Miembro',
+            subtitle: 'Gestiona tu membresía',
+            onTap: () => _showComingSoonDialog(context),
           ),
           const SizedBox(height: 12),
           _buildAccountActionTile(
@@ -2458,6 +2448,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showComingSoonDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: const Color(0xFF18181B),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: AppTheme.border.withValues(alpha: 0.8)),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.workspace_premium_outlined, color: AppTheme.primaryGlow, size: 22),
+            SizedBox(width: 8),
+            Text(
+              'Miembro',
+              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Próximamente',
+          style: TextStyle(color: Colors.white70, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text(
+              'Entendido',
+              style: TextStyle(color: AppTheme.primaryGlow, fontWeight: FontWeight.bold),
             ),
           ),
         ],
