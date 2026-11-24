@@ -2061,15 +2061,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           _buildTextField(
             'Experiencia',
-            provider.studentData?['fitnessExperience'] ?? '',
-            false,
-            null,
+            provider.editingFitnessExperience ?? '',
+            provider.isEditing,
+            (v) => provider.updateField('fitnessExperience', v),
           ),
           _buildTextField(
             'Notas',
-            provider.studentData?['generalNotes'] ?? '',
-            false,
-            null,
+            provider.editingGeneralNotes ?? '',
+            provider.isEditing,
+            (v) => provider.updateField('generalNotes', v),
+            maxLines: 3,
           ),
         ],
       ),
@@ -2078,7 +2079,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildTextField(
       String label, String value, bool enabled, Function(String)? onChanged,
-      {TextInputType keyboardType = TextInputType.text}) {
+      {TextInputType keyboardType = TextInputType.text, int maxLines = 1}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: TextFormField(
@@ -2087,6 +2088,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         enabled: enabled,
         onChanged: onChanged,
         keyboardType: keyboardType,
+        maxLines: maxLines,
         style: const TextStyle(color: Colors.white),
         decoration: InputDecoration(
           labelText: label,
