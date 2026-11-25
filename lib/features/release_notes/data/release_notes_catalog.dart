@@ -14,6 +14,24 @@ class ReleaseNotesCatalog {
   static final List<ReleaseNote> _releases = [
     ReleaseNote(
       version: '1.0.0',
+      buildNumber: 17,
+      releaseDate: DateTime(2026, 11, 25),
+      title: 'Modificación de campos en la edición de perfil',
+      subtitle: '',
+      isMajor: false,
+      items: [
+        const ReleaseItem(
+          title: 'Arreglado bug de campos en el perfil',
+          description:
+              'Arreglado bug que no permitía editar algunos campos en el perfil',
+          type: ReleaseItemType.fix,
+          audience: TargetAudience.all,
+          icon: Icons.build_circle_outlined,
+        ),
+      ],
+    ),
+    ReleaseNote(
+      version: '1.0.0',
       buildNumber: 16,
       releaseDate: DateTime(2026, 11, 16),
       title: 'Arreglado bug que no permitia subir videos de youtube',
