@@ -142,6 +142,8 @@ class ProfileProvider extends ChangeNotifier {
   String? editingMedicalConditions;
   String? editingAllergies;
   String? editingFitnessGoal;
+  String? editingFitnessExperience;
+  String? editingGeneralNotes;
 
   // Variables editables (Entrenador)
   String? editingBio;
@@ -255,6 +257,8 @@ class ProfileProvider extends ChangeNotifier {
     editingMedicalConditions = _studentData?['medicalConditions']?.toString();
     editingAllergies = _studentData?['allergies']?.toString();
     editingFitnessGoal = _studentData?['fitnessGoal']?.toString();
+    editingFitnessExperience = _studentData?['fitnessExperience']?.toString();
+    editingGeneralNotes = _studentData?['generalNotes']?.toString();
   }
 
   void _initCoachEditingValues() {
@@ -385,6 +389,12 @@ class ProfileProvider extends ChangeNotifier {
         editingFitnessGoal = value?.toString();
         notifyListeners();
         return;
+      case 'fitnessExperience':
+        editingFitnessExperience = value?.toString();
+        break;
+      case 'generalNotes':
+        editingGeneralNotes = value?.toString();
+        break;
     }
   }
 
@@ -441,8 +451,8 @@ class ProfileProvider extends ChangeNotifier {
         'medicalConditions': editingMedicalConditions,
         'allergies': editingAllergies,
         'fitnessGoal': editingFitnessGoal,
-        'fitnessExperience': _studentData!['fitnessExperience'],
-        'generalNotes': _studentData!['generalNotes'],
+        'fitnessExperience': editingFitnessExperience,
+        'generalNotes': editingGeneralNotes,
       };
 
       final payload = {

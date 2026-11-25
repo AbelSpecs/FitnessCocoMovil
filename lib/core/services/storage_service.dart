@@ -1,8 +1,21 @@
 import 'dart:typed_data';
 import 'package:dio/dio.dart';
 
+class _CachedDownloadUrl {
+  final String url;
+  final DateTime expiresAt;
+  const _CachedDownloadUrl(this.url, this.expiresAt);
+}
+
 class StorageService {
   static const String storageApiBase = "https://api.pyrosfit.com/api/Storage";
+  static final Map<String, _CachedDownloadUrl> _downloadUrlCache = {};
+
+  /// Invalida la URL presignada de descarga en caché para una key de R2
+  static void invalidateDownloadUrlCache(String? key) {
+    if (key == null || key.trim().isEmpty) return;
+    _downloadUrlCache.remove(key.trim());
+  }
 
   /// Retorna la URL directa para consultar el avatar de un usuario por su userId
   static String getUserProfileUrl(dynamic userId) {
@@ -90,20 +103,26 @@ class StorageService {
 
   /// Solicita una URL presignada para subir un video de ejercicio a Cloudflare R2
   static Future<Map<String, dynamic>> getPresignedVideoUrl({
-    required int trainerId,
+    int? trainerId,
     required int exerciseId,
     required String fileName,
     required String contentType,
+    int? userId,
     int expiresInSeconds = 600,
   }) async {
     final dio = Dio();
-    final query = {
-      'trainerId': trainerId.toString(),
+    final query = <String, String>{
       'exerciseId': exerciseId.toString(),
       'fileName': fileName,
       'contentType': contentType,
       'expiresInSeconds': expiresInSeconds.toString(),
     };
+    if (trainerId != null && trainerId > 0) {
+      query['trainerId'] = trainerId.toString();
+    }
+    if (userId != null && userId > 0) {
+      query['userId'] = userId.toString();
+    }
     final response = await dio.post(
       '$storageApiBase/presign/video',
       queryParameters: query,
@@ -123,6 +142,14 @@ class StorageService {
     if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
       return trimmed;
     }
+
+    if (!forceRefresh) {
+      final cached = _downloadUrlCache[trimmed];
+      if (cached != null && DateTime.now().isBefore(cached.expiresAt)) {
+        return cached.url;
+      }
+    }
+
     try {
       final dio = Dio();
       final response = await dio.get(
@@ -133,9 +160,19 @@ class StorageService {
         },
       );
       final data = response.data;
-      if (data is String) return data;
-      if (data is Map) {
-        return (data['downloadUrl'] ?? data['url'] ?? data['data']?['downloadUrl'] ?? data['data'] ?? '') as String;
+      String resolved = '';
+      if (data is String) {
+        resolved = data;
+      } else if (data is Map) {
+        resolved = (data['downloadUrl'] ?? data['url'] ?? data['data']?['downloadUrl'] ?? data['data'] ?? '') as String;
+      }
+      if (resolved.isNotEmpty) {
+        final ttlSeconds = (expiresInSeconds - 60).clamp(30, expiresInSeconds);
+        _downloadUrlCache[trimmed] = _CachedDownloadUrl(
+          resolved,
+          DateTime.now().add(Duration(seconds: ttlSeconds)),
+        );
+        return resolved;
       }
       return getServeUrl(trimmed);
     } catch (e) {

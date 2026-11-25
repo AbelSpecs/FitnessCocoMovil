@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:pyrosfitmovil/core/models/exercise_model.dart';
+import 'package:pyrosfitmovil/core/services/storage_service.dart';
+import 'package:pyrosfitmovil/core/utils/admin_utils.dart';
 import 'package:pyrosfitmovil/features/auth/presentation/controllers/auth_provider.dart';
 import 'package:pyrosfitmovil/features/exercises/presentation/controllers/exercises_provider.dart';
 import 'package:pyrosfitmovil/theme/app_theme.dart';
@@ -97,8 +99,20 @@ class _ExerciseFormSheetState extends State<ExerciseFormSheet> {
     if (!_formKey.currentState!.validate()) return;
 
     final authUser = context.read<AuthProvider>().user;
+    final isAdmin = isAdminUser(authUser);
+    final currentUserId = authUser?.id;
     final coachId = authUser?.coachId ?? authUser?.id ?? 1;
     final exProvider = context.read<ExercisesProvider>();
+
+    if (widget.exercise != null && isGeneralExercise(widget.exercise!) && !isAdmin) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Solo un administrador puede editar ejercicios generales.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     setState(() => _isSaving = true);
 
@@ -106,56 +120,110 @@ class _ExerciseFormSheetState extends State<ExerciseFormSheet> {
     String? finalVideoUrl = widget.exercise?.videoUrl;
 
     try {
-      // 1. Si eligió subir un archivo de video a R2 (_videoMode == 0)
-      if (_videoMode == 0 && _selectedVideo != null && _videoBytes != null) {
-        final ext = _selectedVideo!.name.split('.').last.toLowerCase();
-        final contentType = ext == 'mp4' ? 'video/mp4' : (ext == 'mov' ? 'video/quicktime' : 'video/webm');
-
-        final uploadedKey = await exProvider.uploadVideo(
-          coachId: coachId,
-          fileName: _selectedVideo!.name,
-          bytes: _videoBytes!,
-          contentType: contentType,
-          exerciseId: widget.exercise?.id,
-        );
-
-        if (uploadedKey != null) {
-          finalVideoKey = uploadedKey;
-          finalVideoUrl = uploadedKey;
-        }
-      } else if (_videoMode == 1) {
-        // Enlace Web / YouTube (_videoMode == 1)
-        final ytUrl = _youtubeController.text.trim();
-        if (ytUrl.isNotEmpty) {
-          finalVideoKey = ytUrl;
-          finalVideoUrl = ytUrl;
-        }
-      }
-
       bool success = false;
       if (widget.exercise != null) {
         // Edit mode
+        final editing = widget.exercise!;
+        final isEditingGeneral = isGeneralExercise(editing);
+        final preservedCoachId = isEditingGeneral ? null : (editing.coachId ?? coachId);
+        final preservedIsCustom = isEditingGeneral ? false : editing.isCustom;
+
+        if (_videoMode == 0 && _selectedVideo != null && _videoBytes != null) {
+          final ext = _selectedVideo!.name.split('.').last.toLowerCase();
+          final contentType = ext == 'mp4' ? 'video/mp4' : (ext == 'mov' ? 'video/quicktime' : 'video/webm');
+
+          final uploadedKey = await exProvider.uploadVideo(
+            coachId: isEditingGeneral ? null : (editing.coachId ?? coachId),
+            fileName: _selectedVideo!.name,
+            bytes: _videoBytes!,
+            contentType: contentType,
+            exerciseId: editing.id,
+            userId: currentUserId,
+          );
+
+          if (uploadedKey != null) {
+            StorageService.invalidateDownloadUrlCache(editing.videoKey);
+            StorageService.invalidateDownloadUrlCache(uploadedKey);
+            finalVideoKey = uploadedKey;
+            finalVideoUrl = uploadedKey;
+          }
+        } else if (_videoMode == 1) {
+          final ytUrl = _youtubeController.text.trim();
+          if (ytUrl.isNotEmpty) {
+            finalVideoKey = ytUrl;
+            finalVideoUrl = ytUrl;
+          }
+        }
+
         success = await exProvider.updateExercise(
-          id: widget.exercise!.id,
-          coachId: coachId,
+          id: editing.id,
+          coachId: preservedCoachId,
           name: _nameController.text.trim(),
           muscleGroupId: _selectedMuscleGroupId,
           description: _descController.text.trim(),
           videoKey: finalVideoKey,
           videoUrl: finalVideoUrl,
-          isCustom: _isCustom,
+          isCustom: preservedIsCustom,
+          userId: currentUserId,
         );
       } else {
         // Create mode
-        success = await exProvider.createExercise(
-          coachId: coachId,
+        final createAsGeneral = isAdmin && !_isCustom;
+        final targetCoachId = createAsGeneral ? null : coachId;
+        final targetIsCustom = createAsGeneral ? false : true;
+
+        if (_videoMode == 1) {
+          final ytUrl = _youtubeController.text.trim();
+          finalVideoKey = ytUrl.isNotEmpty ? ytUrl : null;
+          finalVideoUrl = ytUrl.isNotEmpty ? ytUrl : null;
+        } else {
+          finalVideoKey = null;
+          finalVideoUrl = null;
+        }
+
+        // 1. Crear primero el ejercicio en BD para obtener su ID real
+        final created = await exProvider.createExercise(
+          coachId: targetCoachId,
           name: _nameController.text.trim(),
           muscleGroupId: _selectedMuscleGroupId,
           description: _descController.text.trim(),
           videoKey: finalVideoKey,
           videoUrl: finalVideoUrl,
-          isCustom: _isCustom,
+          isCustom: targetIsCustom,
+          userId: currentUserId,
         );
+
+        success = created != null;
+
+        // 2. Si eligió subir un archivo de video, ahora que existe en BD lo subimos con su ID real
+        if (created != null && _videoMode == 0 && _selectedVideo != null && _videoBytes != null) {
+          final ext = _selectedVideo!.name.split('.').last.toLowerCase();
+          final contentType = ext == 'mp4' ? 'video/mp4' : (ext == 'mov' ? 'video/quicktime' : 'video/webm');
+
+          final uploadedKey = await exProvider.uploadVideo(
+            coachId: createAsGeneral ? null : coachId,
+            fileName: _selectedVideo!.name,
+            bytes: _videoBytes!,
+            contentType: contentType,
+            exerciseId: created.id,
+            userId: currentUserId,
+          );
+
+          if (uploadedKey != null) {
+            StorageService.invalidateDownloadUrlCache(uploadedKey);
+            await exProvider.updateExercise(
+              id: created.id,
+              coachId: targetCoachId,
+              name: _nameController.text.trim(),
+              muscleGroupId: _selectedMuscleGroupId,
+              description: _descController.text.trim(),
+              videoKey: uploadedKey,
+              videoUrl: uploadedKey,
+              isCustom: targetIsCustom,
+              userId: currentUserId,
+            );
+          }
+        }
       }
 
       if (mounted) {
@@ -222,7 +290,11 @@ class _ExerciseFormSheetState extends State<ExerciseFormSheet> {
 
               // Title
               Text(
-                isEditing ? 'Editar Ejercicio' : 'Nuevo Ejercicio',
+                isEditing
+                    ? (isGeneralExercise(widget.exercise!)
+                        ? 'Editar Ejercicio General'
+                        : 'Editar Ejercicio')
+                    : 'Nuevo Ejercicio',
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -230,9 +302,11 @@ class _ExerciseFormSheetState extends State<ExerciseFormSheet> {
                 ),
               ),
               const SizedBox(height: 4),
-              const Text(
-                'Registra el ejercicio y añade un video demostrativo para tus alumnos.',
-                style: TextStyle(fontSize: 12, color: Colors.white54),
+              Text(
+                isEditing && isGeneralExercise(widget.exercise!)
+                    ? 'Actualiza los datos y el video demostrativo de este ejercicio general visible para todos los entrenadores.'
+                    : 'Registra el ejercicio y añade un video demostrativo para tus alumnos.',
+                style: const TextStyle(fontSize: 12, color: Colors.white54),
               ),
               const SizedBox(height: 20),
 
@@ -528,15 +602,16 @@ class _ExerciseFormSheetState extends State<ExerciseFormSheet> {
               ),
               const SizedBox(height: 12),
 
-              // Switch Ejercicio Personalizado
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Ejercicio personalizado', style: TextStyle(color: Colors.white, fontSize: 13)),
-                subtitle: const Text('Visible en tu biblioteca técnica de entrenador', style: TextStyle(color: Colors.white54, fontSize: 11)),
-                value: _isCustom,
-                activeTrackColor: AppTheme.primary,
-                onChanged: (val) => setState(() => _isCustom = val),
-              ),
+              // Switch Publicar como ejercicio general (solo Admin en modo creación)
+              if (!isEditing && isAdminUser(context.read<AuthProvider>().user))
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Publicar como ejercicio general', style: TextStyle(color: Colors.white, fontSize: 13)),
+                  subtitle: const Text('Visible para todos los entrenadores', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                  value: !_isCustom,
+                  activeTrackColor: AppTheme.primary,
+                  onChanged: _isSaving ? null : (isGeneral) => setState(() => _isCustom = !isGeneral),
+                ),
               const SizedBox(height: 20),
 
               // Botones Guardar / Cancelar

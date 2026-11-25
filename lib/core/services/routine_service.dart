@@ -31,9 +31,15 @@ class RoutineService {
   }
 
   static Future<Map<String, dynamic>?> postExercise(
-      Map<String, dynamic> data) async {
+    Map<String, dynamic> data, {
+    int? userId,
+  }) async {
     try {
-      final response = await _api.post('/Exercises', data: data);
+      final response = await _api.post(
+        '/Exercises',
+        data: data,
+        queryParameters: userId != null && userId > 0 ? {'userId': userId} : null,
+      );
       if (response.data != null && response.data['data'] != null) {
         return response.data['data'] as Map<String, dynamic>;
       }
@@ -70,9 +76,20 @@ class RoutineService {
   }
 
   static Future<Map<String, dynamic>?> updateExercise(
-      int id, Map<String, dynamic> data) async {
+    int id,
+    Map<String, dynamic> data, {
+    int? userId,
+  }) async {
     try {
-      final response = await _api.put('/Exercises/$id', data: data);
+      // El endpoint PUT /Exercises/{id} recibe ExerciseUpdateDto plano (sin wrapper 'exercise')
+      final payload = data.containsKey('exercise') && data['exercise'] is Map<String, dynamic>
+          ? data['exercise'] as Map<String, dynamic>
+          : data;
+      final response = await _api.put(
+        '/Exercises/$id',
+        data: payload,
+        queryParameters: userId != null && userId > 0 ? {'userId': userId} : null,
+      );
       if (response.data != null && response.data['data'] != null) {
         return response.data['data'] as Map<String, dynamic>;
       }
@@ -83,9 +100,12 @@ class RoutineService {
     }
   }
 
-  static Future<bool> deleteExercise(int id) async {
+  static Future<bool> deleteExercise(int id, {int? userId}) async {
     try {
-      final response = await _api.delete('/Exercises/$id');
+      final response = await _api.delete(
+        '/Exercises/$id',
+        queryParameters: userId != null && userId > 0 ? {'userId': userId} : null,
+      );
       return response.statusCode == 200 || response.statusCode == 204;
     } catch (e) {
       logError('Error deleting exercise: $e');

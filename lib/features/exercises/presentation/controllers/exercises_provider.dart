@@ -109,11 +109,12 @@ class ExercisesProvider extends ChangeNotifier {
 
   // Video Upload
   Future<String?> uploadVideo({
-    required int coachId,
+    int? coachId,
     required String fileName,
     required Uint8List bytes,
     required String contentType,
     int? exerciseId,
+    int? userId,
   }) async {
     _isUploadingVideo = true;
     _uploadProgress = 0.0;
@@ -121,12 +122,13 @@ class ExercisesProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final tempId = exerciseId ?? (DateTime.now().millisecondsSinceEpoch % 100000000);
+      final targetExerciseId = exerciseId ?? (DateTime.now().millisecondsSinceEpoch % 100000000);
       final presign = await StorageService.getPresignedVideoUrl(
         trainerId: coachId,
-        exerciseId: tempId,
+        exerciseId: targetExerciseId,
         fileName: fileName,
         contentType: contentType,
+        userId: userId,
         expiresInSeconds: 600,
       );
 
@@ -148,6 +150,8 @@ class ExercisesProvider extends ChangeNotifier {
         },
       );
 
+      StorageService.invalidateDownloadUrlCache(videoKey);
+
       _uploadStatusText = '¡Video subido con éxito!';
       _uploadProgress = 1.0;
       notifyListeners();
@@ -164,14 +168,15 @@ class ExercisesProvider extends ChangeNotifier {
   }
 
   // Create Exercise
-  Future<bool> createExercise({
-    required int coachId,
+  Future<ExerciseModel?> createExercise({
+    int? coachId,
     required String name,
     required int muscleGroupId,
     String? description,
     String? videoKey,
     String? videoUrl,
     bool isCustom = true,
+    int? userId,
   }) async {
     try {
       final mgName = _muscleGroups.firstWhere(
@@ -191,7 +196,7 @@ class ExercisesProvider extends ChangeNotifier {
         }
       };
 
-      final response = await RoutineService.postExercise(payload);
+      final response = await RoutineService.postExercise(payload, userId: userId);
       if (response != null) {
         final newId = response['id'] ?? response['exercise']?['id'] ?? DateTime.now().millisecondsSinceEpoch;
         final newExercise = ExerciseModel(
@@ -208,25 +213,26 @@ class ExercisesProvider extends ChangeNotifier {
 
         _exercises.insert(0, newExercise);
         notifyListeners();
-        return true;
+        return newExercise;
       }
-      return false;
+      return null;
     } catch (e) {
       logError('Error creando ejercicio: $e');
-      return false;
+      return null;
     }
   }
 
   // Update Exercise
   Future<bool> updateExercise({
     required int id,
-    required int coachId,
+    int? coachId,
     required String name,
     required int muscleGroupId,
     String? description,
     String? videoKey,
     String? videoUrl,
     bool isCustom = true,
+    int? userId,
   }) async {
     try {
       final mgName = _muscleGroups.firstWhere(
@@ -235,21 +241,25 @@ class ExercisesProvider extends ChangeNotifier {
       ).name;
 
       final payload = {
-        'exercise': {
-          'coachId': coachId,
-          'name': name.trim(),
-          'description': description?.trim(),
-          'muscleGroupId': muscleGroupId,
-          'videoKey': videoKey?.trim().isNotEmpty == true ? videoKey!.trim() : null,
-          'videoUrl': videoUrl?.trim().isNotEmpty == true ? videoUrl!.trim() : null,
-          'isCustom': isCustom,
-        }
+        'coachId': coachId,
+        'name': name.trim(),
+        'description': description?.trim(),
+        'muscleGroupId': muscleGroupId,
+        'videoKey': videoKey?.trim().isNotEmpty == true ? videoKey!.trim() : null,
+        'videoUrl': videoUrl?.trim().isNotEmpty == true ? videoUrl!.trim() : null,
+        'isCustom': isCustom,
       };
 
-      final response = await RoutineService.updateExercise(id, payload);
+      final response = await RoutineService.updateExercise(id, payload, userId: userId);
       if (response != null) {
         final index = _exercises.indexWhere((e) => e.id == id);
         if (index != -1) {
+          final previousKey = _exercises[index].videoKey;
+          if (previousKey != videoKey) {
+            StorageService.invalidateDownloadUrlCache(previousKey);
+          }
+          StorageService.invalidateDownloadUrlCache(videoKey);
+
           _exercises[index] = ExerciseModel(
             id: id,
             coachId: coachId,
@@ -273,9 +283,9 @@ class ExercisesProvider extends ChangeNotifier {
   }
 
   // Delete Exercise
-  Future<bool> deleteExercise(int id) async {
+  Future<bool> deleteExercise(int id, {int? userId}) async {
     try {
-      final success = await RoutineService.deleteExercise(id);
+      final success = await RoutineService.deleteExercise(id, userId: userId);
       if (success) {
         _exercises.removeWhere((e) => e.id == id);
         notifyListeners();

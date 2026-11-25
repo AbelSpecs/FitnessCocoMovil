@@ -220,7 +220,12 @@ class AuthProvider extends ChangeNotifier {
             ? StorageService.getServeUrl(bannerKey)
             : null;
 
+        final bool? syncedIsAdmin = data['isAdmin'] is bool
+            ? data['isAdmin'] as bool
+            : null;
+
         _user = _user!.copyWith(
+          isAdmin: syncedIsAdmin,
           profilePictureKey: profileKey,
           profilePictureUrl: profileUrl,
           bannerPictureKey: bannerKey,

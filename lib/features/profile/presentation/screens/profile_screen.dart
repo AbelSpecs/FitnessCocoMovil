@@ -2061,15 +2061,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           _buildTextField(
             'Experiencia',
-            provider.studentData?['fitnessExperience'] ?? '',
-            false,
-            null,
+            provider.editingFitnessExperience ?? '',
+            provider.isEditing,
+            (v) => provider.updateField('fitnessExperience', v),
           ),
           _buildTextField(
             'Notas',
-            provider.studentData?['generalNotes'] ?? '',
-            false,
-            null,
+            provider.editingGeneralNotes ?? '',
+            provider.isEditing,
+            (v) => provider.updateField('generalNotes', v),
+            maxLines: 3,
           ),
         ],
       ),
@@ -2078,7 +2079,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildTextField(
       String label, String value, bool enabled, Function(String)? onChanged,
-      {TextInputType keyboardType = TextInputType.text}) {
+      {TextInputType keyboardType = TextInputType.text, int maxLines = 1}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: TextFormField(
@@ -2087,6 +2088,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         enabled: enabled,
         onChanged: onChanged,
         keyboardType: keyboardType,
+        maxLines: maxLines,
         style: const TextStyle(color: Colors.white),
         decoration: InputDecoration(
           labelText: label,
@@ -2401,10 +2403,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _buildAccountInfoRow('Rol de usuario', roleDisplay),
           const SizedBox(height: 16),
           _buildAccountActionTile(
-            icon: Icons.payments_outlined,
-            title: 'Pagos',
-            subtitle: 'Consultar historial o registrar un pago en la web',
-            onTap: () => context.push('/payments'),
+            icon: Icons.workspace_premium_outlined,
+            title: 'Miembro',
+            subtitle: 'Gestiona tu membresía',
+            onTap: () => _showComingSoonDialog(context),
           ),
           const SizedBox(height: 12),
           _buildAccountActionTile(
@@ -2448,6 +2450,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showComingSoonDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: const Color(0xFF18181B),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: AppTheme.border.withValues(alpha: 0.8)),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.workspace_premium_outlined, color: AppTheme.primaryGlow, size: 22),
+            SizedBox(width: 8),
+            Text(
+              'Miembro',
+              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Próximamente',
+          style: TextStyle(color: Colors.white70, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text(
+              'Entendido',
+              style: TextStyle(color: AppTheme.primaryGlow, fontWeight: FontWeight.bold),
             ),
           ),
         ],

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:pyrosfitmovil/core/models/exercise_model.dart';
 import 'package:pyrosfitmovil/core/services/tutorial_service.dart';
+import 'package:pyrosfitmovil/core/utils/admin_utils.dart';
 import 'package:pyrosfitmovil/core/widgets/pyros_showcase.dart';
 import 'package:pyrosfitmovil/features/auth/presentation/controllers/auth_provider.dart';
 import 'package:pyrosfitmovil/features/exercises/presentation/controllers/exercises_provider.dart';
@@ -146,7 +147,11 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
             onPressed: () async {
               Navigator.pop(dialogCtx);
               final provider = context.read<ExercisesProvider>();
-              final success = await provider.deleteExercise(exercise.id);
+              final currentUserId = context.read<AuthProvider>().user?.id;
+              final success = await provider.deleteExercise(
+                exercise.id,
+                userId: currentUserId,
+              );
               if (context.mounted) {
                 if (success) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -461,17 +466,16 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
                     (context, index) {
                       final item = items[index];
                       final auth = context.read<AuthProvider>();
-                      final currentCoachId = auth.user?.coachId ?? auth.user?.id;
-                      final isOwner = currentCoachId != null && item.coachId == currentCoachId;
+                      final canManage = canManageExercise(item, auth.user);
 
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 14.0),
                         child: ExerciseCard(
                           exercise: item,
-                          isOwner: isOwner,
+                          isOwner: canManage,
                           onPlayVideo: () => ExerciseVideoModal.show(context, item),
-                          onEdit: isOwner ? () => ExerciseFormSheet.show(context, exercise: item) : null,
-                          onDelete: isOwner ? () => _confirmDelete(context, item) : null,
+                          onEdit: canManage ? () => ExerciseFormSheet.show(context, exercise: item) : null,
+                          onDelete: canManage ? () => _confirmDelete(context, item) : null,
                         ),
                       );
                     },
